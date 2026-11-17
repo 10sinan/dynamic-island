@@ -1,0 +1,556 @@
+#!/usr/bin/env python3
+"""di-config — Dynamic Island ayarları için terminal arayüzü.
+
+Kullanım:
+    di-config                     etkileşimli arayüz (curses)
+    di-config list                tüm ayarları yazdır
+    di-config get <anahtar>
+    di-config set <anahtar> <değer>
+    di-config reset [anahtar]     bir ayarı ya da hepsini varsayılana döndür
+
+Değişiklikler GSettings'e yazılır; eklenti bunları dinler ve island'ları
+oturumu kapatmadan anında yeniden kurar.
+"""
+import curses
+import locale
+import os
+import sys
+
+import gi
+
+gi.require_version("Gio", "2.0")
+gi.require_version("GLib", "2.0")
+from gi.repository import Gio, GLib  # noqa: E402
+
+UUID = "dynamic-island@local"
+SCHEMA_ID = "org.gnome.shell.extensions.dynamic-island"
+
+# ----------------------------------------------------------------- schema
+
+
+def _schema_dirs():
+    here = os.path.dirname(os.path.realpath(__file__))
+    yield os.path.join(here, "..", UUID, "schemas")
+    data = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+    yield os.path.join(data, "gnome-shell", "extensions", UUID, "schemas")
+
+
+def open_settings():
+    for d in _schema_dirs():
+        if os.path.exists(os.path.join(d, "gschemas.compiled")):
+            src = Gio.SettingsSchemaSource.new_from_directory(
+                os.path.abspath(d), Gio.SettingsSchemaSource.get_default(), False)
+            schema = src.lookup(SCHEMA_ID, False)
+            if schema:
+                return Gio.Settings.new_full(schema, None, None), schema
+    sys.exit("di-config: derlenmiş şema bulunamadı. Önce ./install.sh çalıştır.")
+
+
+# ----------------------------------------------------------------- model
+
+CENTER_ALL = ["music", "calendar", "notifications"]
+STATS_ALL = ["cpu", "ram", "temp", "net", "battery", "gpu", "disk", "graph", "procs"]
+QS_ALL = ["sliders", "toggles", "system"]
+EVENTS_ALL = ["power", "battery-low", "wifi", "bluetooth", "privacy", "thermal", "memory", "disk",
+              "lockkey", "layout", "meeting", "powersaver"]
+# modules that have a view in the panel pill (the "panelde" column)
+COMPACT_CAPABLE = {"music", "cpu", "ram", "temp", "net", "battery", "disk"}
+
+MODULE_NAMES = {
+    "gpu": "GPU kullanımı",
+    "disk": "Disk doluluğu",
+    "graph": "Canlı grafikler (60 sn)",
+    "procs": "En çok kaynak kullanan uygulamalar",
+    "power": "Şarj takıldı / çıkarıldı",
+    "battery-low": "Pil düşük (%20, %10)",
+    "wifi": "Wi-Fi bağlandı / koptu",
+    "bluetooth": "Bluetooth cihazı bağlandı / ayrıldı",
+    "privacy": "Mikrofon / kamera kullanımda",
+    "lockkey": "Caps Lock / Num Lock açıldı-kapandı",
+    "layout": "Klavye dili değişti",
+    "meeting": "Toplantı modu açıldı / kapandı",
+    "powersaver": "Güç tasarrufu açıldı / kapandı",
+    "thermal": "Sistem ısındı (CPU 90°C üstü)",
+    "memory": "Bellek az (%90 üstü)",
+    "disk": "Disk dolmak üzere (%95 üstü)",
+    "music": "Müzik oynatıcı",
+    "calendar": "Takvim",
+    "notifications": "Bildirim listesi",
+    "sliders": "Ses + parlaklık kaydırıcıları",
+    "toggles": "Düğmeler (Wi-Fi, Bluetooth, ...)",
+    "system": "Pil + sistem düğmeleri",
+    "cpu": "CPU kullanımı",
+    "ram": "RAM kullanımı",
+    "temp": "CPU sıcaklığı",
+    "net": "Ağ hızı (↓ ↑)",
+    "battery": "Pil",
+}
+
+COLOR_PRESETS = [
+    ("tema rengi", ""),   # empty = the theme's own accent
+    ("Nane", "#5ee6b5"),
+    ("Gök", "#5ab8ff"),
+    ("Lavanta", "#b48cff"),
+    ("Mercan", "#ff7a6b"),
+    ("Kehribar", "#f5b841"),
+    ("Kar", "#e8e8e8"),
+]
+
+# kind: bool | int | choice | color | modules
+TABS = [
+    ("Genel", [
+        dict(key="center-enabled", kind="bool", label="Orta island (saatin yerine)",
+             help="Paneldeki saatin yerine geçen island. Kapatınca orijinal saat geri gelir."),
+        dict(key="stats-enabled", kind="bool", label="Sol island (istatistik, Activities yerine)",
+             help="Üst sol köşede CPU, RAM, ağ... Kapatınca GNOME'un Activities düğmesi geri gelir."),
+        dict(key="meeting-mode", kind="bool", label="Toplantı modu (mikrofon/kamera → Rahatsız Etme)",
+             help="Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner."),
+        dict(key="auto-power-saver", kind="bool", label="Pil azalınca otomatik Güç Tasarrufu",
+             help="Pil aşağıdaki seviyeye inince güç profili 'Güç Tasarrufu' olur, şarja takınca eskisine döner."),
+        dict(key="auto-power-saver-level", kind="int", step=5, unit="%", label="Güç tasarrufu pil seviyesi",
+             help="Pil bu yüzdenin altına düşünce (şarjda değilken) Güç Tasarrufu istenir."),
+        dict(key="shortcut-qs", kind="bool", label="Super+A sağ island'ı açsın",
+             help="GNOME'un Quick Settings kısayolu (Super+A) GNOME menüsü yerine sağ island'ı açar; tekrar basınca ya da Esc ile kapanır."),
+        dict(key="qs-enabled", kind="bool", label="Sağ island (Quick Settings)",
+             help="Sağ üstteki durum ikonlarını siyah hapın içine alır."),
+        dict(key="expand-on-hover", kind="bool", label="Üstüne gelince aç",
+             help="Island'lar yalnızca üstüne gelince açılır (tıklama yok). Kapatırsan hiç açılmazlar."),
+        dict(key="show-seconds", kind="bool", label="Saatte saniye göster",
+             help="Island'daki saat saniyeyi de gösterir (saniyede bir güncellenir)."),
+        dict(key="osd-enabled", kind="bool", label="Ses/parlaklık göstergesi island'da",
+             help="Ses ya da parlaklık değişince GNOME'un kutusu yerine orta island kısa süre açılır."),
+        dict(key="music-popup", kind="bool", label="Şarkı değişince önizleme",
+             help="Yeni şarkı başlayınca orta island kısa süre kapak, başlık ve sanatçıyı gösterir."),
+        dict(key="screenshot-preview", kind="bool", label="Ekran görüntüsü küçük resmi",
+             help="Ekran görüntüsü alınınca küçük resim island'da belirir. Tıkla: aç · sağ tık: kapat. Bildirim önizlemeye bağlıdır."),
+        dict(key="notification-preview", kind="bool", label="Bildirim önizleme",
+             help="Yeni bildirimler GNOME balonu yerine orta island'da gösterilir. Tık: aç · sağ tık: kapat."),
+    ]),
+    ("Zamanlama", [
+        dict(key="hover-expand-delay", kind="int", step=50, unit="ms", label="Açılma bekleme",
+             help="Üstüne geldikten sonra açılmadan önce beklenecek süre. 0 = anında."),
+        dict(key="leave-collapse-delay", kind="int", step=50, unit="ms", label="Kapanma bekleme",
+             help="İmleç çekildikten sonra kapanmadan önce beklenecek süre."),
+        dict(key="auto-collapse", kind="int", step=500, unit="ms", label="Kendiliğinden kapanma",
+             zero="asla", help="İmleç üstünde değilken bu süre sonunda kapanır. 0 = asla."),
+        dict(key="animation-duration", kind="int", step=20, unit="ms", label="Açılma animasyonu",
+             help="Yaylanarak açılma animasyonunun süresi."),
+        dict(key="notification-duration", kind="int", step=500, unit="ms", label="Bildirim önizleme süresi",
+             help="Bildirim önizlemesinin ekranda kalma süresi (üstüne gelince durur)."),
+        dict(key="spring", kind="bool", label="Yaylanma efekti",
+             help="Açılırken hafifçe taşıp geri gelir (EASE_OUT_BACK)."),
+        dict(key="poll-compact", kind="int", step=250, unit="ms", label="Yenileme (kapalıyken)",
+             help="CPU/RAM gibi verilerin kapalı haldeyken yenilenme aralığı."),
+        dict(key="poll-expanded", kind="int", step=250, unit="ms", label="Yenileme (açıkken)",
+             help="Island açıkken verilerin yenilenme aralığı."),
+    ]),
+    ("Görünüm", [
+        dict(key="theme", kind="choice", label="Renk teması",
+             choices=[("ink", "Mürekkep"), ("midnight", "Gece mavisi"), ("sunset", "Gün batımı"),
+                      ("forest", "Orman"), ("rose", "Gül")],
+             help="Island'ın zemin, kenar ve vurgu rengi. ←/→ ile seç; anında uygulanır."),
+        dict(key="accent-color", kind="color", label="Vurgu rengi",
+             help="←/→ hazır renkler ('tema rengi' = seçili temanın rengi) · Enter ile #rrggbb gir."),
+    ]),
+    ("Orta", [
+        dict(key="center-modules", kind="modules", all=CENTER_ALL, panel_key="center-compact-modules",
+             label="Saatin altında açılanlar",
+             help="Müzik kartı, takvim, bildirim listesi. Space: göster/gizle · p: panelde de göster · J/K: sıra"),
+    ]),
+    ("Sol", [
+        dict(key="stats-modules", kind="modules", all=STATS_ALL, panel_key="stats-compact-modules",
+             label="İstatistikler (üst sol köşe)",
+             help="Space: göster/gizle · p: panelde de göster (CPU, RAM, ...) · J/K: sıra"),
+    ]),
+    ("Sağ", [
+        dict(key="qs-modules", kind="modules", all=QS_ALL, label="Panel bölümleri (yukarıdan aşağı)",
+             help="Space: göster/gizle · J/K: sırayı değiştir"),
+    ]),
+    ("Olaylar", [
+        dict(key="events", kind="modules", all=EVENTS_ALL, label="Island'ı kısa süre açan olaylar",
+             help="Space: aç/kapa. Seçilen olaylar olunca orta island kendiliğinden açılıp durumu gösterir."),
+    ]),
+]
+
+ALL_ITEMS = {item["key"]: item for _, items in TABS for item in items}
+
+
+def key_range(schema, key):
+    """(min, max) for integer keys, None otherwise."""
+    rng = schema.get_key(key).get_range().unpack()
+    if rng[0] == "range":
+        return rng[1]
+    return None
+
+
+def write(settings, fn, key, value):
+    getattr(settings, fn)(key, value)
+    Gio.Settings.sync()  # flush to dconf now, the shell picks it up right away
+
+
+# ----------------------------------------------------------------- CLI
+
+def format_value(settings, key):
+    v = settings.get_value(key).unpack()
+    if isinstance(v, bool):
+        return "açık" if v else "kapalı"
+    if isinstance(v, list):
+        return ", ".join(v) if v else "(boş)"
+    return str(v)
+
+
+def cli(settings, schema, argv):
+    cmd = argv[0]
+    if cmd == "list":
+        ordered = [k for k in ALL_ITEMS if schema.has_key(k)]
+        ordered += [k for k in ("center-compact-modules",) if schema.has_key(k)]
+        ordered += sorted(k for k in schema.list_keys() if k not in ordered)
+        for k in ordered:
+            label = ALL_ITEMS.get(k, {}).get("label", "panelde gösterilen metrikler"
+                                             if k == "center-compact-modules" else "")
+            print(f"{k:24} = {format_value(settings, k):28} {label}")
+    elif cmd == "get" and len(argv) == 2:
+        print(settings.get_value(argv[1]).print_(False))
+    elif cmd == "set" and len(argv) == 3:
+        key, raw = argv[1], argv[2]
+        if not schema.has_key(key):
+            sys.exit(f"bilinmeyen anahtar: {key}")
+        vtype = schema.get_key(key).get_value_type().dup_string()
+        try:
+            if vtype == "b":
+                value = GLib.Variant("b", raw.lower() in ("1", "true", "yes", "on", "açık", "evet"))
+            elif vtype == "i":
+                value = GLib.Variant("i", int(raw))
+            elif vtype == "as":
+                if raw.strip().startswith("["):
+                    value = GLib.Variant.parse(GLib.VariantType.new("as"), raw, None, None)
+                else:
+                    value = GLib.Variant("as", [s.strip() for s in raw.split(",") if s.strip()])
+            else:
+                value = GLib.Variant("s", raw)
+        except (ValueError, GLib.Error) as e:
+            sys.exit(f"geçersiz değer: {e}")
+        if not schema.get_key(key).range_check(value):
+            sys.exit(f"{key}: izin verilen aralığın dışında")
+        settings.set_value(key, value)
+        Gio.Settings.sync()
+        print(f"{key} = {format_value(settings, key)}")
+    elif cmd == "reset":
+        keys = argv[1:] or schema.list_keys()
+        for k in keys:
+            settings.reset(k)
+        Gio.Settings.sync()
+        print("varsayılana döndürüldü: " + ", ".join(keys))
+    else:
+        print(__doc__)
+        sys.exit(2)
+
+
+# ----------------------------------------------------------------- TUI
+
+def nearest_256(hex_color):
+    """Closest xterm-256 colour index for a #rrggbb string."""
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
+    steps = [0, 95, 135, 175, 215, 255]
+
+    def idx(c):
+        return min(range(6), key=lambda i: abs(steps[i] - c))
+    return 16 + 36 * idx(r) + 6 * idx(g) + idx(b)
+
+
+class App:
+    MIN_W, MIN_H = 60, 16
+
+    def __init__(self, scr, settings, schema):
+        self.scr, self.s, self.schema = scr, settings, schema
+        self.tab = 0
+        self.row = 0
+        self.msg = ""
+        curses.curs_set(0)
+        curses.use_default_colors()
+        self.colors = curses.has_colors()
+        if self.colors:
+            curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)    # selected tab / row
+            curses.init_pair(2, curses.COLOR_CYAN, -1)                    # accents
+            curses.init_pair(3, 8 if curses.COLORS > 8 else curses.COLOR_WHITE, -1)  # dim
+            curses.init_pair(4, curses.COLOR_GREEN, -1)
+        self.swatch_pair = 5
+
+    # -- helpers
+    def attr(self, n, extra=0):
+        return (curses.color_pair(n) if self.colors else 0) | extra
+
+    def items(self):
+        return TABS[self.tab][1]
+
+    def rows(self):
+        """Selectable rows of the current tab: (item, module_id|None)."""
+        out = []
+        for item in self.items():
+            if item["kind"] == "modules":
+                for mid in self.module_order(item):
+                    out.append((item, mid))
+            else:
+                out.append((item, None))
+        return out
+
+    def module_order(self, item):
+        enabled = self.s.get_strv(item["key"])
+        return enabled + [m for m in item["all"] if m not in enabled]
+
+    def put(self, y, x, text, attr=0):
+        h, w = self.scr.getmaxyx()
+        if 0 <= y < h and x < w:
+            self.scr.addnstr(y, x, text, max(0, w - x - 1), attr)
+
+    # -- drawing
+    def draw(self):
+        scr = self.scr
+        scr.erase()
+        h, w = scr.getmaxyx()
+        if w < self.MIN_W or h < self.MIN_H:
+            self.put(0, 0, f"Terminal çok küçük ({w}x{h}). En az {self.MIN_W}x{self.MIN_H} gerekli.")
+            scr.refresh()
+            return
+
+        self.put(0, 2, "Dynamic Island", self.attr(2, curses.A_BOLD))
+        self.put(0, 17, "· ayarlar", self.attr(3))
+        note = "değişiklikler anında uygulanır"
+        self.put(0, w - len(note) - 2, note, self.attr(3))
+
+        x = 2
+        for i, (name, _) in enumerate(TABS):
+            label = f" {i + 1} {name} "
+            self.put(2, x, label, self.attr(1, curses.A_BOLD) if i == self.tab else self.attr(3))
+            x += len(label) + 1
+        self.put(3, 2, "─" * (w - 4), self.attr(3))
+
+        rows = self.rows()
+        self.row = max(0, min(self.row, len(rows) - 1))
+        y = 5
+        last_item = None
+        for i, (item, mid) in enumerate(rows):
+            if item["kind"] == "modules" and item is not last_item:
+                self.put(y, 2, item["label"], self.attr(2, curses.A_BOLD))
+                if item.get("panel_key"):
+                    self.put(y, w - 22, "karo   panelde", self.attr(3))
+                y += 1
+            last_item = item
+            sel = i == self.row
+            self.draw_row(y, w, item, mid, sel)
+            y += 1
+
+        help_text = rows[self.row][0]["help"] if rows else ""
+        self.put(h - 4, 2, "─" * (w - 4), self.attr(3))
+        self.put(h - 3, 2, help_text, self.attr(0))
+        if self.msg:
+            self.put(h - 2, 2, self.msg, self.attr(4, curses.A_BOLD))
+        keys = "↑↓ gez  ←→ değiştir  Space aç/kapa  Tab/1-7 sekme  r varsayılan  R hepsi  q çık"
+        self.put(h - 1, 2, keys, self.attr(3))
+        scr.refresh()
+
+    def draw_row(self, y, w, item, mid, sel):
+        marker = "›" if sel else " "
+        base = curses.A_REVERSE if sel else 0
+        kind, key = item["kind"], item["key"]
+        if kind == "modules":
+            enabled = mid in self.s.get_strv(key)
+            box = "[x]" if enabled else "[ ]"
+            text = f"{marker} {box} {MODULE_NAMES.get(mid, mid)}"
+            self.put(y, 2, text.ljust(w - 26), base | (0 if enabled else self.attr(3)))
+            if item.get("panel_key"):
+                if mid in COMPACT_CAPABLE:
+                    on_panel = mid in self.s.get_strv(item["panel_key"])
+                    self.put(y, w - 15, "[x]" if on_panel else "[ ]", base)
+                else:
+                    self.put(y, w - 15, " – ", base | self.attr(3))
+            return
+
+        label = f"{marker} {item['label']}"
+        self.put(y, 2, label.ljust(w - 30), base)
+        vx = w - 28
+        if kind == "bool":
+            on = self.s.get_boolean(key)
+            self.put(y, vx, "● açık " if on else "○ kapalı", self.attr(4 if on else 3, base))
+        elif kind == "int":
+            v = self.s.get_int(key)
+            text = item.get("zero") if v == 0 and item.get("zero") else f"{v} {item['unit']}"
+            self.put(y, vx, f"◀ {text:>10} ▶", base)
+        elif kind == "choice":
+            v = self.s.get_string(key)
+            text = dict(item["choices"]).get(v, v)
+            self.put(y, vx, f"◀ {text} ▶", base)
+        elif kind == "color":
+            v = self.s.get_string(key)
+            name = next((n for n, c in COLOR_PRESETS if c.lower() == v.lower()), "özel")
+            self.put(y, vx, f"◀ {v or '—'} {name} ▶", base)
+            if v and self.colors and curses.COLORS >= 256:
+                try:
+                    curses.init_pair(self.swatch_pair, -1, nearest_256(v))
+                    self.put(y, w - 6, "    ", curses.color_pair(self.swatch_pair))
+                except curses.error:
+                    pass
+
+    # -- actions
+    def change(self, delta):
+        rows = self.rows()
+        if not rows:
+            return
+        item, mid = rows[self.row]
+        kind, key = item["kind"], item["key"]
+        if kind == "bool":
+            write(self.s, "set_boolean", key, not self.s.get_boolean(key))
+        elif kind == "int":
+            lo, hi = key_range(self.schema, key) or (0, 1 << 30)
+            v = self.s.get_int(key) + delta * item["step"]
+            write(self.s, "set_int", key, max(lo, min(hi, v)))
+        elif kind == "choice":
+            values = [c for c, _ in item["choices"]]
+            cur = self.s.get_string(key)
+            i = (values.index(cur) + (delta or 1)) % len(values) if cur in values else 0
+            write(self.s, "set_string", key, values[i])
+        elif kind == "color":
+            presets = [c for _, c in COLOR_PRESETS]
+            cur = self.s.get_string(key).lower()
+            i = presets.index(cur) if cur in presets else -1
+            write(self.s, "set_string", key, presets[(i + (delta or 1)) % len(presets)])
+        elif kind == "modules":
+            self.toggle_module(item, mid, item["key"])
+            # the list re-sorts (enabled first); keep the cursor on this module
+            rows = self.rows()
+            self.row = next((i for i, (it, m) in enumerate(rows) if it is item and m == mid), self.row)
+        self.msg = f"✓ {key} güncellendi"
+
+    def toggle_module(self, item, mid, key):
+        cur = self.s.get_strv(key)
+        if mid in cur:
+            cur.remove(mid)
+        else:
+            # insert keeping the displayed order
+            order = self.module_order(item)
+            cur.append(mid)
+            cur.sort(key=order.index)
+        write(self.s, "set_strv", key, cur)
+
+    def move_module(self, step):
+        item, mid = self.rows()[self.row]
+        if item["kind"] != "modules":
+            return
+        cur = self.s.get_strv(item["key"])
+        if mid not in cur:
+            self.msg = "Önce Space ile modülü aç, sonra taşı."
+            return
+        i = cur.index(mid)
+        j = i + step
+        if 0 <= j < len(cur):
+            cur[i], cur[j] = cur[j], cur[i]
+            write(self.s, "set_strv", item["key"], cur)
+            self.row += step
+            self.msg = f"✓ {mid} taşındı"
+
+    def toggle_panel(self):
+        item, mid = self.rows()[self.row]
+        if item["kind"] == "modules" and item.get("panel_key") and mid not in COMPACT_CAPABLE:
+            self.msg = f"{MODULE_NAMES.get(mid, mid)} panelde gösterilemez."
+            return
+        if item["kind"] == "modules" and item.get("panel_key"):
+            self.toggle_module(item, mid, item["panel_key"])
+            self.msg = f"✓ {mid}: panelde gösterim değişti"
+
+    def edit_color(self):
+        h, _ = self.scr.getmaxyx()
+        self.put(h - 2, 2, " " * 60)
+        self.put(h - 2, 2, "Renk (#rrggbb): ", self.attr(2, curses.A_BOLD))
+        curses.echo()
+        curses.curs_set(1)
+        try:
+            raw = self.scr.getstr(h - 2, 18, 7).decode().strip()
+        finally:
+            curses.noecho()
+            curses.curs_set(0)
+        if len(raw) == 6 and not raw.startswith("#"):
+            raw = "#" + raw
+        try:
+            int(raw[1:], 16)
+            ok = len(raw) == 7 and raw.startswith("#")
+        except ValueError:
+            ok = False
+        if ok:
+            write(self.s, "set_string", "accent-color", raw.lower())
+            self.msg = f"✓ vurgu rengi {raw.lower()}"
+        else:
+            self.msg = "Geçersiz renk. Örnek: #5ab8ff"
+
+    def reset_current(self):
+        item, _ = self.rows()[self.row]
+        self.s.reset(item["key"])
+        if item.get("panel_key"):
+            self.s.reset(item["panel_key"])
+        Gio.Settings.sync()
+        self.msg = f"✓ {item['key']} varsayılana döndü"
+
+    def reset_all(self):
+        for k in self.schema.list_keys():
+            self.s.reset(k)
+        Gio.Settings.sync()
+        self.msg = "✓ tüm ayarlar varsayılana döndü"
+
+    def run(self):
+        while True:
+            self.draw()
+            ch = self.scr.get_wch()
+            self.msg = ""
+            if ch in ("q", "Q", "\x1b"):
+                return
+            if ch in (curses.KEY_UP, "k"):
+                self.row = max(0, self.row - 1)
+            elif ch in (curses.KEY_DOWN, "j"):
+                self.row = min(len(self.rows()) - 1, self.row + 1)
+            elif ch in ("\t", curses.KEY_BTAB):
+                self.tab = (self.tab + (1 if ch == "\t" else -1)) % len(TABS)
+                self.row = 0
+            elif isinstance(ch, str) and ch in "1234567":
+                self.tab, self.row = int(ch) - 1, 0
+            elif ch in (curses.KEY_RIGHT, "+", "l", "="):
+                self.change(+1)
+            elif ch in (curses.KEY_LEFT, "-", "h"):
+                self.change(-1)
+            elif ch == " ":
+                self.change(0)
+            elif ch in ("\n", curses.KEY_ENTER):
+                item = self.rows()[self.row][0]
+                if item["kind"] == "color":
+                    self.edit_color()
+                else:
+                    self.change(+1)
+            elif ch == "J":
+                self.move_module(+1)
+            elif ch == "K":
+                self.move_module(-1)
+            elif ch == "p":
+                self.toggle_panel()
+            elif ch == "r":
+                self.reset_current()
+            elif ch == "R":
+                self.reset_all()
+            elif ch == curses.KEY_RESIZE:
+                pass
+
+
+def main():
+    locale.setlocale(locale.LC_ALL, "")
+    settings, schema = open_settings()
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ("-h", "--help", "help"):
+            print(__doc__)
+            return
+        cli(settings, schema, sys.argv[1:])
+        return
+    if not sys.stdout.isatty():
+        sys.exit("di-config: etkileşimli arayüz bir terminal gerektirir (ya da: di-config list).")
+    os.environ.setdefault("ESCDELAY", "25")
+    curses.wrapper(lambda scr: App(scr, settings, schema).run())
+
+
+if __name__ == "__main__":
+    main()

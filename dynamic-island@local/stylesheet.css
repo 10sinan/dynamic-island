@@ -1,0 +1,815 @@
+/* Dynamic Island — original styling. Ink black body; the accent colour
+   ("ok" bars, notification dot) comes from settings and is set inline. */
+
+/* invisible hover/click area around the pill */
+.di-hitbox {
+    background-color: transparent;
+}
+
+/* The pill itself: a childless background. border-radius is set inline
+   from JS every frame (min(26px, height / 2)) so it never breaks. */
+.di-island {
+    background-color: #000000;
+    border: 1px solid rgba(255, 255, 255, 0.08);   /* keep in sync with BORDER in constants.js */
+}
+
+.di-hitbox:hover .di-island {
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* ---------- compact row (in the panel) ---------- */
+
+.di-compact {
+    spacing: 12px;
+    padding: 0 12px;
+    color: #f2f2f2;
+}
+
+.di-clock-box {
+    spacing: 5px;
+}
+
+.di-clock {
+    font-size: 10.5pt;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: #ffffff;
+}
+
+.di-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+}
+
+.di-meter-compact {
+    spacing: 6px;
+}
+
+/* St does not include letter-spacing in the natural width, which would
+   ellipsize the short title in a horizontal box. */
+.di-meter-compact .di-title {
+    letter-spacing: 0;
+}
+
+/* ---------- expanded ---------- */
+
+.di-expanded {
+    padding: 10px 16px 14px 16px;
+    spacing: 10px;
+    color: #f2f2f2;
+}
+
+/* big clock at the very top */
+.di-header {
+    spacing: 10px;
+}
+
+.di-clock-big {
+    font-size: 22pt;
+    font-weight: 800;
+    font-feature-settings: "tnum";
+    color: #ffffff;
+}
+
+.di-date {
+    font-size: 11pt;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.di-expanded-row {
+    spacing: 10px;
+}
+
+.di-tile {
+    spacing: 4px;
+    min-width: 66px;
+    padding: 2px 4px;
+}
+
+.di-title {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.50);
+}
+
+.di-value {
+    font-size: 12pt;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: #ffffff;
+}
+
+.di-value-compact {
+    font-size: 9.5pt;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: #ffffff;
+    min-width: 30px;
+}
+
+.di-sub {
+    font-size: 8pt;
+    font-feature-settings: "tnum";
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.di-bar-track {
+    background-color: rgba(255, 255, 255, 0.13);
+    border-radius: 3px;
+}
+
+.di-bar-fill {
+    border-radius: 3px;
+}
+
+.di-sev-warn { background-color: #f5b841; }
+.di-sev-crit { background-color: #ff6b5e; }
+
+/* ---------- activities ---------- */
+
+.di-activity {
+    color: #f2f2f2;
+}
+
+/* OSD: [icon] ▬▬▬▬▬──── 64% */
+.di-osd {
+    spacing: 12px;
+    padding: 6px 16px;
+}
+
+.di-osd-icon {
+    color: #ffffff;
+}
+
+.di-osd-value {
+    font-size: 10.5pt;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: #ffffff;
+    min-width: 42px;
+    text-align: right;
+}
+
+/* notification preview */
+.di-notif {
+    spacing: 12px;
+    padding: 10px 18px 12px 14px;
+    width: 400px;
+}
+
+.di-notif-icon {
+    color: #ffffff;
+}
+
+.di-notif-text {
+    spacing: 1px;
+}
+
+.di-notif-app {
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.50);
+}
+
+.di-notif-title {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.di-notif-body {
+    font-size: 10pt;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---------- expanded panels: shared ---------- */
+
+.di-main-row {
+    spacing: 14px;
+}
+
+.di-main-col {
+    spacing: 12px;
+    min-width: 340px;
+}
+
+.di-section-title {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.50);
+}
+
+.di-chip {
+    font-size: 9pt;
+    font-weight: 600;
+    color: #f2f2f2;
+    padding: 4px 12px;
+    border-radius: 99px;
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.di-chip:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.di-icon-button {
+    color: #ffffff;
+    padding: 6px;
+    border-radius: 99px;
+}
+
+.di-icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- calendar ---------- */
+
+.di-cal {
+    spacing: 2px;
+    padding: 8px 10px;
+    border-radius: 18px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.di-cal-header {
+    padding-bottom: 4px;
+}
+
+.di-cal-title {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.di-cal-nav {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #ffffff;
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+}
+
+.di-cal-nav:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.di-cal-row {
+    spacing: 2px;
+}
+
+.di-cal-weekday,
+.di-cal-day {
+    width: 30px;
+    height: 26px;
+    text-align: center;
+    font-size: 9pt;
+    font-feature-settings: "tnum";
+}
+
+.di-cal-weekday {
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.di-cal-day {
+    color: #f2f2f2;
+    border-radius: 13px;
+    padding-top: 5px;
+}
+
+.di-cal-weekend { color: rgba(255, 255, 255, 0.65); }
+.di-cal-other { color: rgba(255, 255, 255, 0.25); }
+
+.di-cal-today {
+    color: #000000;
+    font-weight: 800;
+}
+
+/* ---------- notification list ---------- */
+
+.di-notifs {
+    spacing: 6px;
+    width: 300px;
+    padding: 8px 10px;
+    border-radius: 18px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.di-notifs-header {
+    spacing: 8px;
+    padding-bottom: 2px;
+}
+
+.di-notifs-list {
+    spacing: 4px;
+}
+
+.di-notifs-empty,
+.di-notifs-more {
+    font-size: 9.5pt;
+    color: rgba(255, 255, 255, 0.40);
+    padding: 10px 4px;
+}
+
+.di-notif-row {
+    border-radius: 14px;
+    padding: 6px 8px;
+}
+
+.di-notif-row:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.di-notif-row-box {
+    spacing: 10px;
+}
+
+.di-notif-row-icon {
+    color: #ffffff;
+}
+
+.di-notif-row-title {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.di-notif-row-body {
+    font-size: 9pt;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.di-notif-close {
+    color: rgba(255, 255, 255, 0.55);
+    padding: 4px;
+    border-radius: 99px;
+}
+
+.di-notif-close:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+/* ---------- Quick Settings island ---------- */
+
+.di-sliders {
+    spacing: 4px;
+}
+
+.di-slider-row {
+    spacing: 8px;
+}
+
+.slider.di-slider {
+    height: 22px;
+    -barlevel-height: 6px;
+    -barlevel-background-color: rgba(255, 255, 255, 0.14);
+    -barlevel-border-width: 0;
+    -slider-handle-radius: 8px;
+    -slider-handle-border-width: 0;
+    color: #ffffff;
+}
+
+.di-slider-pct {
+    font-size: 9pt;
+    font-weight: 600;
+    font-feature-settings: "tnum";
+    color: rgba(255, 255, 255, 0.70);
+    min-width: 46px;
+    text-align: right;
+}
+
+.di-toggles,
+.di-toggle-grid {
+    spacing: 8px;
+}
+
+.di-toggle-row {
+    spacing: 8px;
+}
+
+.di-toggle {
+    width: 166px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #f2f2f2;
+}
+
+.di-toggle:checked {
+    color: #000000;
+}
+
+.di-toggle-main {
+    border-radius: 16px;
+    padding: 8px 10px;
+}
+
+.di-toggle-main:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.di-toggle-inner {
+    spacing: 10px;
+}
+
+.di-toggle-title {
+    font-size: 9.5pt;
+    font-weight: 700;
+}
+
+.di-toggle-sub {
+    font-size: 8pt;
+    opacity: 0.75;
+}
+
+.di-toggle-arrow {
+    width: 30px;
+    border-radius: 0 16px 16px 0;
+    border-left: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+.di-toggle-arrow:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.di-subpage {
+    spacing: 6px;
+}
+
+.di-subpage-header {
+    spacing: 6px;
+}
+
+.di-list {
+    spacing: 2px;
+}
+
+.di-list-row {
+    border-radius: 12px;
+    padding: 7px 10px;
+    color: #f2f2f2;
+}
+
+.di-list-row:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.di-list-row-box {
+    spacing: 10px;
+}
+
+.di-list-name {
+    font-size: 10pt;
+}
+
+.di-list-status {
+    font-size: 8.5pt;
+    color: rgba(255, 255, 255, 0.50);
+}
+
+.di-list-active {
+    font-weight: 700;
+}
+
+.di-system {
+    spacing: 8px;
+}
+
+.di-system-row {
+    spacing: 6px;
+}
+
+.di-battery {
+    spacing: 6px;
+    color: #f2f2f2;
+}
+
+.di-battery-label {
+    font-size: 9.5pt;
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+.di-round-button {
+    color: #ffffff;
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.di-round-button:hover {
+    background-color: rgba(255, 255, 255, 0.20);
+}
+
+.di-power-row {
+    spacing: 6px;
+}
+
+.di-power-choice {
+    padding: 7px 8px;
+}
+
+/* ---------- music ---------- */
+
+.di-music-compact {
+    spacing: 6px;
+}
+
+.di-eq {
+    spacing: 2px;
+}
+
+.di-eq-bar {
+    border-radius: 1.5px;
+    background-color: #5ee6b5;
+}
+
+.di-banner-row {
+    padding-bottom: 2px;
+}
+
+.di-music-tint {
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.di-music-row {
+    spacing: 16px;
+    padding: 12px 16px 12px 0;   /* the 112 px cover wrapper brings its own 12 px margin */
+}
+
+.di-music-cover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.di-music-col {
+    spacing: 2px;
+}
+
+.di-music-titlerow {
+    spacing: 10px;
+}
+
+.di-music-title {
+    font-size: 12pt;
+    font-weight: 800;
+    color: #ffffff;
+    max-width: 330px;
+}
+
+.di-music-artist {
+    font-size: 10pt;
+    color: rgba(255, 255, 255, 0.80);
+    max-width: 330px;
+}
+
+.di-music-album {
+    font-size: 8.5pt;
+    color: rgba(255, 255, 255, 0.50);
+    max-width: 330px;
+}
+
+.di-music-progress {
+    padding-top: 6px;
+}
+
+.di-music-seek {
+    height: 14px;
+    padding: 0;
+}
+
+.di-music-track {
+    height: 4px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.20);
+}
+
+.di-music-fill {
+    border-radius: 2px;
+    background-color: #5ee6b5;
+}
+
+.di-music-times {
+    padding-top: 1px;
+}
+
+.di-music-time {
+    font-size: 8pt;
+    font-feature-settings: "tnum";
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.di-music-controls {
+    spacing: 10px;
+    padding-top: 2px;
+}
+
+.di-music-btn {
+    color: #ffffff;
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+}
+
+.di-music-btn:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.di-music-play {
+    color: #000000;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background-color: #5ee6b5;
+}
+
+.di-music-play:hover {
+    background-color: #ffffff;
+}
+
+.di-music-popup {
+    spacing: 12px;
+    padding: 8px 18px 8px 10px;
+    min-width: 280px;
+}
+
+.di-music-popup-text {
+    spacing: 0;
+}
+
+.di-music-flow {
+    border-radius: 20px;
+}
+
+.di-music-glow {
+    border-radius: 56px;
+}
+
+/* ---------- statistics island ---------- */
+
+.di-graphs {
+    spacing: 8px;
+    padding: 10px 12px;
+    border-radius: 18px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.di-graph-head {
+    spacing: 8px;
+}
+
+.di-graph-value {
+    font-size: 9pt;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: #ffffff;
+}
+
+.di-graph {
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.di-procs {
+    spacing: 18px;
+    padding: 10px 14px;
+    min-width: 300px;
+    border-radius: 18px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.di-procs-col {
+    spacing: 5px;
+}
+
+.di-proc-row {
+    spacing: 8px;
+}
+
+.di-proc-name {
+    font-size: 9.5pt;
+    color: #f2f2f2;
+    min-width: 96px;
+    max-width: 120px;
+}
+
+.di-proc-value {
+    font-size: 9pt;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: rgba(255, 255, 255, 0.70);
+}
+
+/* ---------- QS island: icon row ---------- */
+
+.di-qs-row {
+    spacing: 10px;
+}
+
+.di-qs-icon {
+    color: #ffffff;
+}
+
+.di-qs-battery {
+    spacing: 3px;
+}
+
+.di-bat-shell {
+    width: 20px;
+    height: 10px;
+    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    border-radius: 3px;
+}
+
+.di-bat-tip {
+    width: 2px;
+    height: 4px;
+    border-radius: 0 1px 1px 0;
+    background-color: rgba(255, 255, 255, 0.75);
+}
+
+.di-bat-fill {
+    border-radius: 1.5px;
+    background-color: #ffffff;
+}
+
+.di-bat-warn { background-color: #f5b841; }
+.di-bat-crit { background-color: #ff6b5e; }
+
+.di-qs-percent {
+    margin-left: 3px;
+    font-size: 9.5pt;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: #ffffff;
+}
+
+/* ---------- screenshot preview ---------- */
+
+.di-shot {
+    spacing: 14px;
+    padding: 10px 18px 10px 10px;
+    min-width: 300px;
+}
+
+.di-shot-frame {
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    border-radius: 5px;
+    background-color: #101010;
+}
+
+.di-shot-flash {
+    background-color: #ffffff;
+}
+
+.di-shot-hint {
+    margin-top: 3px;
+    font-size: 8pt;
+    color: rgba(255, 255, 255, 0.38);
+}
+
+/* ---------- event indicators ---------- */
+
+.di-event-badge {
+    min-width: 40px;
+    padding: 3px 4px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.10);
+    font-size: 13pt;
+    font-weight: 800;
+    text-align: center;
+}
+
+.di-diskio {
+    spacing: 5px;
+    color: #ffffff;
+}
+
+.di-event {
+    spacing: 12px;
+    padding: 8px 18px 8px 12px;
+    min-width: 250px;
+}
+
+.di-event-title {
+    font-size: 10.5pt;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.di-event-sub {
+    font-size: 8.5pt;
+    color: rgba(255, 255, 255, 0.60);
+}
+
+.di-event-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 5px;
+}

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.dynamic-island"
+          path="/org/gnome/shell/extensions/dynamic-island/">
+
+    <!-- Which islands -->
+    <key name="center-enabled" type="b">
+      <default>true</default>
+      <summary>Show the centre island (replaces the clock)</summary>
+    </key>
+    <key name="stats-enabled" type="b">
+      <default>true</default>
+      <summary>Show the statistics island (top left, replaces the Activities button)</summary>
+    </key>
+    <key name="layout-version" type="i">
+      <default>0</default>
+      <summary>Internal: settings layout version (used to migrate saved module lists)</summary>
+    </key>
+    <key name="shortcut-qs" type="b">
+      <default>true</default>
+      <summary>GNOME's Quick Settings shortcut (Super+A) opens the right island instead of the GNOME menu</summary>
+    </key>
+    <key name="qs-enabled" type="b">
+      <default>true</default>
+      <summary>Show the Quick Settings island (top right)</summary>
+    </key>
+
+    <!-- Behaviour -->
+    <key name="expand-on-hover" type="b">
+      <default>true</default>
+      <summary>Expand when the pointer is over the island</summary>
+    </key>
+    <key name="hover-expand-delay" type="i">
+      <range min="0" max="2000"/>
+      <default>0</default>
+      <summary>Wait before expanding on hover (ms)</summary>
+    </key>
+    <key name="leave-collapse-delay" type="i">
+      <range min="0" max="5000"/>
+      <default>150</default>
+      <summary>Wait before collapsing after the pointer leaves (ms)</summary>
+    </key>
+    <key name="auto-collapse" type="i">
+      <range min="0" max="60000"/>
+      <default>5000</default>
+      <summary>Collapse after this long without the pointer (ms, 0 = never)</summary>
+    </key>
+
+    <!-- Activities and menus -->
+    <key name="osd-enabled" type="b">
+      <default>true</default>
+      <summary>Show volume / brightness changes in the centre island instead of GNOME's OSD</summary>
+    </key>
+    <key name="notification-preview" type="b">
+      <default>true</default>
+      <summary>Preview new notifications in the centre island instead of GNOME's banner</summary>
+    </key>
+    <key name="music-popup" type="b">
+      <default>true</default>
+      <summary>Show a short "now playing" preview in the centre island when the track changes</summary>
+    </key>
+    <key name="screenshot-preview" type="b">
+      <default>true</default>
+      <summary>Show a thumbnail of new screenshots in the centre island (needs notification-preview)</summary>
+    </key>
+    <key name="notification-duration" type="i">
+      <range min="1000" max="30000"/>
+      <default>5000</default>
+      <summary>How long a notification preview stays (ms)</summary>
+    </key>
+
+    <!-- Animation -->
+    <key name="animation-duration" type="i">
+      <range min="0" max="2000"/>
+      <default>420</default>
+      <summary>Expand animation length (ms)</summary>
+    </key>
+    <key name="spring" type="b">
+      <default>true</default>
+      <summary>Springy overshoot when expanding</summary>
+    </key>
+
+    <!-- Data -->
+    <key name="poll-compact" type="i">
+      <range min="500" max="10000"/>
+      <default>2000</default>
+      <summary>Refresh interval while compact (ms)</summary>
+    </key>
+    <key name="poll-expanded" type="i">
+      <range min="250" max="10000"/>
+      <default>1000</default>
+      <summary>Refresh interval while expanded (ms)</summary>
+    </key>
+
+    <!-- Modules -->
+    <key name="center-compact-modules" type="as">
+      <default>['music']</default>
+      <summary>Modules shown next to the clock in the panel</summary>
+    </key>
+    <key name="center-modules" type="as">
+      <default>['music', 'calendar', 'notifications']</default>
+      <summary>Content of the expanded centre island, in order</summary>
+    </key>
+    <key name="stats-modules" type="as">
+      <default>['cpu', 'ram', 'temp', 'net', 'battery', 'gpu', 'disk', 'graph', 'procs']</default>
+      <summary>Content of the expanded statistics island</summary>
+    </key>
+    <key name="stats-compact-modules" type="as">
+      <default>['cpu', 'ram', 'disk']</default>
+      <summary>Metrics shown in the statistics pill in the panel (disk shows up only during heavy disk activity)</summary>
+    </key>
+    <key name="events" type="as">
+      <default>['power', 'battery-low', 'wifi', 'bluetooth', 'privacy', 'thermal', 'memory', 'disk', 'lockkey', 'layout', 'meeting', 'powersaver']</default>
+      <summary>Events that briefly open the centre island</summary>
+    </key>
+    <key name="qs-modules" type="as">
+      <default>['sliders', 'toggles', 'system']</default>
+      <summary>Sections of the Quick Settings island, top to bottom</summary>
+    </key>
+
+    <!-- Look -->
+    <key name="theme" type="s">
+      <choices>
+        <choice value="ink"/>
+        <choice value="midnight"/>
+        <choice value="sunset"/>
+        <choice value="forest"/>
+        <choice value="rose"/>
+      </choices>
+      <default>'ink'</default>
+      <summary>Colour theme (island body, outline and default accent)</summary>
+    </key>
+    <key name="accent-color" type="s">
+      <default>''</default>
+      <summary>Accent colour override (#rrggbb); empty = use the theme's accent</summary>
+    </key>
+    <key name="meeting-mode" type="b">
+      <default>true</default>
+      <summary>Turn Do Not Disturb on while the microphone or camera is in use</summary>
+    </key>
+    <key name="meeting-dnd-active" type="b">
+      <default>false</default>
+      <summary>Internal: Do Not Disturb was switched on by meeting mode (so it can be undone)</summary>
+    </key>
+    <key name="auto-power-saver" type="b">
+      <default>true</default>
+      <summary>Switch to the Power Saver profile when the battery is low</summary>
+    </key>
+    <key name="auto-power-saver-level" type="i">
+      <range min="5" max="50"/>
+      <default>20</default>
+      <summary>Battery percentage at or below which Power Saver is requested</summary>
+    </key>
+    <key name="show-seconds" type="b">
+      <default>false</default>
+      <summary>Show seconds in the island clock</summary>
+    </key>
+  </schema>
+</schemalist>

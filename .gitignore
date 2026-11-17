@@ -1,0 +1,5 @@
+# built by install.sh / glib-compile-schemas
+gschemas.compiled
+# python
+__pycache__/
+*.pyc
