@@ -10,8 +10,9 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
-import {_, _f} from '../lib/i18n.js';
+import {_, _f, weekdayName} from '../lib/i18n.js';
 import {WINDOW_MS, addEntry, formatTokens, parseLine, splitDuration, windowStats} from '../lib/claudeUsage.js';
+import {QUOTA_BETA, QUOTA_URL, parseQuota, readToken, untilReset} from '../lib/claudeQuota.js';
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
@@ -20,8 +21,11 @@ Gio._promisify(Gio.InputStream.prototype, 'read_bytes_async', 'read_bytes_finish
 Gio._promisify(Gio.InputStream.prototype, 'close_async', 'close_finish');
 
 const RESCAN_S = 15;
+const QUOTA_EVERY_S = 180;      // Anthropic quota refresh while the island is open
+const QUOTA_ON_OPEN_S = 60;     // ... and on opening, if older than this
 // Claude's warm terracotta orange (colour only; no logo is drawn)
 const ORANGE = {r: 217, g: 119, b: 87};
+const QBAR_W = 96;
 const RED = {r: 255, g: 99, b: 84};
 const MAX_DEPTH = 4;
 const CHUNK = 1 << 20;
@@ -81,10 +85,15 @@ export default class ClaudeUsageModule extends IslandModule {
         this._sub.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         foot.add_child(this._sub);
 
+        // real quota (Anthropic /usage): one row per window
+        this._table = new St.BoxLayout({style_class: 'di-claude-table', orientation: Clutter.Orientation.VERTICAL,
+            visible: false});
+        this._localParts = [mid, this._track, foot];
         col.add_child(top);
         col.add_child(mid);
         col.add_child(this._track);
         col.add_child(foot);
+        col.add_child(this._table);
         card.add_child(col);
 
         card.connect('destroy', () => {
@@ -92,6 +101,8 @@ export default class ClaudeUsageModule extends IslandModule {
             this._ringTl = null;
             this._ring = this._ringText = this._value = this._unit = this._today = null;
             this._track = this._fill = this._sub = null;
+            this._table = this._localParts = null;
+            this._tableKey = null;
         });
         this._card = card;
         this._shown = null;
@@ -157,6 +168,9 @@ export default class ClaudeUsageModule extends IslandModule {
 
     onShown() {
         this._lastScan = 0;   // refresh as soon as the island opens
+        const now = GLib.get_monotonic_time() / 1e6;
+        if (now - (this._quotaAt ?? 0) >= QUOTA_ON_OPEN_S)
+            this._quotaAt = 0;
     }
 
     async tick() {
@@ -173,7 +187,57 @@ export default class ClaudeUsageModule extends IslandModule {
                 this._scanning = false;
             }
         }
+        if (this.ctx?.config?.claudeRealUsage && !this._fetching && now - (this._quotaAt ?? 0) >= QUOTA_EVERY_S)
+            await this._fetchQuota();
         this._render();
+    }
+
+    /** Real quota from Anthropic, with the token Claude Code keeps (read only, never refreshed here). */
+    async _fetchQuota() {
+        this._fetching = true;
+        const nowS = GLib.get_monotonic_time() / 1e6;
+        try {
+            const file = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_home_dir(), '.claude', '.credentials.json']));
+            const [bytes] = await file.load_contents_async(this.cancellable);
+            const tok = readToken(new TextDecoder().decode(bytes), Date.now());
+            if (!tok) {
+                this._quotaErr = _('No Claude Code login found');
+                return;
+            }
+            if (tok.expired) {
+                this._quotaErr = _('Login expired · opening Claude Code renews it');
+                return;
+            }
+            const Soup = (await import('gi://Soup?version=3.0')).default;
+            Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_finish');
+            this._soup ??= new Soup.Session({timeout: 10, user_agent: 'dynamic-island'});
+            const msg = Soup.Message.new('GET', QUOTA_URL);
+            msg.request_headers.append('Authorization', `Bearer ${tok.token}`);
+            msg.request_headers.append('anthropic-beta', QUOTA_BETA);
+            msg.request_headers.append('Content-Type', 'application/json');
+            const body = await this._soup.send_and_read_async(msg, GLib.PRIORITY_LOW, this.cancellable);
+            if (msg.status_code === 401) {
+                this._quotaErr = _('Login expired · opening Claude Code renews it');
+                return;
+            }
+            if (msg.status_code !== 200) {
+                this._quotaErr = _f('Anthropic answered %s', msg.status_code);
+                return;
+            }
+            const rows = parseQuota(JSON.parse(new TextDecoder().decode(body.toArray())));
+            if (rows.length) {
+                this._quota = {rows, at: Date.now()};
+                this._quotaErr = null;
+            }
+        } catch (e) {
+            if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                return;
+            this._quotaErr = _('Anthropic not reachable');
+            console.debug(`[dynamic-island] claude quota: ${e.message}`);
+        } finally {
+            this._quotaAt = nowS;
+            this._fetching = false;
+        }
     }
 
     /** Oldest message that can still matter: today, or the last 6 h (a window started before midnight). */
@@ -281,6 +345,16 @@ export default class ClaudeUsageModule extends IslandModule {
     _render() {
         if (!this._value)
             return;
+        const real = this.ctx?.config?.claudeRealUsage && this._quota?.rows.length;
+        this._table.visible = !!real;
+        for (const a of this._localParts)
+            a.visible = !real;
+        if (real) {
+            this._renderQuota();
+            return;
+        }
+        if (this.ctx?.config?.claudeRealUsage && this._quotaErr)
+            this._today.text = this._quotaErr;
         const {midnight} = this._since();
         const nowMs = Date.now();
         const w = windowStats([...this._entries.values()], nowMs, midnight);
@@ -290,7 +364,8 @@ export default class ClaudeUsageModule extends IslandModule {
                 label.text = text;
         };
         const accent = ORANGE;
-        set(this._today, w.today ? _f('Today %s', formatTokens(w.today)) : '');
+        if (!(this.ctx?.config?.claudeRealUsage && this._quotaErr))
+            set(this._today, w.today ? _f('Today %s', formatTokens(w.today)) : '');
 
         if (!w.active) {
             this._setRing(0, accent);
@@ -329,7 +404,71 @@ export default class ClaudeUsageModule extends IslandModule {
         }
     }
 
+    _rowLabel(r) {
+        if (r.kind === 'session')
+            return _('5-hour');
+        if (r.kind === 'weekly')
+            return _('Weekly (all)');
+        return _f('Weekly · %s', r.model ?? '?');
+    }
+
+    _resetText(r, now) {
+        const u = untilReset(r.resetsAt, now);
+        if (!u)
+            return '';
+        const n = u.unit === 'min' ? String(u.value) : u.value.toFixed(1).replace('.', _('.'));
+        const span = u.unit === 'd' ? _f('%s d', n) : u.unit === 'h' ? _f('%s h', n) : _f('%s min', n);
+        const at = new Date(r.resetsAt);
+        const clock = `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+        return `${span} (${weekdayName(at.getDay(), true)} ${clock})`;
+    }
+
+    _renderQuota() {
+        const {rows, at} = this._quota;
+        const now = Date.now();
+        const key = rows.map(r => `${r.kind}:${r.model}`).join('|');
+        if (key !== this._tableKey) {
+            this._tableKey = key;
+            this._table.destroy_all_children();
+            this._cells = rows.map(() => {
+                const row = new St.BoxLayout({style_class: 'di-claude-qrow'});
+                const name = new St.Label({style_class: 'di-claude-qname', y_align: Clutter.ActorAlign.CENTER});
+                const track = new St.Widget({style_class: 'di-claude-qtrack', width: QBAR_W, height: 6,
+                    y_align: Clutter.ActorAlign.CENTER});
+                const fill = new St.Widget({style_class: 'di-claude-qfill', width: QBAR_W, height: 6, scale_x: 0});
+                fill.set_pivot_point(0, 0.5);
+                track.add_child(fill);
+                const pct = new St.Label({style_class: 'di-claude-qpct', y_align: Clutter.ActorAlign.CENTER});
+                const reset = new St.Label({style_class: 'di-claude-qreset', y_align: Clutter.ActorAlign.CENTER,
+                    x_expand: true});
+                for (const a of [name, track, pct, reset])
+                    row.add_child(a);
+                this._table.add_child(row);
+                return {name, fill, pct, reset};
+            });
+            this.ctx?.requestExpandedRelayout?.();
+        }
+        rows.forEach((r, i) => {
+            const c = this._cells[i];
+            c.name.text = this._rowLabel(r);
+            c.pct.text = `${Math.round(r.percent)}%`;
+            c.reset.text = this._resetText(r, now);
+            const f = r.percent / 100;
+            if (Math.abs(c.fill.scale_x - f) > 0.002)
+                c.fill.ease({scale_x: f, duration: 600, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+            c.fill.set_style(r.percent >= 90 ? 'background-color: #ff6354;' : null);
+        });
+        // ring: the 5-hour window, as in the table
+        const s = rows.find(r => r.kind === 'session') ?? rows[0];
+        this._setRing(s.percent / 100, s.percent >= 90 ? RED : ORANGE);
+        this._ringText.text = `${Math.round(s.percent)}%`;
+        const mins = Math.floor((now - at) / 60000);
+        this._today.text = mins < 1 ? _('Anthropic /usage · now') : _f('Anthropic /usage · %s min ago', mins);
+    }
+
     destroy() {
+        this._soup?.abort();
+        this._soup = null;
         this._entries?.clear();
         this._files?.clear();
         this._ringTl?.stop();

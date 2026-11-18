@@ -318,6 +318,11 @@ dset claude-token-limit 20000; sleep 2; ev "$C._hold(true); $C._setMode('expande
 echo "   with a 20M limit: value=$(ev "$CL._value?.text") unit=$(ev "$CL._unit?.text") ring=$(ev "$CL._ringText?.text") frac=$(ev "$CL._ringFrac.toFixed(2)")"
 shot claude-card 600 0 720 640
 dreset claude-token-limit; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 1
+dset claude-real-usage true; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 6
+CL="$C._modules.find(m => m.constructor.id === 'claude')"
+echo "   real quota: rows=$(ev "JSON.stringify(($CL._cells ?? []).map(c => [c.name.text, c.pct.text, c.reset.text]))") ring=$(ev "$CL._ringText?.text") note=$(ev "$CL._today?.text") err=$(ev "String($CL._quotaErr)")"
+shot claude-quota 600 0 720 660
+dreset claude-real-usage; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 1
 echo "   play button colour: $(ev "$MU._playButton.get_style()")  progress fill: $(ev "$MU._fill.get_style()")"
 ev "$MU._next.emit('clicked', 1); true" >/dev/null; sleep 1.5
 echo "   Next clicked -> title=$(ev "$MU._info?.title") accent=$(ev "$MU._art?.accent") (blue cover => blue accent) progress reset: $(ev "$MU._elapsed.text")"

@@ -13,6 +13,15 @@ const WEEKDAYS = {
     tr: ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'],
     en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
 };
+// short forms written out: the first letters are ambiguous in Turkish (Pazar / Pazartesi)
+const WEEKDAYS_SHORT = {
+    tr: ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'],
+    en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+};
+const WEEKDAYS_MIN = {
+    tr: ['Pz', 'Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct'],
+    en: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+};
 const MONTHS = {
     tr: ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'],
     en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
@@ -150,6 +159,14 @@ const TR = {
     'Enter a percentage between 1 and 100': '1 ile 100 arasında bir yüzde gir',
     'No active Claude session to calibrate with': 'Kalibrasyon için aktif Claude oturumu yok',
     'Limit set to %s (%s used = %s%)': 'Limit %s olarak ayarlandı (%s kullanılmış = %%s)',
+    '5-hour': '5 saat', 'Weekly (all)': 'Haftalık (tümü)', 'Weekly · %s': 'Haftalık · %s',
+    '.': ',', '%s d': '%s g', '%s h': '%s sa',
+    'Anthropic /usage · now': 'Anthropic /usage · şimdi', 'Anthropic /usage · %s min ago': 'Anthropic /usage · %s dk önce',
+    'No Claude Code login found': 'Claude Code girişi bulunamadı',
+    'Login expired · opening Claude Code renews it': 'Giriş süresi dolmuş · Claude Code açılınca yenilenir',
+    'Anthropic answered %s': 'Anthropic yanıtı: %s', 'Anthropic not reachable': 'Anthropic\'e ulaşılamadı',
+    'Claude: real quota from Anthropic': 'Claude: Anthropic\'ten gerçek kota',
+    'Same numbers as /usage. Reads Claude Code\'s login token and sends it only to api.anthropic.com': '/usage ile aynı rakamlar. Claude Code giriş anahtarını okur, yalnızca api.anthropic.com\'a gönderir',
     // claude usage
     'Claude Code usage': 'Claude Code kullanımı', 'Claude token limit (K per 5 h)': 'Claude token limiti (5 saatte, bin)',
     '0 = just show the tokens used; set your own limit to see how much is left': '0 = yalnızca kullanılan token; kendi limitini yazarsan kalanı görürsün',
@@ -198,8 +215,13 @@ export function pct(n) {
 
 /** Day of week 0 = Sunday. */
 export function weekdayName(dow, short = false) {
-    const n = WEEKDAYS[_lang][((dow % 7) + 7) % 7];
-    return short ? n.slice(0, 3) : n;
+    const i = ((dow % 7) + 7) % 7;
+    return short ? WEEKDAYS_SHORT[_lang][i] : WEEKDAYS[_lang][i];
+}
+
+/** Two-letter day name for the calendar header. */
+export function weekdayMin(dow) {
+    return WEEKDAYS_MIN[_lang][((dow % 7) + 7) % 7];
 }
 
 export function monthName(m0, short = false) {

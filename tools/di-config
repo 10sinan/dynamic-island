@@ -111,6 +111,9 @@ EN = {
     "Kendiliğinden kapanma": "Auto close", "asla": "never", "yok": "none",
     "Claude token limiti (5 saatte)": "Claude token limit (per 5 h)",
     "Claude Code bildirimleri": "Claude Code notifications",
+    "Claude: Anthropic'ten gerçek kota": "Claude: real quota from Anthropic",
+    "Claude kartı /usage ile aynı rakamları gösterir (5 saat + haftalık). Claude Code giriş anahtarını okur, yalnızca api.anthropic.com'a gönderir.":
+        "The Claude card shows the same numbers as /usage (5-hour + weekly). Reads Claude Code's login token and sends it only to api.anthropic.com.",
     "Claude bitince ya da seni beklerken orta island turuncu dalgalı çizgiyle açılır. Bir kez: di-config claude-hooks install":
         "When Claude finishes or waits for you the centre island opens with a wavy orange outline. Once: di-config claude-hooks install",
     "Orta island'daki Claude kartı için 5 saatlik oturum limitin (bin token). 0 = yalnızca kullanılanı göster; yazarsan kalan yüzdeyi görürsün. Kullanım yerel kayıtlardan tahmin edilir.":
@@ -248,6 +251,8 @@ TABS = [
              help="Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner."),
         dict(key="claude-notify", kind="bool", label="Claude Code bildirimleri",
              help="Claude bitince ya da seni beklerken orta island turuncu dalgalı çizgiyle açılır. Bir kez: di-config claude-hooks install"),
+        dict(key="claude-real-usage", kind="bool", label="Claude: Anthropic'ten gerçek kota",
+             help="Claude kartı /usage ile aynı rakamları gösterir (5 saat + haftalık). Claude Code giriş anahtarını okur, yalnızca api.anthropic.com'a gönderir."),
         dict(key="claude-token-limit", kind="int", step=1000, unit="K", label="Claude token limiti (5 saatte)",
              zero="yok", help="Orta island'daki Claude kartı için 5 saatlik oturum limitin (bin token). 0 = yalnızca kullanılanı göster; yazarsan kalan yüzdeyi görürsün. Kullanım yerel kayıtlardan tahmin edilir."),
         dict(key="auto-power-saver", kind="bool", label="Pil azalınca otomatik Güç Tasarrufu",

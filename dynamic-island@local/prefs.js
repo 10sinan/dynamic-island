@@ -134,6 +134,8 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         this._switch(s, feat, 'meeting-mode', _('Meeting mode (mic/camera → Do Not Disturb)'));
         this._switch(s, feat, 'claude-notify', _('Claude Code notifications'),
             _('When Claude finishes or waits for you (run: di-config claude-hooks install)'));
+        this._switch(s, feat, 'claude-real-usage', _('Claude: real quota from Anthropic'),
+            _('Same numbers as /usage. Reads Claude Code\'s login token and sends it only to api.anthropic.com'));
         this._spin(s, feat, 'claude-token-limit', _('Claude token limit (K per 5 h)'),
             _('0 = just show the tokens used; set your own limit to see how much is left'), 1000);
         // calibration: type the session % that Claude Code's /usage shows

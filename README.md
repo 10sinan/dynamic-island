@@ -213,7 +213,9 @@ Arayüz dili cihazın diline göre **değil**, `language` ayarına göre belirle
 
 Orta island'da **CLAUDE** kartı: 5 saatlik oturumda kullanılan token ve oturumun ne zaman sıfırlanacağı. Veri, bu bilgisayardaki `~/.claude/projects/**/*.jsonl` kayıtlarından **tahmin edilir**; hiçbir şey internete gönderilmez, hesap bilgin/token'ın okunmaz. Anthropic planındaki kalan kotayı yerelde yayımlamadığı için "kalan" bir limite göredir: ayarlardan **Claude token limiti** (bin token) girersen kalan yüzde görünür (örn. `di-config set claude-token-limit 20000` = 20M). Hesap yalnızca girdi + çıktı + önbellek yazma tokenlarını sayar, önbellek okumayı saymaz; resmî `/usage` ekranıyla birebir aynı değildir (Anthropic limiti farklı ağırlıklarla sayar ve yüzdeyi yerelde yayımlamaz).
 
-**Kalibrasyon:** Claude Code'da `/usage`'ın gösterdiği oturum yüzdesini bir kez gir; limit, yerelde sayılan tokenlarla o yüzde eşleşecek şekilde ayarlanır:
+**Gerçek kota (önerilen):** `claude-real-usage` açıksa kart, Claude Code'un `/usage` ekranındaki rakamların aynısını gösterir: **5 saat** ve **haftalık** (varsa model bazlı haftalık) satırları; her satırda turuncu çubuk, yüzde ve sıfırlanma (`4,7 sa (Per 01:30)`). Bunun için Claude Code'un `~/.claude/.credentials.json` dosyasındaki giriş anahtarı **yalnızca okunur** ve yalnızca `api.anthropic.com`'a gönderilir (yenilenmez/değiştirilmez); island açıkken 3 dakikada bir güncellenir. Bu adres resmî olarak belgelenmemiştir; çalışmazsa kart yerel tahmine döner. Açmak: `di-config set claude-real-usage true` ya da Ayarlar → Özellikler.
+
+**Kalibrasyon (yerel tahmin için):** Claude Code'da `/usage`'ın gösterdiği oturum yüzdesini bir kez gir; limit, yerelde sayılan tokenlarla o yüzde eşleşecek şekilde ayarlanır:
 
 ```bash
 di-config claude-calibrate 37      # ya da: Ayarlar penceresi → Özellikler → "Kalibre et"
@@ -320,6 +322,7 @@ tests/
 ├── i18n.test.js           # dil katmanı testleri (gjs)
 ├── spring.test.js         # yay fiziği testleri (gjs)
 ├── claudeusage.test.js    # Claude kullanım hesabı testleri (gjs)
+├── claudequota.test.js    # Anthropic kota yanıtı ayrıştırma testleri (gjs)
 ├── wave.test.js           # dalgalı çizgi geometrisi testleri (gjs)
 ├── claudehook.test.py     # Claude Code hook betiği testleri
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
@@ -379,6 +382,7 @@ gjs -m tests/cliplist.test.js
 gjs -m tests/i18n.test.js
 gjs -m tests/spring.test.js
 gjs -m tests/claudeusage.test.js
+gjs -m tests/claudequota.test.js
 gjs -m tests/wave.test.js
 python3 tests/claudehook.test.py
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py

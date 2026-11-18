@@ -1207,3 +1207,45 @@
     color: #f0b49e;
     max-width: 110px;
 }
+
+/* ---- Claude card: real quota table */
+.di-claude-table {
+    spacing: 5px;
+    padding-top: 4px;
+}
+
+.di-claude-qrow {
+    spacing: 10px;
+}
+
+.di-claude-qname {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #ffffff;
+    min-width: 108px;
+}
+
+.di-claude-qtrack {
+    background-color: rgba(217, 119, 87, 0.20);
+    border-radius: 3px;
+}
+
+.di-claude-qfill {
+    background-color: #d97757;
+    border-radius: 3px;
+}
+
+.di-claude-qpct {
+    font-size: 9.5pt;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: #ffffff;
+    min-width: 40px;
+    text-align: right;
+}
+
+.di-claude-qreset {
+    font-size: 8.5pt;
+    font-feature-settings: "tnum";
+    color: rgba(240, 190, 170, 0.80);
+}

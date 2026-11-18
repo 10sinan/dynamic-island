@@ -4,7 +4,7 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
-import {weekStart, weekdayName, monthTitle} from '../lib/i18n.js';
+import {weekStart, weekdayMin, monthTitle} from '../lib/i18n.js';
 
 const CELLS = 42;   // 6 weeks
 
@@ -66,7 +66,7 @@ export default class CalendarModule extends IslandModule {
         const sunday = GLib.DateTime.new_local(2023, 1, 1, 12, 0, 0);   // a Sunday
         for (let i = 0; i < 7; i++) {
             const d = sunday.add_days((this._weekStart + i) % 7);
-            names.add_child(new St.Label({style_class: 'di-cal-weekday', text: weekdayName(d.get_day_of_week() % 7, true).slice(0, 2)}));
+            names.add_child(new St.Label({style_class: 'di-cal-weekday', text: weekdayMin(d.get_day_of_week() % 7)}));
         }
         box.add_child(names);
 

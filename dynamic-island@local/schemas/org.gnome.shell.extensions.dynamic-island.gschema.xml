@@ -113,6 +113,10 @@
       <default>true</default>
       <summary>Show Claude Code notifications (finished / waiting) in the centre island; needs `di-config claude-hooks install`</summary>
     </key>
+    <key name="claude-real-usage" type="b">
+      <default>false</default>
+      <summary>Claude card shows the real plan quota from Anthropic (same as /usage): reads Claude Code's login token from ~/.claude/.credentials.json and sends it only to api.anthropic.com</summary>
+    </key>
     <key name="claude-token-limit" type="i">
       <range min="0" max="100000000"/>
       <default>0</default>

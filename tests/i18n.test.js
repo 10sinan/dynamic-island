@@ -12,6 +12,7 @@ eq(weekStart(), 1, 'tr week');
 const dt = GLib.DateTime.new_local(2026, 11, 18, 12, 0, 0);   // a Wednesday
 eq(shortDate(dt), 'Çar 18 Kas', 'tr date');
 eq(monthTitle(2026, 11), 'Kasım 2026', 'tr month');
+eq(weekdayName(0, true) + weekdayName(1, true), 'PazPzt', 'tr short days are distinct');
 
 setLanguage('en');
 eq(_('Clear'), 'Clear', 'en clear');
