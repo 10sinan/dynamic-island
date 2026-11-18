@@ -148,7 +148,7 @@ EN = {
     "CPU kullanımı": "CPU usage", "RAM kullanımı": "RAM usage", "CPU sıcaklığı": "CPU temperature", "Ağ hızı (↓ ↑)": "Network speed (↓ ↑)",
     "Pil": "Battery",
     "açık": "on", "kapalı": "off", "● açık ": "● on ", "○ kapalı": "○ off",
-    T("(boş)"): "(empty)", "panelde gösterilen metrikler": "metrics shown in the panel",
+    "(boş)": "(empty)", "panelde gösterilen metrikler": "metrics shown in the panel",
     "karo   panelde": "tile   panel",
     "değişiklikler anında uygulanır": "changes apply instantly", "· ayarlar": "· settings",
     "↑↓ gez  ←→ değiştir  Space aç/kapa  Tab/1-7 sekme  r varsayılan  R hepsi  q çık":
@@ -156,7 +156,7 @@ EN = {
     "Önce Space ile modülü aç, sonra taşı.": "Turn the module on with Space first, then move it.",
     "güncellendi": "updated", "taşındı": "moved", "panelde gösterilemez.": "cannot be shown in the panel.",
     "panelde gösterim değişti": "panel display changed", "vurgu rengi": "accent color",
-    "Geçersiz renk. Örnek: #5ab8ff": "Invalid color. Example: #5ab8ff", T("Renk (#rrggbb): "): "Color (#rrggbb): ",
+    "Geçersiz renk. Örnek: #5ab8ff": "Invalid color. Example: #5ab8ff", "Renk (#rrggbb): ": "Color (#rrggbb): ",
     "varsayılana döndü": "reset to default", "tüm ayarlar varsayılana döndü": "all settings reset to defaults",
 }
 
