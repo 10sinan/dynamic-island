@@ -230,8 +230,10 @@ export default class QsStatusModule extends IslandModule {
         const pct = Number(cap);
         if (!this._batLabel || !Number.isFinite(pct))
             return;
-        const charging = status === 'Charging';
-        this._batGlyph.set({pct, charging});
+        // green + bolt whenever it is on power: "Not charging" means plugged in
+        // but held by a charge limit (e.g. ASUS 80 %), "Full" plugged in and full
+        const plugged = status === 'Charging' || status === 'Full' || status === 'Not charging';
+        this._batGlyph.set({pct, charging: plugged});
         const text = `${pct}%`;
         if (this._batLabel.text !== text) {
             this._batLabel.text = text;

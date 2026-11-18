@@ -128,10 +128,12 @@ export default class SystemModule extends IslandModule {
         if (!this._batLabel || !Number.isFinite(pct))
             return;
         const charging = status === 'Charging';
-        const text = `${pct}%${charging ? ` · ${_('charging')}` : status === 'Full' ? ` · ${_('full')}` : ''}`;
+        const note = charging ? _('charging') : status === 'Full' ? _('full')
+            : status === 'Not charging' ? _('plugged in') : '';
+        const text = note ? `${pct}% · ${note}` : `${pct}%`;
         if (this._batLabel.text !== text)
             this._batLabel.text = text;
-        this._batIcon.icon_name = batteryIcon(pct, charging);
+        this._batIcon.icon_name = batteryIcon(pct, charging || status === 'Not charging' || status === 'Full');
     }
 
     destroy() {

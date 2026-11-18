@@ -7,6 +7,8 @@ Kullanım:
     di-config get <anahtar>
     di-config set <anahtar> <değer>
     di-config reset [anahtar]     bir ayarı ya da hepsini varsayılana döndür
+    di-config claude-hooks install|remove|status
+                                  Claude Code bildirimleri için hook'ları kur / kaldır
 
 Değişiklikler GSettings'e yazılır; eklenti bunları dinler ve island'ları
 oturumu kapatmadan anında yeniden kurar.
@@ -106,6 +108,9 @@ EN = {
         "Wait before closing after the pointer leaves.",
     "Kendiliğinden kapanma": "Auto close", "asla": "never", "yok": "none",
     "Claude token limiti (5 saatte)": "Claude token limit (per 5 h)",
+    "Claude Code bildirimleri": "Claude Code notifications",
+    "Claude bitince ya da seni beklerken orta island turuncu dalgalı çizgiyle açılır. Bir kez: di-config claude-hooks install":
+        "When Claude finishes or waits for you the centre island opens with a wavy orange outline. Once: di-config claude-hooks install",
     "Orta island'daki Claude kartı için 5 saatlik oturum limitin (bin token). 0 = yalnızca kullanılanı göster; yazarsan kalan yüzdeyi görürsün. Kullanım yerel kayıtlardan tahmin edilir.":
         "Your 5-hour session limit (thousands of tokens) for the Claude card in the center island. 0 = just show what was used; set it to see the percentage left. Usage is estimated from local logs.",
     "İmleç üstünde değilken bu süre sonunda kapanır. 0 = asla.": "Closes after this time when not hovered. 0 = never.",
@@ -140,7 +145,7 @@ EN = {
     "Space: aç/kapa. Seçilen olaylar olunca orta island kendiliğinden açılıp durumu gösterir.":
         "Space: on/off. When a chosen event happens the center island opens by itself to show it.",
     "Claude Code kullanımı (5 saatlik oturum)": "Claude Code usage (5-hour session)",
-    "Çalışma alanları ve pencereler": "Workspaces and windows", "Ses çıkışı seçici": "Sound output chooser",
+    "Çalışma alanları ve pencereler": "Workspaces and windows", "Ses çıkışı seçici": "Sound output chooser", "Uygulama başına ses": "Per-app volume",
     "GPU kullanımı": "GPU usage", "Disk doluluğu": "Disk usage", "Canlı grafikler (60 sn)": "Live graphs (60 s)",
     "En çok kaynak kullanan uygulamalar": "Top resource-using apps", "Şarj takıldı / çıkarıldı": "Charger plugged / unplugged",
     "Pil düşük (%20, %10)": "Battery low (20%, 10%)", "Wi-Fi bağlandı / koptu": "Wi-Fi connected / lost",
@@ -174,7 +179,7 @@ def T(s):
 
 CENTER_ALL = ["music", "calendar", "notifications", "claude"]
 STATS_ALL = ["workspaces", "cpu", "ram", "temp", "net", "battery", "gpu", "disk", "graph", "procs"]
-QS_ALL = ["sliders", "audio", "toggles", "clipboard", "system"]
+QS_ALL = ["sliders", "audio", "mixer", "toggles", "clipboard", "system"]
 EVENTS_ALL = ["power", "battery-low", "wifi", "bluetooth", "privacy", "thermal", "memory", "disk",
               "lockkey", "layout", "meeting", "powersaver"]
 # modules that have a view in the panel pill (the "panelde" column)
@@ -184,6 +189,7 @@ MODULE_NAMES = {
     "claude": "Claude Code kullanımı (5 saatlik oturum)",
     "workspaces": "Çalışma alanları ve pencereler",
     "audio": "Ses çıkışı seçici",
+    "mixer": "Uygulama başına ses",
     "gpu": "GPU kullanımı",
     "disk": "Disk doluluğu",
     "graph": "Canlı grafikler (60 sn)",
@@ -238,6 +244,8 @@ TABS = [
              help="Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır."),
         dict(key="meeting-mode", kind="bool", label="Toplantı modu (mikrofon/kamera → Rahatsız Etme)",
              help="Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner."),
+        dict(key="claude-notify", kind="bool", label="Claude Code bildirimleri",
+             help="Claude bitince ya da seni beklerken orta island turuncu dalgalı çizgiyle açılır. Bir kez: di-config claude-hooks install"),
         dict(key="claude-token-limit", kind="int", step=1000, unit="K", label="Claude token limiti (5 saatte)",
              zero="yok", help="Orta island'daki Claude kartı için 5 saatlik oturum limitin (bin token). 0 = yalnızca kullanılanı göster; yazarsan kalan yüzdeyi görürsün. Kullanım yerel kayıtlardan tahmin edilir."),
         dict(key="auto-power-saver", kind="bool", label="Pil azalınca otomatik Güç Tasarrufu",
@@ -678,8 +686,72 @@ class App:
                 pass
 
 
+# ----------------------------------------------------------------- Claude Code hooks
+
+CLAUDE_SETTINGS = os.path.expanduser("~/.claude/settings.json")
+HOOK_EVENTS = ("Stop", "Notification")
+
+
+def hook_command():
+    here = os.path.dirname(os.path.realpath(__file__))
+    installed = os.path.expanduser("~/.local/bin/di-claude-hook")
+    return installed if os.path.exists(installed) else os.path.join(here, "di-claude-hook")
+
+
+def _is_ours(entry):
+    return any(str(h.get("command", "")).endswith("di-claude-hook") for h in entry.get("hooks", []) if isinstance(h, dict))
+
+
+def claude_hooks(action):
+    """install / remove / status of the Stop + Notification hooks in ~/.claude/settings.json."""
+    import json
+    import shutil
+    data = {}
+    if os.path.exists(CLAUDE_SETTINGS):
+        with open(CLAUDE_SETTINGS, encoding="utf-8") as f:
+            data = json.load(f)
+    hooks = data.get("hooks") or {}
+    present = {ev: any(_is_ours(e) for e in hooks.get(ev, [])) for ev in HOOK_EVENTS}
+    if action == "status":
+        for ev in HOOK_EVENTS:
+            print(f"{ev:13} {'kurulu' if present[ev] else 'yok'}")
+        return
+    if action == "install":
+        cmd = hook_command()
+        for ev in HOOK_EVENTS:
+            if not present[ev]:
+                hooks.setdefault(ev, []).append({"hooks": [{"type": "command", "command": cmd}]})
+        msg = f"Claude Code hook'ları kuruldu: {cmd}"
+    elif action == "remove":
+        for ev in HOOK_EVENTS:
+            kept = [e for e in hooks.get(ev, []) if not _is_ours(e)]
+            if kept:
+                hooks[ev] = kept
+            else:
+                hooks.pop(ev, None)
+        msg = "Claude Code hook'ları kaldırıldı."
+    else:
+        sys.exit("kullanım: di-config claude-hooks install|remove|status")
+    if hooks:
+        data["hooks"] = hooks
+    else:
+        data.pop("hooks", None)
+    os.makedirs(os.path.dirname(CLAUDE_SETTINGS), exist_ok=True)
+    if os.path.exists(CLAUDE_SETTINGS):
+        shutil.copy2(CLAUDE_SETTINGS, CLAUDE_SETTINGS + ".bak")
+    tmp = CLAUDE_SETTINGS + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.replace(tmp, CLAUDE_SETTINGS)
+    print(msg)
+
+
 def main():
     locale.setlocale(locale.LC_ALL, "")
+    if len(sys.argv) > 1 and sys.argv[1] == "claude-hooks":
+        claude_hooks(sys.argv[2] if len(sys.argv) > 2 else "status")
+        return
     settings, schema = open_settings()
     if len(sys.argv) > 1:
         if sys.argv[1] in ("-h", "--help", "help"):

@@ -26,6 +26,8 @@ echo "• di-config bağlanıyor: $BIN_DIR/di-config"
 mkdir -p "$BIN_DIR"
 chmod +x "$HERE/tools/di-config"
 ln -sfn "$HERE/tools/di-config" "$BIN_DIR/di-config"
+chmod +x "$HERE/tools/di-claude-hook"
+ln -sfn "$HERE/tools/di-claude-hook" "$BIN_DIR/di-claude-hook"
 case ":$PATH:" in
     *":$BIN_DIR:"*) ;;
     *) echo "  ! $BIN_DIR PATH'te değil. ~/.bashrc'ye ekle: export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;

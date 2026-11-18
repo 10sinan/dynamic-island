@@ -7,6 +7,7 @@ import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 
 import {IslandModule} from '../base.js';
+import {_} from '../../lib/i18n.js';
 
 function volumeIcon(frac, muted) {
     if (muted || frac <= 0)
@@ -122,7 +123,7 @@ export default class SlidersModule extends IslandModule {
         this._volSlider.value = muted ? 0 : frac;
         this._syncing = false;
         this._volIcon.icon_name = volumeIcon(frac, muted);
-        this._volPct.text = s ? (muted ? 'sessiz' : `${Math.round(frac * 100)}%`) : '–';
+        this._volPct.text = s ? (muted ? _('muted') : `${Math.round(frac * 100)}%`) : '–';
     }
 
     _bindScale() {

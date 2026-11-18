@@ -17,13 +17,14 @@ import {ClipboardStore} from './lib/clipboardStore.js';
 import {Caffeine} from './lib/caffeine.js';
 import {MeetingMode} from './lib/meeting.js';
 import {AutoPowerSaver} from './lib/powerPolicy.js';
+import {ClaudeNotifier} from './lib/claudeNotifier.js';
 import {readConfig} from './lib/settings.js';
 import {setLanguage} from './lib/i18n.js';
 import {LOG_PREFIX, REBUILD_DEBOUNCE_MS} from './lib/constants.js';
 import {CENTER_FIXED, CENTER_MODULES, QS_FIXED, QS_MODULES, STATS_FIXED, STATS_MODULES} from './modules/index.js';
 
 const STAT_IDS = ['cpu', 'ram', 'temp', 'net', 'battery'];
-const LAYOUT_VERSION = 5;
+const LAYOUT_VERSION = 6;
 // Written by the extension itself; changing them must not rebuild the islands.
 const INTERNAL_KEYS = new Set(['meeting-dnd-active', 'layout-version']);
 
@@ -194,6 +195,14 @@ export default class DynamicIslandExtension extends Extension {
                 s.set_strv('qs-modules', at >= 0 ? [...qs.slice(0, at + 1), 'audio', ...qs.slice(at + 1)] : ['audio', ...qs]);
             }
         }
+        if (from < 6) {
+            // v6: per-app volume in the right island, after the output chooser
+            const qs = userList('qs-modules');
+            if (qs && !qs.includes('mixer')) {
+                const after = qs.includes('audio') ? qs.indexOf('audio') : qs.indexOf('sliders');
+                s.set_strv('qs-modules', after >= 0 ? [...qs.slice(0, after + 1), 'mixer', ...qs.slice(after + 1)] : ['mixer', ...qs]);
+            }
+        }
         s.set_int('layout-version', LAYOUT_VERSION);
     }
 
@@ -294,6 +303,14 @@ export default class DynamicIslandExtension extends Extension {
                 this._features.push(new OsdRouter(center, cfg));
             if (center && cfg.notificationPreview)
                 this._features.push(new NotificationPreview(center, cfg));
+            // Claude Code hook -> D-Bus -> wavy orange notification
+            if (center && cfg.claudeNotify) {
+                try {
+                    this._features.push(new ClaudeNotifier(center));
+                } catch (e) {
+                    console.warn(`${LOG_PREFIX} Claude notifications unavailable: ${e.message}`);
+                }
+            }
             // event indicators use whichever island exists (centre preferred)
             const host = center ?? stats ?? qs;
             if (host) {

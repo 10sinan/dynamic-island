@@ -21,6 +21,7 @@ export function readConfig(settings) {
         autoCollapse: settings.get_int('auto-collapse'),
 
         expandMs: settings.get_int('animation-duration'),
+        claudeNotify: settings.get_boolean('claude-notify'),
         claudeLimit: settings.get_int('claude-token-limit') * 1000,
         spring: settings.get_boolean('spring'),
         morphBlur: settings.get_boolean('morph-blur'),

@@ -577,6 +577,59 @@ ev "$EXT._toggleSearch(); true" >/dev/null; sleep 1
 echo "   Super+R again -> closed=$(ev "!$SR.isOpen") pinned=$(ev "$C.pinned") modal released=$(ev "Main.modalCount === $MODAL0") mode=$(ev "$C.mode") sections back=$(ev "[...$C._expandedActors].filter(([m, a]) => m !== $SR && a.visible).length")"
 echo
 
+echo "== Claude Code notifications (hook -> D-Bus -> island)"
+CT="$C._activityInner.get_child()"
+echo '{"hook_event_name":"Stop","cwd":"/home/x/projects/dynamic-island"}' | python3 "$HERE/tools/di-claude-hook"; sleep 0.25
+echo "   Stop: activity=$(ev "$C.activityKey") mode=$(ev "$C.mode") title=$(ev "$CT?.get_child_at_index(1).get_child_at_index(0).text") sub=$(ev "$CT?.get_child_at_index(1).get_child_at_index(1).text")"
+shot claude-grow 460 0 1000 120
+sleep 0.6
+P1=$(ev "$C._outlineFx?.phase.toFixed(2)"); sleep 0.3; P2=$(ev "$C._outlineFx?.phase.toFixed(2)")
+echo "   wavy outline: actor=$(ev "!!$C._outline") alpha=$(ev "$C._outlineFx?.alpha.toFixed(2)") phase $P1 -> $P2 moving=$([ "$P1" != "$P2" ] && echo true || echo false)"
+shot claude-done 460 0 1000 120
+sleep 6.5
+echo "   after 6 s: activity=$(ev "$C.activityKey") outline removed=$(ev "!$C._outline")"
+echo '{"hook_event_name":"Notification","cwd":"/p/app","message":"Claude needs your permission to use Bash"}' | python3 "$HERE/tools/di-claude-hook"; sleep 0.8
+echo "   permission: title=$(ev "$CT?.get_child_at_index(1).get_child_at_index(0).text") sub=$(ev "$CT?.get_child_at_index(1).get_child_at_index(1).text") duration=$(ev "$C._activity?.duration")"
+shot claude-waiting 460 0 1000 120
+ev "$C.endActivity('claude'); true" >/dev/null; sleep 1
+# Claude's window focused -> nothing; not focused -> shown, click focuses it
+WAYLAND_DISPLAY=di-wl-test gnome-text-editor >/dev/null 2>&1 &
+ED=$!
+sleep 7
+EDW="global.display.list_all_windows().find(w => w.get_wm_class()?.toLowerCase().includes('texteditor'))"
+ev "Main.activateWindow($EDW); true" >/dev/null; sleep 1
+WPID=$(ev "$EDW?.get_pid()")
+echo "   editor window: pid=$WPID focused=$(ev "global.display.focus_window === $EDW")"
+CALL="gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/DynamicIsland --method org.gnome.Shell.Extensions.DynamicIsland.ClaudeEvent"
+$CALL done proj "" "$WPID,1" >/dev/null; sleep 0.8
+echo "   window focused (pid $WPID): shown=$(ev "$C.activityKey === 'claude'")"
+ev "$EDW.minimize(); true" >/dev/null; sleep 0.5
+$CALL done proj "" "$WPID" >/dev/null; sleep 0.8
+echo "   window not focused: shown=$(ev "$C.activityKey === 'claude'")"
+ev "$C._onActivityClicked(1); true" >/dev/null; sleep 0.8
+echo "   click -> Claude's window focused: $(ev "global.display.focus_window?.get_pid() === $WPID") island=$(ev "$C.mode")"
+kill $ED 2>/dev/null; sleep 1
+dset claude-notify false; sleep 1.2
+echo '{"hook_event_name":"Stop","cwd":"/x"}' | python3 "$HERE/tools/di-claude-hook"; sleep 0.6
+echo "   claude-notify=false: shown=$(ev "$C.activityKey === 'claude'") D-Bus object gone=$(gdbus introspect --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/DynamicIsland 2>/dev/null | grep -c ClaudeEvent)"
+dreset claude-notify; sleep 1.2
+
+echo "== per-app volume (silent sound in the sandbox)"
+python3 -c "import wave; w=wave.open('$SANDBOX/silence.wav','wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000); w.writeframes(bytes(8000*2*6)); w.close()"
+MX="$Q.moduleById('mixer')"
+paplay --client-name=di-test "$SANDBOX/silence.wav" >/dev/null 2>&1 &
+PA=$!
+sleep 2
+ev "$Q._hold(true); $Q._setMode('expanded'); true" >/dev/null; sleep 1
+echo "   playing: rows=$(ev "$MX._rows.size") visible=$(ev "$MX._box?.visible") name=$(ev "[...$MX._rows.values()][0]?.row.get_child_at_index(1).get_child_at_index(0).text")"
+ev "[...$MX._rows.values()][0]?.slider && ([...$MX._rows.values()][0].slider.value = 0.4); true" >/dev/null; sleep 0.5
+echo "   slider 40% -> stream volume: $(ev "(() => { const e = [...$MX._rows.values()][0]; return e ? Math.round(e.stream.volume / imports.gi.Gvc.MixerControl.prototype.get_vol_max_norm.call($MX._control) * 100) : 'n/a'; })()")% pct=$(ev "[...$MX._rows.values()][0]?.pct.text")"
+shot qs-mixer 1300 0 620 520
+wait $PA 2>/dev/null; sleep 1.5
+echo "   finished: rows=$(ev "$MX._rows.size") hidden=$(ev "!$MX._box?.visible")"
+ev "$Q._hold(false); $Q._collapseAll(false); true" >/dev/null; sleep 0.5
+echo
+
 echo "== $CYCLES disable/enable cycles"
 echo "   before: $(ev "$COUNTS")"
 for i in $(seq 1 "$CYCLES"); do

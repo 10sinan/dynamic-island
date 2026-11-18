@@ -32,10 +32,14 @@ import {PanelSlot} from './panelSlot.js';
 import {History} from './history.js';
 import {hexToRgb, mix} from './color.js';
 import {SpringGroup} from './spring.js';
+import {perimeterPoints, perimeterLength, waveOffset} from './wave.js';
+import Cairo from 'gi://cairo';
 
 function isCancelled(e) {
     return e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED) ?? false;
 }
+
+const OUTLINE_MARGIN = 8;   // px around the pill for the wavy line + glow
 
 function sameRect(a, b) {
     return a && b && a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
@@ -296,6 +300,115 @@ export class Island {
         }
         // Clip content to the pill: paint-only, no relayout.
         this._content.set_clip(bg.x, bg.y, bg.width, bg.height);
+        if (this._outline) {
+            const m = OUTLINE_MARGIN;
+            this._outline.set_position(bg.x - m, bg.y - m);
+            this._outline.set_size(Math.max(1, bg.width + 2 * m), Math.max(1, bg.height + 2 * m));
+        }
+    }
+
+    // ------------------------------------------------------------ wavy outline
+
+    /**
+     * An animated wavy line just outside the pill (Claude notifications).
+     * @param {{color: number[], color2?: number[], amp?: number, speed?: number, wavelength?: number}|null} fx
+     *   null fades it out and removes the actor (no cost while unused)
+     */
+    setOutlineEffect(fx) {
+        if (this._destroyed || this._actorGone)
+            return;
+        if (!fx) {
+            if (this._outlineFx)
+                this._outlineFx.target = 0;
+            return;
+        }
+        const prev = this._outlineFx;
+        this._outlineFx = {amp: 2.2, speed: 1, wavelength: 30, color2: fx.color, ...fx,
+            phase: prev?.phase ?? 0, alpha: prev?.alpha ?? 0, target: 1, grow: prev?.grow ?? 0};
+        if (this._outline)
+            return;
+        const area = new St.DrawingArea({reactive: false});
+        area.connect('repaint', () => this._paintOutline());
+        this._root.insert_child_above(area, this._bg);
+        this._outline = area;
+        this._onBgChanged();
+        let last = 0;
+        const tl = new Clutter.Timeline({actor: area, duration: 60000, repeat_count: -1});
+        tl.connect('new-frame', (_t, msecs) => {
+            const o = this._outlineFx;
+            if (!o || !this._outline)
+                return;
+            const dt = Math.max(0, Math.min(100, msecs - last)) / 1000;
+            last = msecs > last ? msecs : 0;
+            o.phase += dt * 2 * Math.PI / 1.6 * o.speed;   // one wave per ~1.6 s
+            // fade in / out linearly (~0.3 s)
+            o.alpha = o.target > o.alpha ? Math.min(o.target, o.alpha + dt / 0.3)
+                : Math.max(o.target, o.alpha - dt / 0.3);
+            o.grow = Math.min(1, o.grow + dt / 0.45);
+            if (o.target === 0 && o.alpha <= 0.001) {
+                this._removeOutline();
+                return;
+            }
+            this._outline.queue_repaint();
+        });
+        this._outlineTl = tl;
+        tl.start();
+    }
+
+    _removeOutline() {
+        this._outlineTl?.stop();
+        this._outlineTl = null;
+        this._outline?.destroy();
+        this._outline = null;
+        this._outlineFx = null;
+    }
+
+    _paintOutline() {
+        const o = this._outlineFx, area = this._outline;
+        if (!o || !area)
+            return;
+        const cr = area.get_context();
+        try {
+            const m = OUTLINE_MARGIN;
+            const w = this._bg.width, h = this._bg.height, rad = Math.max(0, this._radius);
+            const total = perimeterLength(w, h, rad);
+            const pts = perimeterPoints(w, h, rad, 3);
+            if (pts.length < 8)
+                return;
+            // amplitude grows in with the notification, the line follows the morph every frame
+            const amp = o.amp * (0.25 + 0.75 * o.grow);
+            const path = () => {
+                pts.forEach((p, i) => {
+                    const off = 1.2 + waveOffset(p.s, total, o.phase, amp, o.wavelength);
+                    const x = m + p.x + p.nx * off, y = m + p.y + p.ny * off;
+                    if (i === 0)
+                        cr.moveTo(x, y);
+                    else
+                        cr.lineTo(x, y);
+                });
+                cr.closePath();
+            };
+            const [r1, g1, b1] = o.color, [r2, g2, b2] = o.color2;
+            const grad = (alpha) => {
+                const g = new Cairo.LinearGradient(m, 0, m + w, 0);
+                g.addColorStopRGBA(0, r1 / 255, g1 / 255, b1 / 255, alpha);
+                g.addColorStopRGBA(0.5, r2 / 255, g2 / 255, b2 / 255, alpha);
+                g.addColorStopRGBA(1, r1 / 255, g1 / 255, b1 / 255, alpha);
+                return g;
+            };
+            cr.setLineJoin(Cairo.LineJoin.ROUND);
+            // soft glow, then the bright line
+            path();
+            cr.setSource(grad(0.22 * o.alpha));
+            cr.setLineWidth(6);
+            cr.stroke();
+            path();
+            cr.setSource(grad(0.95 * o.alpha));
+            cr.setLineWidth(1.8);
+            cr.stroke();
+        } finally {
+            cr.$dispose();
+        }
     }
 
     _applyBgStyle() {
@@ -1199,6 +1312,7 @@ export class Island {
         this._slot = null;
 
         this._stopSpring();
+        this._removeOutline();
         this._bg.remove_all_transitions();
         this.actor.remove_all_transitions();
         Main.layoutManager.removeChrome(this.actor);
