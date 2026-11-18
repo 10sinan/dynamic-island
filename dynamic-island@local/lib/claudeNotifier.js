@@ -72,7 +72,7 @@ export class ClaudeNotifier {
             this._island.setCompactAccessory(this._pill);   // re-measure the pill width
         }
         // safety net for stale sessions
-        this._staleTimer ??= GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 60, () => {
+        this._staleTimer ||= GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 60, () => {
             this._staleTimer = 0;
             this._syncWorking();
             return GLib.SOURCE_REMOVE;
