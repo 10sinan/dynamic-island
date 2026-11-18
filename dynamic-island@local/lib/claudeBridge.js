@@ -1,6 +1,6 @@
 // D-Bus entry point for the Claude Code hook (tools/di-claude-hook):
 //   object  /org/gnome/Shell/Extensions/DynamicIsland  on the shell's own bus name
-//   method  org.gnome.Shell.Extensions.DynamicIsland.ClaudeEvent(kind, project, message, pids)
+//   method  org.gnome.Shell.Extensions.DynamicIsland.ClaudeEvent(kind, project, message, pids, session)
 // Only local processes of this user's session can call it; it just shows a
 // notification in the island.
 import Gio from 'gi://Gio';
@@ -14,6 +14,7 @@ const IFACE = `
       <arg type="s" direction="in" name="project"/>
       <arg type="s" direction="in" name="message"/>
       <arg type="s" direction="in" name="pids"/>
+      <arg type="s" direction="in" name="session"/>
     </method>
   </interface>
 </node>`;
@@ -26,9 +27,10 @@ export class ClaudeBridge {
         this._obj.export(Gio.DBus.session, OBJECT_PATH);
     }
 
-    ClaudeEvent(kind, project, message, pids) {
+    ClaudeEvent(kind, project, message, pids, session) {
         const ev = {
-            kind: ['done', 'waiting'].includes(kind) ? kind : 'done',
+            kind: ['done', 'waiting', 'working'].includes(kind) ? kind : 'done',
+            session: String(session).slice(0, 80),
             project: String(project).slice(0, 80),
             message: String(message).slice(0, 200),
             pids: String(pids).split(',').map(Number).filter(n => Number.isInteger(n) && n > 1).slice(0, 64),

@@ -146,6 +146,10 @@ const TR = {
     'Claude is waiting for you': 'Claude seni bekliyor', 'wants to use %s': '%s kullanmak istiyor',
     'waiting for your reply': 'yanıtını bekliyor', 'Claude Code notifications': 'Claude Code bildirimleri',
     'When Claude finishes or waits for you (run: di-config claude-hooks install)': 'Claude bitince ya da seni beklerken (kurulum: di-config claude-hooks install)',
+    'Calibrate: session % shown by /usage': 'Kalibre et: /usage\'daki oturum yüzdesi',
+    'Enter a percentage between 1 and 100': '1 ile 100 arasında bir yüzde gir',
+    'No active Claude session to calibrate with': 'Kalibrasyon için aktif Claude oturumu yok',
+    'Limit set to %s (%s used = %s%)': 'Limit %s olarak ayarlandı (%s kullanılmış = %%s)',
     // claude usage
     'Claude Code usage': 'Claude Code kullanımı', 'Claude token limit (K per 5 h)': 'Claude token limiti (5 saatte, bin)',
     '0 = just show the tokens used; set your own limit to see how much is left': '0 = yalnızca kullanılan token; kendi limitini yazarsan kalanı görürsün',

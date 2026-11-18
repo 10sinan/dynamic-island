@@ -517,6 +517,26 @@ export class Island {
             this._collapseTimer.schedule(Math.max(this._cfg.leaveDelay, 300), () => this._maybeCollapse());
     }
 
+    /**
+     * An extra widget at the end of the pill in the panel (Claude "working"
+     * indicator). null removes it. The pill re-measures its width.
+     */
+    setCompactAccessory(actor) {
+        if (this._destroyed)
+            return;
+        if (this._accessory && this._accessory !== actor) {
+            const old = this._accessory;
+            this._accessory = null;
+            if (old.get_parent())
+                old.destroy();
+        }
+        if (actor && actor.get_parent() !== this._compactRow) {
+            this._accessory = actor;
+            this._compactRow.add_child(actor);
+        }
+        this._requestRelayout(true);
+    }
+
     /** A module of this island by id (e.g. 'search'), or null. */
     moduleById(id) {
         return this._modules.find(m => m.constructor.id === id) ?? null;

@@ -579,7 +579,18 @@ echo
 
 echo "== Claude Code notifications (hook -> D-Bus -> island)"
 CT="$C._activityInner.get_child()"
-echo '{"hook_event_name":"Stop","cwd":"/home/x/projects/dynamic-island"}' | python3 "$HERE/tools/di-claude-hook"; sleep 0.25
+W0=$(ev "Math.round($C._bg.width)")
+echo '{"hook_event_name":"UserPromptSubmit","cwd":"/home/x/projects/dynamic-island","session_id":"s1"}' | python3 "$HERE/tools/di-claude-hook"; sleep 1.2
+NF="$EXT._features.find(f => f._working)"
+WP1=$(ev "$NF._wavePhase.toFixed(2)"); sleep 0.3; WP2=$(ev "$NF._wavePhase.toFixed(2)")
+echo "   working: accessory in pill=$(ev "!!$C._accessory && $C._accessory.get_parent() === $C._compactRow") label=$(ev "$NF._pillLabel?.text") pill $W0 -> $(ev "Math.round($C._bg.width)") wave $WP1 -> $WP2"
+shot claude-working 560 0 800 60
+echo '{"hook_event_name":"UserPromptSubmit","cwd":"/home/x/projects/other","session_id":"s2"}' | python3 "$HERE/tools/di-claude-hook"; sleep 0.5
+echo "   two sessions: label=$(ev "$NF._pillLabel?.text")"
+echo '{"hook_event_name":"Stop","cwd":"/home/x/projects/other","session_id":"s2"}' | python3 "$HERE/tools/di-claude-hook"; sleep 0.4
+ev "$C.endActivity('claude'); true" >/dev/null; sleep 1
+echo "   one finished: label=$(ev "$NF._pillLabel?.text")"
+echo '{"hook_event_name":"Stop","cwd":"/home/x/projects/dynamic-island","session_id":"s1"}' | python3 "$HERE/tools/di-claude-hook"; sleep 0.25
 echo "   Stop: activity=$(ev "$C.activityKey") mode=$(ev "$C.mode") title=$(ev "$CT?.get_child_at_index(1).get_child_at_index(0).text") sub=$(ev "$CT?.get_child_at_index(1).get_child_at_index(1).text")"
 shot claude-grow 460 0 1000 120
 sleep 0.6
@@ -587,7 +598,7 @@ P1=$(ev "$C._outlineFx?.phase.toFixed(2)"); sleep 0.3; P2=$(ev "$C._outlineFx?.p
 echo "   wavy outline: actor=$(ev "!!$C._outline") alpha=$(ev "$C._outlineFx?.alpha.toFixed(2)") phase $P1 -> $P2 moving=$([ "$P1" != "$P2" ] && echo true || echo false)"
 shot claude-done 460 0 1000 120
 sleep 6.5
-echo "   after 6 s: activity=$(ev "$C.activityKey") outline removed=$(ev "!$C._outline")"
+echo "   after 6 s: activity=$(ev "$C.activityKey") outline removed=$(ev "!$C._outline") working indicator gone=$(ev "!$C._accessory")"
 echo '{"hook_event_name":"Notification","cwd":"/p/app","message":"Claude needs your permission to use Bash"}' | python3 "$HERE/tools/di-claude-hook"; sleep 0.8
 echo "   permission: title=$(ev "$CT?.get_child_at_index(1).get_child_at_index(0).text") sub=$(ev "$CT?.get_child_at_index(1).get_child_at_index(1).text") duration=$(ev "$C._activity?.duration")"
 shot claude-waiting 460 0 1000 120
@@ -601,10 +612,10 @@ ev "Main.activateWindow($EDW); true" >/dev/null; sleep 1
 WPID=$(ev "$EDW?.get_pid()")
 echo "   editor window: pid=$WPID focused=$(ev "global.display.focus_window === $EDW")"
 CALL="gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/DynamicIsland --method org.gnome.Shell.Extensions.DynamicIsland.ClaudeEvent"
-$CALL done proj "" "$WPID,1" >/dev/null; sleep 0.8
+$CALL done proj "" "$WPID,1" "" >/dev/null; sleep 0.8
 echo "   window focused (pid $WPID): shown=$(ev "$C.activityKey === 'claude'")"
 ev "$EDW.minimize(); true" >/dev/null; sleep 0.5
-$CALL done proj "" "$WPID" >/dev/null; sleep 0.8
+$CALL done proj "" "$WPID" "" >/dev/null; sleep 0.8
 echo "   window not focused: shown=$(ev "$C.activityKey === 'claude'")"
 ev "$C._onActivityClicked(1); true" >/dev/null; sleep 0.8
 echo "   click -> Claude's window focused: $(ev "global.display.focus_window?.get_pid() === $WPID") island=$(ev "$C.mode")"

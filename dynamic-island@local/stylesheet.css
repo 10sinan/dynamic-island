@@ -1194,3 +1194,16 @@
     font-weight: 600;
     color: rgba(255, 255, 255, 0.85);
 }
+
+/* ---- "Claude is working" in the pill */
+.di-claude-working {
+    spacing: 6px;
+    padding-left: 4px;
+}
+
+.di-claude-working-label {
+    font-size: 9pt;
+    font-weight: 600;
+    color: #f0b49e;
+    max-width: 110px;
+}

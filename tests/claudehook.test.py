@@ -24,10 +24,12 @@ def ok(cond, msg):
 
 
 a = hook.build_args({"hook_event_name": "Stop", "cwd": "/home/x/projects/dynamic-island/"}, [10, 5])
-ok(a and a[-4:] == ["done", "dynamic-island", "", "10,5"], f"Stop -> done: {a}")
+ok(a and a[-5:] == ["done", "dynamic-island", "", "10,5", ""], f"Stop -> done: {a}")
+a = hook.build_args({"hook_event_name": "UserPromptSubmit", "cwd": "/p/app", "session_id": "abc"}, [7])
+ok(a and a[-5:] == ["working", "app", "", "7", "abc"], f"UserPromptSubmit -> working: {a}")
 a = hook.build_args({"hook_event_name": "Notification", "cwd": "/p/app",
                      "message": "Claude needs your permission to use Bash"}, [])
-ok(a and a[-4:] == ["waiting", "app", "Claude needs your permission to use Bash", ""], f"Notification: {a}")
+ok(a and a[-5:] == ["waiting", "app", "Claude needs your permission to use Bash", "", ""], f"Notification: {a}")
 ok(hook.build_args({"hook_event_name": "PreToolUse"}, []) is None, "other events ignored")
 ok("--timeout" in hook.build_args({"hook_event_name": "Stop", "cwd": "/a"}, []), "short D-Bus timeout")
 ok(hook.ancestors()[0] == os.getpid() and len(hook.ancestors()) >= 2, "ancestors start with this process")

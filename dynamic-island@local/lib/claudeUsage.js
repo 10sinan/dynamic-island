@@ -96,3 +96,16 @@ export function splitDuration(ms) {
     const total = Math.max(0, Math.ceil(ms / 60000));
     return {h: Math.floor(total / 60), m: total % 60};
 }
+
+/**
+ * Calibration: the user reads the session percentage from Claude Code's
+ * /usage screen; with the tokens counted locally for the same session this
+ * gives the limit that makes our estimate match it.
+ * @returns {number} limit in tokens, 0 if it cannot be computed
+ */
+export function calibratedLimit(used, percent) {
+    const p = Number(percent);
+    if (!(used > 0) || !(p > 0) || p > 100)
+        return 0;
+    return Math.round(used / (p / 100));
+}

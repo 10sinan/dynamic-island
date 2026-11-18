@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """di-claude-hook — Claude Code hook that tells the Dynamic Island extension
-when Claude finishes (Stop) or waits for you (Notification).
+when you send Claude a prompt (UserPromptSubmit), when it finishes (Stop)
+or waits for you (Notification).
 
 Claude Code runs it with the hook's JSON on stdin. It never blocks or fails
 Claude: whatever happens it exits 0 within about a second.
@@ -40,6 +41,8 @@ def build_args(payload, pids):
         kind = "done"
     elif event == "Notification":
         kind = "waiting"
+    elif event == "UserPromptSubmit":
+        kind = "working"
     else:
         return None
     cwd = str(payload.get("cwd") or os.getcwd())
@@ -47,7 +50,7 @@ def build_args(payload, pids):
     message = str(payload.get("message", "")).replace("\n", " ")[:200]
     return ["gdbus", "call", "--session", "--timeout", "1",
             "--dest", DEST, "--object-path", PATH, "--method", METHOD,
-            kind, project, message, ",".join(map(str, pids))]
+            kind, project, message, ",".join(map(str, pids)), str(payload.get("session_id", ""))[:80]]
 
 
 def main():

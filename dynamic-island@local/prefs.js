@@ -6,8 +6,10 @@ import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
-import {_, setLanguage} from './lib/i18n.js';
+import {_, _f, setLanguage} from './lib/i18n.js';
 import {THEMES} from './lib/themes.js';
+import {calibratedLimit, formatTokens} from './lib/claudeUsage.js';
+import {currentWindowSync} from './lib/claudeScan.js';
 
 const MODULES = {
     'center-modules': ['music', 'calendar', 'notifications', 'claude'],
@@ -134,6 +136,24 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
             _('When Claude finishes or waits for you (run: di-config claude-hooks install)'));
         this._spin(s, feat, 'claude-token-limit', _('Claude token limit (K per 5 h)'),
             _('0 = just show the tokens used; set your own limit to see how much is left'), 1000);
+        // calibration: type the session % that Claude Code's /usage shows
+        const cal = new Adw.EntryRow({title: _('Calibrate: session % shown by /usage'), show_apply_button: true,
+            input_purpose: Gtk.InputPurpose.NUMBER});
+        cal.connect('apply', () => {
+            const pct = parseFloat(cal.text.replace(',', '.').replace('%', ''));
+            const w = currentWindowSync();
+            const limit = calibratedLimit(w.used, pct);
+            if (!limit) {
+                window.add_toast(new Adw.Toast({title: w.active ? _('Enter a percentage between 1 and 100')
+                    : _('No active Claude session to calibrate with')}));
+                return;
+            }
+            s.set_int('claude-token-limit', Math.min(100000000, Math.max(1, Math.round(limit / 1000))));
+            cal.text = '';
+            window.add_toast(new Adw.Toast({title: _f('Limit set to %s (%s used = %s%)', formatTokens(limit),
+                formatTokens(w.used), pct)}));
+        });
+        feat.add(cal);
         this._switch(s, feat, 'auto-power-saver', _('Auto Power Saver on low battery'));
         this._spin(s, feat, 'auto-power-saver-level', _('Power saver battery level'), '%', 5);
         page.add(feat);

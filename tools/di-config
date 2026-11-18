@@ -7,6 +7,8 @@ Kullanım:
     di-config get <anahtar>
     di-config set <anahtar> <değer>
     di-config reset [anahtar]     bir ayarı ya da hepsini varsayılana döndür
+    di-config claude-calibrate <yüzde>
+                                  Claude kartını /usage'daki oturum yüzdesine göre ayarla
     di-config claude-hooks install|remove|status
                                   Claude Code bildirimleri için hook'ları kur / kaldır
 
@@ -689,7 +691,7 @@ class App:
 # ----------------------------------------------------------------- Claude Code hooks
 
 CLAUDE_SETTINGS = os.path.expanduser("~/.claude/settings.json")
-HOOK_EVENTS = ("Stop", "Notification")
+HOOK_EVENTS = ("UserPromptSubmit", "Stop", "Notification")
 
 
 def hook_command():
@@ -747,12 +749,74 @@ def claude_hooks(action):
     print(msg)
 
 
+def claude_window():
+    """Current 5-hour Claude session from ~/.claude/projects (same rules as lib/claudeUsage.js)."""
+    import calendar
+    import json
+    import time
+    window = 5 * 3600
+    now = time.time()
+    since = now - window - 3600
+    by_id = {}
+    root = os.path.expanduser("~/.claude/projects")
+    for dirpath, _dirs, files in os.walk(root):
+        if dirpath[len(root):].count(os.sep) > 4:
+            continue
+        for name in files:
+            path = os.path.join(dirpath, name)
+            if not name.endswith(".jsonl") or os.path.getmtime(path) < since:
+                continue
+            with open(path, encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    if '"usage"' not in line:
+                        continue
+                    try:
+                        o = json.loads(line)
+                        m, u = o["message"], o["message"]["usage"]
+                        t = calendar.timegm(time.strptime(o["timestamp"][:19], "%Y-%m-%dT%H:%M:%S"))
+                    except (ValueError, KeyError, TypeError):
+                        continue
+                    if not m.get("id") or t < since:
+                        continue
+                    cur = by_id.setdefault(m["id"], {"t": t, "input": 0, "output": 0, "cw": 0})
+                    cur["t"] = min(cur["t"], t)
+                    cur["input"] = max(cur["input"], int(u.get("input_tokens") or 0))
+                    cur["output"] = max(cur["output"], int(u.get("output_tokens") or 0))
+                    cur["cw"] = max(cur["cw"], int(u.get("cache_creation_input_tokens") or 0))
+    start, last, used = None, 0, 0
+    for e in sorted(by_id.values(), key=lambda e: e["t"]):
+        if start is None or e["t"] >= start + window or e["t"] - last >= window:
+            start, used = e["t"] // 3600 * 3600, 0
+        used += e["input"] + e["output"] + e["cw"]
+        last = e["t"]
+    if start is None or now >= start + window:
+        return 0
+    return used
+
+
+def claude_calibrate(settings, pct_text):
+    try:
+        pct = float(pct_text.replace(",", ".").rstrip("%"))
+    except ValueError:
+        sys.exit("kullanım: di-config claude-calibrate <yüzde>   (/usage'daki oturum yüzdesi, örn. 37)")
+    used = claude_window()
+    if not used or not 0 < pct <= 100:
+        sys.exit("Aktif Claude oturumu yok ya da yüzde 1-100 arasında değil.")
+    limit_k = max(1, round(used / (pct / 100) / 1000))
+    settings.set_int("claude-token-limit", min(100000000, limit_k))
+    Gio.Settings.sync()
+    print(f"claude-token-limit = {limit_k}K  ({used / 1e6:.1f}M kullanılmış = %{pct:g})")
+
+
 def main():
     locale.setlocale(locale.LC_ALL, "")
     if len(sys.argv) > 1 and sys.argv[1] == "claude-hooks":
         claude_hooks(sys.argv[2] if len(sys.argv) > 2 else "status")
         return
     settings, schema = open_settings()
+    if len(sys.argv) > 2 and sys.argv[1] == "claude-calibrate":
+        claude_calibrate(settings, sys.argv[2])
+        return
     if len(sys.argv) > 1:
         if sys.argv[1] in ("-h", "--help", "help"):
             print(__doc__)

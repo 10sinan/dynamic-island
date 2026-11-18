@@ -1,5 +1,5 @@
 // gjs -m tests/claudeusage.test.js
-import {parseLine, addEntry, windowStats, formatTokens, splitDuration, billable, WINDOW_MS}
+import {parseLine, addEntry, windowStats, formatTokens, splitDuration, billable, WINDOW_MS, calibratedLimit}
     from '../dynamic-island@local/lib/claudeUsage.js';
 
 let fails = 0;
@@ -45,6 +45,9 @@ ok(formatTokens(2_500_000) === '2.5M' && formatTokens(48_000_000) === '48M', 'M 
 const d = splitDuration(2.5 * H);
 ok(d.h === 2 && d.m === 30, 'duration split');
 ok(splitDuration(1000).m === 1, 'rounds up to a minute');
+
+ok(calibratedLimit(1_400_000, 7) === 20_000_000, 'calibration: 1.4M at 7% -> 20M');
+ok(calibratedLimit(0, 50) === 0 && calibratedLimit(1000, 0) === 0 && calibratedLimit(1000, 120) === 0, 'calibration rejects bad input');
 
 print(fails ? `${fails} FAILED` : 'claudeusage ok');
 imports.system.exit(fails ? 1 : 0);
