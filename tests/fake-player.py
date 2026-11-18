@@ -81,6 +81,7 @@ class Player:
         self.status = "Playing"
         self.base = 12_000_000
         self.t0 = time.monotonic()
+        self.stale_art = None   # like real players: new title first, new cover a moment later
 
     def position(self):
         if self.status != "Playing":
@@ -92,7 +93,7 @@ class Player:
         return GLib.Variant("a{sv}", {
             "mpris:trackid": GLib.Variant("o", f"/fake/track/{self.idx}"),
             "mpris:length": GLib.Variant("x", t["len"]),
-            "mpris:artUrl": GLib.Variant("s", "file://" + t["art"]),
+            "mpris:artUrl": GLib.Variant("s", "file://" + (self.stale_art or t["art"])),
             "xesam:title": GLib.Variant("s", t["title"]),
             "xesam:artist": GLib.Variant("as", t["artist"]),
             "xesam:album": GLib.Variant("s", t["album"]),
@@ -117,9 +118,16 @@ class Player:
 
     def method(self, conn, sender, path, iface, name, params, invocation):
         if name in ("Next", "Previous"):
+            self.stale_art = TRACKS[self.idx]["art"]
             self.idx = (self.idx + (1 if name == "Next" else -1)) % len(TRACKS)
             self.base, self.t0 = 0, time.monotonic()
             self.changed("Metadata")
+
+            def late_cover():
+                self.stale_art = None
+                self.changed("Metadata")
+                return False
+            GLib.timeout_add(200, late_cover)
         elif name == "PlayPause":
             self.base = self.position()
             self.status = "Paused" if self.status == "Playing" else "Playing"

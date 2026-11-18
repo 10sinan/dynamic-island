@@ -22,6 +22,7 @@ const PATH = '/org/mpris/MediaPlayer2';
 const PLAYER_IFACE = 'org.mpris.MediaPlayer2.Player';
 const COVER_PX = 176;            // decoded cover size (88 logical px at 2x)
 const ART_CACHE = 8;
+const ART_SETTLE_MS = 350;   // wait for a late cover URL after a track change
 const POPUP_MS = 4000;
 const VIDEO_MAX_W = 232;   // the live window preview fits into this box
 const VIDEO_MAX_H = 130;
@@ -301,6 +302,8 @@ export default class MusicModule extends IslandModule {
             this._trackKey = null;
             this._player = null;
             this._art = null;
+            this._artUrl = null;
+            this._clearArtTimer();
             this._applyVisibility(was);
             this.ctx?.setAccentBorder?.(null);
             this.ctx?.setBodyTint?.(null);
@@ -327,8 +330,26 @@ export default class MusicModule extends IslandModule {
         if (changed) {
             this._pos = 0;
             this._renderProgress(true);
-            this._loadArt(md.artUrl, !this._firstRefresh && info.status === 'Playing');
+            // Players often send the new title first and the new cover URL a
+            // moment later (still carrying the previous track's URL, or none).
+            // Wait for the metadata to settle before picking the cover; a
+            // later URL change is picked up below.
+            const popup = !this._firstRefresh && info.status === 'Playing';
             this._firstRefresh = false;
+            this._artUrl = null;
+            this._dropFileArt();
+            this._clearArtTimer();
+            this._artTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ART_SETTLE_MS, () => {
+                this._artTimer = 0;
+                const url = this._info?.artUrl ?? '';
+                this._artUrl = url;
+                this._loadArt(url, popup);
+                return GLib.SOURCE_REMOVE;
+            });
+        } else if (!this._artTimer && md.artUrl !== this._artUrl) {
+            // cover arrived (or changed) after the track did
+            this._artUrl = md.artUrl;
+            this._loadArt(md.artUrl, false);
         }
         this._fetchPosition();
     }
@@ -451,6 +472,21 @@ export default class MusicModule extends IslandModule {
                 this._artCache.delete(this._artCache.keys().next().value);
         }
         return p;
+    }
+
+    _clearArtTimer() {
+        if (this._artTimer) {
+            GLib.source_remove(this._artTimer);
+            this._artTimer = 0;
+        }
+    }
+
+    /** Players (browsers, VLC) may reuse the same local file for every cover. */
+    _dropFileArt() {
+        for (const url of [...this._artCache.keys()]) {
+            if (url.startsWith('file://'))
+                this._artCache.delete(url);
+        }
     }
 
     async _loadArt(url, popup) {
@@ -913,6 +949,7 @@ export default class MusicModule extends IslandModule {
 
     destroy() {
         this._dead = true;
+        this._clearArtTimer();
         this.ctx?.setAccentBorder?.(null);
         this.ctx?.setBodyTint?.(null);
         if (this._subId) {
