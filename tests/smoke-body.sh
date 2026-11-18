@@ -197,9 +197,25 @@ echo "   expands to the right from the left edge: x=$(ev "Math.round($ST._bg.x +
 shot stats-expanded 0 0 760 420
 ev "$ST._hold(false); $ST._setMode('compact'); true" >/dev/null; sleep 0.8
 
-echo "== QS compact icon row (own icons, not a clone)"
-echo "   children: $(ev "JSON.stringify($Q._compactRow.get_children().get_children?.() ?? $Q._compactRow.get_children()[0].get_children().map(c => ({cls: c.style_class, vis: c.visible, icon: c.icon_name ?? null, h: Math.round(c.height), text: c.text ?? null})))")"
-echo "   pill: h=$(ev "$Q._bg.height") w=$(ev "$Q._bg.width"); icon sizes equal: $(ev "new Set($Q._compactRow.get_children()[0].get_children().filter(c => c.visible && c.icon_name).map(c => c.icon_size)).size === 1")"
+echo "== QS compact icon row (menu-bar style glyphs drawn with Cairo)"
+ROW="$Q._compactRow.get_children()[0]"
+echo "   children: $(ev "JSON.stringify($ROW.get_children().map(c => ({cls: c.style_class ?? c.constructor.name, vis: c.visible, w: Math.round(c.width), h: Math.round(c.height)})))")"
+echo "   visible glyph heights (all 16 = same line): $(ev "JSON.stringify([...new Set($ROW.get_children().filter(c => c.visible && c.style_class === 'di-glyph').map(c => Math.round(c.height)))])")"
+echo "   battery: glyph + label '$(ev "$Q._modules.find(m => m.constructor.id === 'qs-status')._batLabel.text")', pill h=$(ev "$Q._bg.height") w=$(ev "$Q._bg.width")"
+echo "   state: wifi=$(ev "JSON.stringify($Q._modules.find(m => m.constructor.id === 'qs-status')._wifi._state)") volume=$(ev "JSON.stringify($Q._modules.find(m => m.constructor.id === 'qs-status')._vol._state)") battery=$(ev "JSON.stringify($Q._modules.find(m => m.constructor.id === 'qs-status')._batGlyph._state)")"
+QSM="$Q._modules.find(m => m.constructor.id === 'qs-status')"
+ev "$QSM._batGlyph.set({pct: 15, charging: false}); $QSM._dnd.actor.show(); $QSM._btIcon.actor.show(); true" >/dev/null; sleep 0.4
+shot qs-row-low 1520 0 400 40
+ev "$QSM._batGlyph.set({pct: 55, charging: true}); true" >/dev/null; sleep 0.4
+shot qs-row-charging 1520 0 400 40
+ev "$QSM._batGlyph.set({pct: 100, charging: false}); true" >/dev/null; sleep 0.4
+shot qs-row-full 1520 0 400 40
+ev "$QSM._wifi.setKind('wired'); true" >/dev/null; sleep 0.4
+shot qs-row-wired 1520 0 400 40
+ev "$QSM._wifi.setKind('wifi'); $QSM._wifi.set({level: 0, off: true}); $QSM._vol.set({muted: true, level: 0}); true" >/dev/null; sleep 0.4
+shot qs-row-off 1520 0 400 40
+ev "$QSM._wifi.set({level: 3, off: false}); $QSM._vol.set({muted: false, level: 3}); true" >/dev/null; sleep 0.3
+ev "$QSM.tick(); $QSM._syncBt(); $QSM._syncDnd(); true" >/dev/null; sleep 1
 shot qs-row 1560 0 360 40
 
 echo "== event indicators"
@@ -276,6 +292,7 @@ echo "   card: title=$(ev "$MU._title.text") artist=$(ev "$MU._artist.text") alb
 echo "   palette: accent=$(ev "$MU._art?.accent") accent2=$(ev "$MU._art?.accent2")"
 echo "   motion while playing: flow=$(ev "$MU._flowA.get_transition('opacity') !== null") glow=$(ev "$MU._glow.get_transition('opacity') !== null") cover pulse=$(ev "$MU._cardCover.actor.get_transition('scale-x') !== null") eq(5 bars)=$(ev "$MU._cardEq._bars.length")"
 echo "   pill outline takes the album colour: $(ev "$C._bg.get_style()")"
+echo "   body gradient while playing: $(ev "$C._bg.get_style().match(/background-gradient-start: ([^;]+)/)?.[1]") -> $(ev "$C._bg.get_style().match(/background-gradient-end: ([^;]+)/)?.[1]") (not the theme's black)"
 echo "   banner is between header and main row: $(ev "$C._expandedInner.get_children().map(c => c === $C._headerRow ? 'header' : c === $C._bannerRow ? 'banner' : c === $C._mainRow ? 'main' : 'tiles').join('>')")"
 shot music-card 300 0 1320 330
 echo "   play button colour: $(ev "$MU._playButton.get_style()")  progress fill: $(ev "$MU._fill.get_style()")"
@@ -283,7 +300,7 @@ ev "$MU._next.emit('clicked', 1); true" >/dev/null; sleep 1.5
 echo "   Next clicked -> title=$(ev "$MU._info?.title") accent=$(ev "$MU._art?.accent") (blue cover => blue accent) progress reset: $(ev "$MU._elapsed.text")"
 shot music-card-blue 300 0 1320 330
 ev "$MU._playButton.emit('clicked', 1); true" >/dev/null; sleep 1
-echo "   PlayPause clicked -> status=$(ev "$MU._info?.status") icon=$(ev "$MU._playIcon.icon_name") eq stopped=$(ev "$MU._compactEq._bars[0].get_transition('scale-y') === null") flow frozen=$(ev "$MU._flowA.get_transition('opacity') === null") outline reset=$(ev "!$C._bg.get_style().includes('border-color')")"
+echo "   PlayPause clicked -> status=$(ev "$MU._info?.status") icon=$(ev "$MU._playIcon.icon_name") eq stopped=$(ev "$MU._compactEq._bars[0].get_transition('scale-y') === null") flow frozen=$(ev "$MU._flowA.get_transition('opacity') === null") body back to the theme (no gradient, theme outline)=$(ev "!$C._bg.get_style().includes('background-gradient') && $C._bg.get_style().includes('rgba(255, 255, 255, 0.08)')")"
 ev "$MU._playButton.emit('clicked', 1); true" >/dev/null; sleep 1
 ev "$MU._call('SetPosition', new (imports.gi.GLib.Variant)('(ox)', ['/fake/track/1', 90000000])); true" >/dev/null; sleep 2.3
 echo "   SetPosition(90 s) -> elapsed=$(ev "$MU._elapsed.text") (expect ~1:3x)"

@@ -29,6 +29,7 @@ import * as C from './constants.js';
 import {Disposer} from './disposer.js';
 import {PanelSlot} from './panelSlot.js';
 import {History} from './history.js';
+import {hexToRgb, mix} from './color.js';
 
 function isCancelled(e) {
     return e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED) ?? false;
@@ -67,6 +68,9 @@ export class Island {
         this._d = new Disposer();
         this._history = new History(120);
         this._borderColor = null;
+        this._bodyTint = null;        // {a, b}: colours of the body gradient while music plays
+        this._tintTarget = null;
+        this._tintTl = null;
         this._destroyed = false;
         this._mode = 'compact';            // 'compact' | 'expanded' | 'activity'
         this._activity = null;
@@ -286,7 +290,48 @@ export class Island {
         const t = this._cfg.theme;
         // the album colour (while music plays) wins over the theme's outline
         const edge = this._borderColor ?? (this.actor?.hover ? t.edgeHover : t.edge);
-        this._bg.set_style(`border-radius: ${Math.max(0, this._radius)}px; background-color: ${t.bg}; border-color: ${edge};`);
+        const rgb = c => `rgb(${c.r}, ${c.g}, ${c.b})`;
+        const bt = this._bodyTint;
+        const body = bt
+            ? `background-color: ${rgb(bt.a)}; background-gradient-direction: horizontal; background-gradient-start: ${rgb(bt.a)}; background-gradient-end: ${rgb(bt.b)};`
+            : `background-color: ${t.bg};`;
+        this._bg.set_style(`border-radius: ${Math.max(0, this._radius)}px; ${body} border-color: ${edge};`);
+    }
+
+    /**
+     * Colour the whole body with a two-colour gradient (the album colours while
+     * music plays); null fades back to the theme colour. The change glides
+     * over 700 ms. Only the childless background widget is restyled per frame.
+     * @param {{a: {r,g,b}, b: {r,g,b}}|null} target
+     */
+    setBodyTint(target) {
+        if (this._destroyed)
+            return;
+        const theme = hexToRgb(this._cfg.theme.bg);
+        const flat = {a: theme, b: theme};
+        const to = target ?? flat;
+        const cur = this._tintTarget ?? flat;
+        const same = (x, y) => ['r', 'g', 'b'].every(k => x.a[k] === y.a[k] && x.b[k] === y.b[k]);
+        if (same(cur, to))
+            return;
+        const from = this._bodyTint ?? flat;
+        this._tintTarget = target;
+        this._tintTl?.stop();
+        const tl = new Clutter.Timeline({actor: this.actor, duration: 700});
+        this._tintTl = tl;
+        tl.connect('new-frame', () => {
+            const p = tl.get_progress();
+            const e = 1 - (1 - p) * (1 - p);   // ease-out
+            this._bodyTint = {a: mix(from.a, to.a, e), b: mix(from.b, to.b, e)};
+            this._applyBgStyle();
+        });
+        tl.connect('completed', () => {
+            this._bodyTint = target ? to : null;
+            this._applyBgStyle();
+            if (this._tintTl === tl)
+                this._tintTl = null;
+        });
+        tl.start();
     }
 
     /** Tint the pill's outline (e.g. with the album colour); null = default. */
@@ -817,6 +862,7 @@ export class Island {
             isExpanded: () => this._mode === 'expanded',
             history: this._history,
             setAccentBorder: c => this.setAccentBorder(c),
+            setBodyTint: t => this.setBodyTint(t),
             holdOpen: on => this._hold(on),
             collapse: () => this._collapseAll(),
         };
@@ -957,6 +1003,8 @@ export class Island {
         if (this._destroyed)
             return;
         this._destroyed = true;
+        this._tintTl?.stop();
+        this._tintTl = null;
         this._releasePin();
         this._activity = null;
 

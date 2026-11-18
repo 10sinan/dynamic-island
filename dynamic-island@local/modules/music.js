@@ -288,6 +288,7 @@ export default class MusicModule extends IslandModule {
             this._art = null;
             this._applyVisibility(was);
             this.ctx?.setAccentBorder?.(null);
+            this.ctx?.setBodyTint?.(null);
             return;
         }
         const md = this._metadata(p);
@@ -420,6 +421,7 @@ export default class MusicModule extends IslandModule {
                     accent: toHex(accentFrom(pal.primary)),
                     accent2: toHex(accentFrom(pal.secondary)),
                     tint: tintFrom(pal.primary),
+                    tint2: tintFrom(pal.secondary),
                     flow1: tintFrom(pal.secondary, 0.30),
                     flow2: tintFrom(pal.primary, 0.30),
                 };
@@ -472,11 +474,17 @@ export default class MusicModule extends IslandModule {
         this._updateBorder();
     }
 
-    /** Playing: the island outline takes the album colour. */
+    /**
+     * Playing: the island takes the album colours — body gradient (primary ->
+     * secondary, dark enough for white text) and a brighter outline. Paused
+     * or nothing playing: back to the theme colours.
+     */
     _updateBorder() {
-        const on = this._info?.status === 'Playing' && this._accentNow;
-        const c = on ? hexToRgb(this._accentNow) : null;
+        const playing = this._info?.status === 'Playing';
+        const c = playing && this._accentNow ? hexToRgb(this._accentNow) : null;
         this.ctx?.setAccentBorder?.(c ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)` : null);
+        const art = this._art;
+        this.ctx?.setBodyTint?.(playing && art?.tint ? {a: art.tint, b: art.tint2 ?? art.tint} : null);
     }
 
     /** Slow colour flow, glow and cover pulse: only while the card is open and playing. */
@@ -775,6 +783,7 @@ export default class MusicModule extends IslandModule {
     destroy() {
         this._dead = true;
         this.ctx?.setAccentBorder?.(null);
+        this.ctx?.setBodyTint?.(null);
         if (this._subId) {
             this._bus.signal_unsubscribe(this._subId);
             this._subId = 0;

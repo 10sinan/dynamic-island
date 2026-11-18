@@ -18,7 +18,7 @@
 - **Bluetooth ›:** eşleşmiş cihazları listeler. Tıklayınca bağlanır ya da bağlantıyı keser.
 - **Kaydırıcılar:** Sürüklerken imleç island'ın dışına çıksa da island açık kalır.
 - **GNOME menüleri:** GNOME'un kendi takvim ve Quick Settings menüleri kullanılmaz; yalnızca klavye kısayolu (`Super+V`) ile açılırlar.
-- **Sağ ikon satırı:** Hepsi aynı boyutta (14 px), eşit aralıklı, dikeyde ortalı. Mikrofon, kamera, konum, ekran paylaşımı gibi nadir GNOME göstergeleri yalnızca görünür oldukları sürece eklenir.
+- **Sağ ikon satırı:** Menü çubuğu tarzında, Cairo ile çizilmiş özgün vektör ikonlar (`lib/glyphs.js`): Wi-Fi yelpazesi (sinyale göre 0-3 yay yanar, kapalıyken üstü çizili), dalgalı hoparlör (sessizde çarpı), Bluetooth, Rahatsız Etme ayı ve yuvarlak köşeli pil. Pilde doluluk yuvarlak bir dolgu olarak çizilir; %20 ve altında kırmızı, şarjdayken yeşil ve içinde şimşek vardır. Hepsi 16 px'lik aynı çizgide, eşit aralıkla durur. Bluetooth ve Rahatsız Etme yalnızca ilgiliyken görünür. Mikrofon, kamera, konum, ekran paylaşımı gibi nadir GNOME göstergeleri yalnızca görünür oldukları sürece eklenir. Hazır ikon seti kullanılmadığı için lisans sorunu yoktur.
 
 ### Müzik
 
@@ -27,7 +27,7 @@ Spotify, tarayıcılar (YouTube Music dahil), VLC, Rhythmbox gibi **MPRIS** dest
 - **Panelde:** Çalarken küçük kapak ve hareketli equalizer görünür. Müzik durunca ya da oynatıcı kapanınca kaybolur ve pill eski genişliğine döner.
 - **Üstüne gelince:** Saatin altında kart açılır. Kapakta kapak, başlık, sanatçı, albüm, ilerleme çubuğu ve ⏮ ⏯ ⏭ düğmeleri vardır. İlerleme çubuğuna tıklayınca şarkıda o noktaya atlar.
 - **Şarkıya göre renk:** Albüm kapağından **iki ayrı renk** çıkarılır (beyaz çerçeve gibi kenarlar yok sayılır; tek renkli kapakta ikinci renk komşu bir ton olur). Kart arka planı, ilerleme çubuğu, equalizer ve oynat düğmesi bu renklerle boyanır. Şarkı değişince renkler yumuşakça geçer, kapak çapraz solarak değişir.
-- **Hareket:** Kart açıkken ve müzik çalarken arka plandaki renkler yavaşça akar, kapağın arkasındaki parıltı ve kapak hafifçe nabız atar, equalizer çubukları (5 adet, iki renkli) oynar. Panelde island'ın kenarı albüm renginde yanar. Duraklayınca her şey durur; kart kapalıyken hiçbir animasyon çalışmaz.
+- **Hareket:** Kart açıkken ve müzik çalarken arka plandaki renkler yavaşça akar, kapağın arkasındaki parıltı ve kapak hafifçe nabız atar, equalizer çubukları (5 adet, iki renkli) oynar. **Müzik çalarken island'ın gövdesi de albüm renginde iki renkli bir gradient'e dönüşür** (panelde, açıkken ve şarkı değişimi önizlemesinde), kenarı albüm renginde yanar; duraklayınca ya da müzik bitince 0,7 sn'de tema rengine geri döner. Duraklayınca her şey durur; kart kapalıyken hiçbir animasyon çalışmaz.
 - **Şarkı değişince:** Island kısa süre (4 sn) kapak, başlık ve sanatçıyla açılır. `music-popup` ile kapatılabilir.
 - Birden çok oynatıcı varsa çalan, yoksa en son çalan gösterilir.
 - Kapaklar `file://` ya da `https://` adresinden alınır. `https` için yalnızca oynatıcının bildirdiği kapak adresi istenir, başka bir şey gönderilmez.
@@ -210,6 +210,7 @@ dynamic-island@local/
 │   ├── notifications.js   # bildirim önizleme (GNOME balonu ekran dışına alınır)
 │   ├── events.js          # olay göstergeleri (şarj, pil, Wi-Fi, Bluetooth, mikrofon/kamera)
 │   ├── history.js graph.js# canlı grafikler için örnek tamponu + Cairo çizimi
+│   ├── glyphs.js          # sağ ikon satırının Cairo ile çizilmiş ikonları (glyphLogic.js: seviye/renk kararları)
 │   ├── color.js           # albüm kapağından renk çıkarma (saf fonksiyonlar)
 │   ├── panelSlot.js       # panel düğmesini gizler, yerini ayırır, menüsüne erişim
 │   ├── settings.js        # GSettings → config
@@ -228,6 +229,7 @@ tests/
 ├── color.test.js          # renk çıkarma + palet testleri (gjs)
 ├── history.test.js        # grafik örnek tamponu testleri (gjs)
 ├── diskio.test.js         # disk hızı ölçer testleri (gjs)
+├── glyphs.test.js         # ikon seviye/renk kararları testleri (gjs)
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
 ├── headless-smoke.sh      # izole headless shell başlatır
@@ -280,6 +282,7 @@ gjs -m tests/proc.test.js
 gjs -m tests/color.test.js
 gjs -m tests/history.test.js
 gjs -m tests/diskio.test.js
+gjs -m tests/glyphs.test.js
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots
 ```

@@ -3,6 +3,7 @@
 // pill). Every icon has the same size and spacing, vertically centred:
 //
 //   [wifi] [volume] [bluetooth] [do-not-disturb] [battery 86%]
+// drawn as menu-bar style glyphs (lib/glyphs.js), not theme icons.
 //
 // Bluetooth and Do Not Disturb only show when relevant. Rarely seen GNOME
 // indicators (camera, microphone, location, screen sharing, unsafe mode) are
@@ -17,30 +18,10 @@ import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 
 import {IslandModule} from '../base.js';
 import {tryReadText, listDir} from '../../lib/proc.js';
+import {Glyph, volumeLevel, wifiLevel} from '../../lib/glyphs.js';
 
 const PS = '/sys/class/power_supply';
-const ICON = 14;
 const RARE = ['_camera', '_volumeInput', '_location', '_remoteAccess', '_unsafeMode'];
-
-function wifiIcon(strength) {
-    if (strength >= 80)
-        return 'network-wireless-signal-excellent-symbolic';
-    if (strength >= 55)
-        return 'network-wireless-signal-good-symbolic';
-    if (strength >= 30)
-        return 'network-wireless-signal-ok-symbolic';
-    return 'network-wireless-signal-weak-symbolic';
-}
-
-function volumeIcon(frac, muted) {
-    if (muted || frac <= 0)
-        return 'audio-volume-muted-symbolic';
-    if (frac < 0.34)
-        return 'audio-volume-low-symbolic';
-    if (frac < 0.67)
-        return 'audio-volume-medium-symbolic';
-    return 'audio-volume-high-symbolic';
-}
 
 export default class QsStatusModule extends IslandModule {
     static id = 'qs-status';
@@ -106,11 +87,6 @@ export default class QsStatusModule extends IslandModule {
 
     // ------------------------------------------------------------ UI
 
-    _icon(name) {
-        return new St.Icon({style_class: 'di-qs-icon', icon_name: name, icon_size: ICON,
-            y_align: Clutter.ActorAlign.CENTER});
-    }
-
     buildCompact() {
         const row = new St.BoxLayout({style_class: 'di-qs-row', y_align: Clutter.ActorAlign.CENTER});
         this._row = row;
@@ -128,33 +104,31 @@ export default class QsStatusModule extends IslandModule {
             row.add_child(clone);
         }
 
-        this._wifi = this._icon('network-wireless-offline-symbolic');
-        this._vol = this._icon('audio-volume-high-symbolic');
-        this._btIcon = this._icon('bluetooth-active-symbolic');
-        this._dnd = this._icon('notifications-disabled-symbolic');
-        row.add_child(this._wifi);
-        row.add_child(this._vol);
-        row.add_child(this._btIcon);
-        row.add_child(this._dnd);
+        this._wifi = new Glyph('wifi', {level: 0, off: true});
+        this._vol = new Glyph('volume', {level: 3, muted: false});
+        this._btIcon = new Glyph('bluetooth');
+        this._dnd = new Glyph('dnd');
+        for (const g of [this._wifi, this._vol, this._btIcon, this._dnd]) {
+            g.actor.y_align = Clutter.ActorAlign.CENTER;
+            row.add_child(g.actor);
+        }
+        this._btIcon.actor.visible = false;
+        this._dnd.actor.visible = false;
 
-        // battery: outline + fill (scaled, no relayout) + tip + percentage
+        // battery: one drawn glyph (rounded body + rounded fill + terminal) and the percentage
         this._batBox = new St.BoxLayout({style_class: 'di-qs-battery', y_align: Clutter.ActorAlign.CENTER,
             visible: !!this._bat});
-        const shell = new St.Widget({style_class: 'di-bat-shell', y_align: Clutter.ActorAlign.CENTER});
-        this._batFill = new St.Widget({style_class: 'di-bat-fill', x: 2, y: 2, width: 16, height: 6});
-        this._batFill.set_pivot_point(0, 0.5);
-        shell.add_child(this._batFill);
-        const tip = new St.Widget({style_class: 'di-bat-tip', y_align: Clutter.ActorAlign.CENTER});
+        this._batGlyph = new Glyph('battery', {pct: 100, charging: false});
+        this._batGlyph.actor.y_align = Clutter.ActorAlign.CENTER;
         this._batLabel = new St.Label({style_class: 'di-qs-percent', y_align: Clutter.ActorAlign.CENTER});
-        this._batBox.add_child(shell);
-        this._batBox.add_child(tip);
+        this._batBox.add_child(this._batGlyph.actor);
         this._batBox.add_child(this._batLabel);
         row.add_child(this._batBox);
 
         row.connect('destroy', () => {
             this._dead = true;
             this._row = this._wifi = this._vol = this._btIcon = this._dnd = null;
-            this._batBox = this._batFill = this._batLabel = null;
+            this._batBox = this._batGlyph = this._batLabel = null;
             this._rare = [];
         });
 
@@ -179,20 +153,20 @@ export default class QsStatusModule extends IslandModule {
         if (!this._wifi || !this._nm)
             return;
         const NM = this._NM;
-        let name = 'network-wireless-offline-symbolic';
-        if (!this._nm.wireless_enabled && !this._nm.primary_connection) {
-            name = 'network-wireless-disabled-symbolic';
-        } else if (this._nm.primary_connection) {
-            const dev = this._nm.primary_connection.get_devices?.()[0] ?? null;
-            if (dev instanceof NM.DeviceWifi)
-                name = wifiIcon(dev.active_access_point?.strength ?? 0);
-            else if (dev instanceof NM.DeviceEthernet)
-                name = 'network-wired-symbolic';
-            else
-                name = 'network-workgroup-symbolic';
+        const ac = this._nm.primary_connection;
+        if (!ac) {
+            // no connection: Wi-Fi radio on -> empty fan, off -> empty fan with a slash
+            this._wifi.setKind('wifi');
+            this._wifi.set({level: 0, off: !this._nm.wireless_enabled});
+            return;
         }
-        if (this._wifi.icon_name !== name)
-            this._wifi.icon_name = name;
+        const dev = ac.get_devices?.()[0] ?? null;
+        if (dev instanceof NM.DeviceWifi) {
+            this._wifi.setKind('wifi');
+            this._wifi.set({level: wifiLevel(dev.active_access_point?.strength ?? 0), off: false});
+        } else {
+            this._wifi.setKind('wired');   // ethernet, VPN-only, ...
+        }
     }
 
     _bindSink() {
@@ -214,9 +188,8 @@ export default class QsStatusModule extends IslandModule {
             return;
         const s = this._sink;
         const frac = s ? Math.min(1, s.volume / this._mixer.get_vol_max_norm()) : 0;
-        const name = volumeIcon(frac, !s || s.is_muted);
-        if (this._vol.icon_name !== name)
-            this._vol.icon_name = name;
+        const muted = !s || s.is_muted;
+        this._vol.set({level: volumeLevel(frac, muted), muted: muted || frac <= 0});
     }
 
     _connectedBt() {
@@ -229,12 +202,12 @@ export default class QsStatusModule extends IslandModule {
     }
 
     _syncBt() {
-        if (this._show(this._btIcon, this._connectedBt()))
+        if (this._show(this._btIcon?.actor, this._connectedBt()))
             this.ctx?.requestRelayout?.(true);
     }
 
     _syncDnd() {
-        if (this._show(this._dnd, !this._notif.get_boolean('show-banners')))
+        if (this._show(this._dnd?.actor, !this._notif.get_boolean('show-banners')))
             this.ctx?.requestRelayout?.(true);
     }
 
@@ -252,16 +225,12 @@ export default class QsStatusModule extends IslandModule {
         if (!this._batLabel || !Number.isFinite(pct))
             return;
         const charging = status === 'Charging';
-        const text = `${charging ? '⚡' : ''}${pct}%`;
+        this._batGlyph.set({pct, charging});
+        const text = `${pct}%`;
         if (this._batLabel.text !== text) {
             this._batLabel.text = text;
             this.ctx?.requestRelayout?.(true);   // "9%" -> "100%" changes the width
         }
-        this._batFill.ease({scale_x: Math.max(0.05, pct / 100), duration: 400, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
-        const level = charging ? 'ok' : pct <= 10 ? 'crit' : pct <= 20 ? 'warn' : 'ok';
-        for (const l of ['ok', 'warn', 'crit'])
-            this._batFill.remove_style_class_name(`di-bat-${l}`);
-        this._batFill.add_style_class_name(`di-bat-${level}`);
     }
 
     destroy() {

@@ -712,35 +712,9 @@
     spacing: 10px;
 }
 
-.di-qs-icon {
-    color: #ffffff;
-}
-
 .di-qs-battery {
     spacing: 3px;
 }
-
-.di-bat-shell {
-    width: 20px;
-    height: 10px;
-    border: 1.5px solid rgba(255, 255, 255, 0.75);
-    border-radius: 3px;
-}
-
-.di-bat-tip {
-    width: 2px;
-    height: 4px;
-    border-radius: 0 1px 1px 0;
-    background-color: rgba(255, 255, 255, 0.75);
-}
-
-.di-bat-fill {
-    border-radius: 1.5px;
-    background-color: #ffffff;
-}
-
-.di-bat-warn { background-color: #f5b841; }
-.di-bat-crit { background-color: #ff6b5e; }
 
 .di-qs-percent {
     margin-left: 3px;
