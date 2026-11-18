@@ -6,35 +6,35 @@
 
 export const THEMES = {
     ink: {
-        label: 'Mürekkep',
+        label: 'Ink',
         bg: '#000000',
         edge: 'rgba(255, 255, 255, 0.08)',
         edgeHover: 'rgba(255, 255, 255, 0.16)',
         accent: '#5ee6b5',
     },
     midnight: {
-        label: 'Gece mavisi',
+        label: 'Midnight',
         bg: '#070b1c',
         edge: 'rgba(122, 162, 255, 0.24)',
         edgeHover: 'rgba(122, 162, 255, 0.46)',
         accent: '#7aa2ff',
     },
     sunset: {
-        label: 'Gün batımı',
+        label: 'Sunset',
         bg: '#160a0c',
         edge: 'rgba(255, 138, 92, 0.26)',
         edgeHover: 'rgba(255, 138, 92, 0.50)',
         accent: '#ff8a5c',
     },
     forest: {
-        label: 'Orman',
+        label: 'Forest',
         bg: '#07120c',
         edge: 'rgba(110, 224, 154, 0.24)',
         edgeHover: 'rgba(110, 224, 154, 0.46)',
         accent: '#6ee09a',
     },
     rose: {
-        label: 'Gül',
+        label: 'Rose',
         bg: '#150a12',
         edge: 'rgba(255, 127, 176, 0.26)',
         edgeHover: 'rgba(255, 127, 176, 0.50)',

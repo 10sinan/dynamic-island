@@ -5,14 +5,15 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import {IslandModule} from '../base.js';
+import {_} from '../../lib/i18n.js';
 
 function ago(ms) {
     const s = Math.floor((Date.now() - ms) / 1000);
     if (s < 60)
-        return 'şimdi';
+        return _('now');
     if (s < 3600)
-        return `${Math.floor(s / 60)} dk`;
-    return `${Math.floor(s / 3600)} sa`;
+        return `${Math.floor(s / 60)} ${_('min')}`;
+    return `${Math.floor(s / 3600)} ${_('h')}`;
 }
 
 export default class ClipboardModule extends IslandModule {
@@ -28,9 +29,9 @@ export default class ClipboardModule extends IslandModule {
     buildExpanded() {
         const box = new St.BoxLayout({style_class: 'di-clip', orientation: Clutter.Orientation.VERTICAL});
         const head = new St.BoxLayout({style_class: 'di-clip-head'});
-        head.add_child(new St.Label({style_class: 'di-section-title', text: 'PANO GEÇMİŞİ', x_expand: true,
+        head.add_child(new St.Label({style_class: 'di-section-title', text: _('CLIPBOARD HISTORY'), x_expand: true,
             y_align: Clutter.ActorAlign.CENTER}));
-        this._clear = new St.Button({style_class: 'di-chip', label: 'Temizle', can_focus: false});
+        this._clear = new St.Button({style_class: 'di-chip', label: _('Clear'), can_focus: false});
         this._clear.connect('clicked', () => this._store?.clear());
         head.add_child(this._clear);
         box.add_child(head);
@@ -54,7 +55,7 @@ export default class ClipboardModule extends IslandModule {
         const items = this._store?.items ?? [];
         this._clear.visible = items.length > 0;
         if (!items.length) {
-            this._list.add_child(new St.Label({style_class: 'di-notifs-empty', text: 'Kopyaladığın şeyler burada görünür'}));
+            this._list.add_child(new St.Label({style_class: 'di-notifs-empty', text: _('Things you copy show up here')}));
         }
         for (const item of items)
             this._list.add_child(this._row(item));
@@ -72,7 +73,7 @@ export default class ClipboardModule extends IslandModule {
             box.add_child(new St.Icon({style_class: 'di-clip-kind', icon_name: 'edit-copy-symbolic', icon_size: 14,
                 y_align: Clutter.ActorAlign.CENTER}));
         }
-        const label = new St.Label({style_class: 'di-clip-text', text: item.preview, x_expand: true,
+        const label = new St.Label({style_class: 'di-clip-text', text: item.kind === 'image' ? _('Image') : item.preview, x_expand: true,
             y_align: Clutter.ActorAlign.CENTER});
         label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         const time = new St.Label({style_class: 'di-clip-time', text: ago(item.at), y_align: Clutter.ActorAlign.CENTER});

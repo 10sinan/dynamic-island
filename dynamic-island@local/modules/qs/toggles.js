@@ -11,10 +11,11 @@ import St from 'gi://St';
 import {getRfkillManager} from 'resource:///org/gnome/shell/ui/status/rfkill.js';
 
 import {IslandModule} from '../base.js';
+import {_, _f} from '../../lib/i18n.js';
 
 const PP_BUS = 'org.freedesktop.UPower.PowerProfiles';
 const PP_PATH = '/org/freedesktop/UPower/PowerProfiles';
-const PP_NAMES = {'power-saver': 'Tasarruf', 'balanced': 'Dengeli', 'performance': 'Performans'};
+const ppName = p => ({'power-saver': _('Saver'), 'balanced': _('Balanced'), 'performance': _('Performance')})[p];
 const PP_ICONS = {
     'power-saver': 'power-profile-power-saver-symbolic',
     'balanced': 'power-profile-balanced-symbolic',
@@ -115,16 +116,16 @@ export default class TogglesModule extends IslandModule {
         this._toggles = {
             wifi: this._toggle('network-wireless-symbolic', 'Wi-Fi', () => this._toggleWifi(), () => this._openPage('wifi')),
             bt: this._toggle('bluetooth-active-symbolic', 'Bluetooth', () => this._toggleBt(), () => this._openPage('bt')),
-            dark: this._toggle('dark-mode-symbolic', 'Karanlık', () => this._iface.set_string('color-scheme',
+            dark: this._toggle('dark-mode-symbolic', _('Dark'), () => this._iface.set_string('color-scheme',
                 this._iface.get_string('color-scheme') === 'prefer-dark' ? 'default' : 'prefer-dark')),
-            night: this._toggle('night-light-symbolic', 'Gece ışığı', () => this._color.set_boolean('night-light-enabled',
+            night: this._toggle('night-light-symbolic', _('Night light'), () => this._color.set_boolean('night-light-enabled',
                 !this._color.get_boolean('night-light-enabled'))),
-            dnd: this._toggle('notifications-disabled-symbolic', 'Rahatsız etme', () => this._notif.set_boolean('show-banners',
+            dnd: this._toggle('notifications-disabled-symbolic', _('Do not disturb'), () => this._notif.set_boolean('show-banners',
                 !this._notif.get_boolean('show-banners'))),
-            airplane: this._toggle('airplane-mode-symbolic', 'Uçak modu', () => {
+            airplane: this._toggle('airplane-mode-symbolic', _('Airplane mode'), () => {
                 this._rfkill.airplaneMode = !this._rfkill.airplaneMode;
             }),
-            power: this._toggle('power-profile-balanced-symbolic', 'Güç modu', () => this._cyclePower()),
+            power: this._toggle('power-profile-balanced-symbolic', _('Power mode'), () => this._cyclePower()),
         };
         const order = ['wifi', 'bt', 'dark', 'night', 'dnd', 'airplane', 'power'];
         let row = null;
@@ -203,7 +204,7 @@ export default class TogglesModule extends IslandModule {
         T.wifi.set({
             visible: !!dev,
             on: wifiOn,
-            subtitle: !wifiOn ? 'Kapalı' : ap ? this._ssid(ap) : 'Bağlı değil',
+            subtitle: !wifiOn ? _('Off') : ap ? this._ssid(ap) : _('Not connected'),
             iconName: wifiOn && ap ? signalIcon(ap.strength) : 'network-wireless-offline-symbolic',
         });
 
@@ -214,26 +215,26 @@ export default class TogglesModule extends IslandModule {
         T.bt.set({
             visible: btHas,
             on: btOn,
-            subtitle: !btOn ? 'Kapalı' : connected.length === 1 ? connected[0].alias
-                : connected.length ? `${connected.length} cihaz` : 'Açık',
+            subtitle: !btOn ? _('Off') : connected.length === 1 ? connected[0].alias
+                : connected.length ? _f('%s devices', connected.length) : _('On'),
             iconName: btOn ? 'bluetooth-active-symbolic' : 'bluetooth-disabled-symbolic',
         });
 
         const dark = this._iface.get_string('color-scheme') === 'prefer-dark';
-        T.dark.set({on: dark, subtitle: dark ? 'Açık' : 'Kapalı'});
+        T.dark.set({on: dark, subtitle: dark ? _('On') : _('Off')});
         const night = this._color.get_boolean('night-light-enabled');
-        T.night.set({on: night, subtitle: night ? 'Açık' : 'Kapalı'});
+        T.night.set({on: night, subtitle: night ? _('On') : _('Off')});
         const dnd = !this._notif.get_boolean('show-banners');
-        T.dnd.set({on: dnd, subtitle: dnd ? 'Açık' : 'Kapalı'});
+        T.dnd.set({on: dnd, subtitle: dnd ? _('On') : _('Off')});
         const air = !!this._rfkill?.airplaneMode;
         T.airplane.set({visible: !!this._rfkill?.showAirplaneMode || air, on: air,
-            subtitle: air ? 'Açık' : 'Kapalı'});
+            subtitle: air ? _('On') : _('Off')});
 
         const profile = this._pp?.get_cached_property('ActiveProfile')?.unpack() ?? '';
         T.power.set({
             visible: !!this._pp,
             on: profile !== '' && profile !== 'balanced',
-            subtitle: PP_NAMES[profile] ?? profile,
+            subtitle: ppName(profile) ?? profile,
             iconName: PP_ICONS[profile],
         });
 
@@ -358,7 +359,7 @@ export default class TogglesModule extends IslandModule {
     _renderWifi() {
         const dev = this._wifiDevice();
         if (!dev || !this._nm.wireless_enabled) {
-            this._renderPage('off', 'Wi-Fi', [], 'Wi-Fi kapalı');
+            this._renderPage('off', 'Wi-Fi', [], _('Wi-Fi off'));
             return;
         }
         const active = dev.active_access_point;
@@ -380,9 +381,9 @@ export default class TogglesModule extends IslandModule {
             const secured = (ap.flags | ap.wpa_flags | ap.rsn_flags) !== 0;
             const isActive = ssid === activeSsid;
             return this._listRow(signalIcon(ap.strength), ssid,
-                isActive ? 'Bağlı' : secured ? '🔒' : '', () => this._connectAp(dev, ap), isActive);
+                isActive ? _('Connected') : secured ? '🔒' : '', () => this._connectAp(dev, ap), isActive);
         });
-        this._renderPage(sig, 'Wi-Fi ağları', rows, 'Ağ aranıyor…');
+        this._renderPage(sig, _('Wi-Fi networks'), rows, _('Scanning for networks…'));
     }
 
     _connectAp(dev, ap) {
@@ -410,14 +411,14 @@ export default class TogglesModule extends IslandModule {
 
     _renderBt() {
         if (!this._bt?.default_adapter_powered) {
-            this._renderPage('off', 'Bluetooth', [], 'Bluetooth kapalı');
+            this._renderPage('off', 'Bluetooth', [], _('Bluetooth off'));
             return;
         }
         const devices = this._btDevices().sort((a, b) => b.connected - a.connected);
         const sig = devices.map(d => `${d.alias}:${d.connected}`).join('|');
         const rows = devices.map(d => this._listRow(d.icon || 'bluetooth-active-symbolic', d.alias || d.name,
-            d.connected ? 'Bağlı' : 'Bağlan', () => this._toggleDevice(d), d.connected));
-        this._renderPage(sig, 'Bluetooth cihazları', rows, 'Eşleşmiş cihaz yok');
+            d.connected ? _('Connected') : _('Connect'), () => this._toggleDevice(d), d.connected));
+        this._renderPage(sig, _('Bluetooth devices'), rows, _('No paired devices'));
     }
 
     _toggleDevice(device) {

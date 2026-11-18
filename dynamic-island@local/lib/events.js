@@ -17,6 +17,7 @@ import {getInputSourceManager} from 'resource:///org/gnome/shell/ui/status/keybo
 
 import * as C from './constants.js';
 import {findCpuTemp, parseMeminfo, readText, tryReadText} from './proc.js';
+import {_, _f, pct} from './i18n.js';
 
 const UPOWER = 'org.freedesktop.UPower';
 const DISPLAY_DEVICE = '/org/freedesktop/UPower/devices/DisplayDevice';
@@ -287,50 +288,50 @@ export class EventHub {
         case 'power': {
             const level = Math.min(100, Math.round(d.pct / 10) * 10);
             return d.charging
-                ? {icon: `battery-level-${level}-charging-symbolic`, title: 'Şarj oluyor', sub: `%${d.pct}`, tone: 'ok'}
-                : {icon: `battery-level-${level}-symbolic`, title: 'Şarj kablosu çıkarıldı', sub: `%${d.pct}`, tone: 'ok'};
+                ? {icon: `battery-level-${level}-charging-symbolic`, title: _('Charging'), sub: pct(d.pct), tone: 'ok'}
+                : {icon: `battery-level-${level}-symbolic`, title: _('Charger unplugged'), sub: pct(d.pct), tone: 'ok'};
         }
         case 'battery-low':
-            return {icon: 'battery-level-10-symbolic', title: 'Pil düşük', sub: `%${d.pct} kaldı`,
+            return {icon: 'battery-level-10-symbolic', title: _('Battery low'), sub: _f('%s left', pct(d.pct)),
                 tone: d.level <= 10 ? 'crit' : 'warn', duration: 5000};
         case 'wifi':
             return d.connected
                 ? {icon: d.wired ? 'network-wired-symbolic' : 'network-wireless-signal-excellent-symbolic',
-                    title: d.name, sub: 'Bağlandı', tone: 'ok'}
-                : {icon: 'network-wireless-offline-symbolic', title: 'Bağlantı koptu', sub: 'İnternet yok', tone: 'warn'};
+                    title: d.name, sub: _('Connected'), tone: 'ok'}
+                : {icon: 'network-wireless-offline-symbolic', title: _('Connection lost'), sub: _('No internet'), tone: 'warn'};
         case 'bluetooth':
             return {icon: d.icon || 'bluetooth-active-symbolic', title: d.name,
-                sub: d.connected ? 'Bağlandı' : 'Bağlantı kesildi', tone: d.connected ? 'ok' : 'warn'};
+                sub: d.connected ? _('Connected') : _('Disconnected'), tone: d.connected ? 'ok' : 'warn'};
         case 'lockkey': {
             const caps = d.key === 'caps';
             return {badge: caps ? (d.on ? 'AA' : 'aa') : (d.on ? '123' : '···'),
-                title: caps ? 'Caps Lock' : 'Num Lock', sub: d.on ? 'Açık' : 'Kapalı',
+                title: caps ? 'Caps Lock' : 'Num Lock', sub: d.on ? _('On') : _('Off'),
                 tone: d.on && caps ? 'warn' : 'ok', duration: 2000};
         }
         case 'layout':
-            return {badge: d.short, title: d.name, sub: 'Klavye düzeni', tone: 'ok', duration: 2200};
+            return {badge: d.short, title: d.name, sub: _('Keyboard layout'), tone: 'ok', duration: 2200};
         case 'meeting':
             return d.on
-                ? {icon: 'notifications-disabled-symbolic', title: 'Toplantı modu', sub: 'Bildirimler susturuldu', tone: 'mic', duration: 3500}
-                : {icon: 'notifications-symbolic', title: 'Toplantı bitti', sub: 'Bildirimler yeniden açık', tone: 'ok', duration: 3000};
+                ? {icon: 'notifications-disabled-symbolic', title: _('Meeting mode'), sub: _('Notifications muted'), tone: 'mic', duration: 3500}
+                : {icon: 'notifications-symbolic', title: _('Meeting ended'), sub: _('Notifications back on'), tone: 'ok', duration: 3000};
         case 'powersaver':
             return d.on
-                ? {icon: 'power-profile-power-saver-symbolic', title: 'Güç tasarrufu açıldı',
-                    sub: `Pil %${d.pct} · ekran ve işlemci kısıldı`, tone: 'warn', duration: 4500}
-                : {icon: 'power-profile-balanced-symbolic', title: 'Güç tasarrufu kapandı',
-                    sub: 'Önceki profile dönüldü', tone: 'ok', duration: 3000};
+                ? {icon: 'power-profile-power-saver-symbolic', title: _('Power saver on'),
+                    sub: _f('Battery %s · screen and CPU throttled', pct(d.pct)), tone: 'warn', duration: 4500}
+                : {icon: 'power-profile-balanced-symbolic', title: _('Power saver off'),
+                    sub: _('Previous profile restored'), tone: 'ok', duration: 3000};
         case 'thermal':
-            return {icon: 'dialog-warning-symbolic', title: 'Sistem ısındı', sub: `CPU ${d.c}°C`, tone: 'crit', duration: 5000};
+            return {icon: 'dialog-warning-symbolic', title: _('System running hot'), sub: `CPU ${d.c}°C`, tone: 'crit', duration: 5000};
         case 'memory':
-            return {icon: 'dialog-warning-symbolic', title: 'Bellek az', sub: `%${d.pct} dolu`, tone: 'warn', duration: 5000};
+            return {icon: 'dialog-warning-symbolic', title: _('Low memory'), sub: _f('%s used', pct(d.pct)), tone: 'warn', duration: 5000};
         case 'disk':
-            return {icon: 'drive-harddisk-symbolic', title: 'Disk dolmak üzere',
-                sub: `%${d.pct} dolu · ${d.freeGb.toFixed(1)} GB boş`, tone: 'crit', duration: 5000};
+            return {icon: 'drive-harddisk-symbolic', title: _('Disk almost full'),
+                sub: _f('%s used · %s GB free', pct(d.pct), d.freeGb.toFixed(1)), tone: 'crit', duration: 5000};
         case 'privacy':
             return d.kind === 'mic'
-                ? {icon: 'audio-input-microphone-symbolic', title: 'Mikrofon kullanılıyor', sub: 'Bir uygulama dinliyor',
+                ? {icon: 'audio-input-microphone-symbolic', title: _('Microphone in use'), sub: _('An app is listening'),
                     tone: 'mic', dot: true, duration: 4000}
-                : {icon: 'camera-web-symbolic', title: 'Kamera kullanılıyor', sub: 'Bir uygulama görüntü alıyor',
+                : {icon: 'camera-web-symbolic', title: _('Camera in use'), sub: _('An app is using the camera'),
                     tone: 'cam', dot: true, duration: 4000};
         default:
             return null;

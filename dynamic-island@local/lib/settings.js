@@ -10,6 +10,7 @@ export function readConfig(settings) {
     const accent = settings.get_string('accent-color');
     const theme = themeFor(settings.get_string('theme'));
     return {
+        language: settings.get_string('language'),
         theme,
         centerEnabled: settings.get_boolean('center-enabled'),
         qsEnabled: settings.get_boolean('qs-enabled'),

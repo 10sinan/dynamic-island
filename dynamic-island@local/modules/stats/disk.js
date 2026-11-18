@@ -14,6 +14,7 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import {IslandModule} from '../base.js';
+import {_, _f} from '../../lib/i18n.js';
 import {Meter} from '../../lib/widgets.js';
 import {IoMeter, formatBytes, parseDiskstats} from '../../lib/diskio.js';
 import {clamp01, formatRate, readText, severity} from '../../lib/proc.js';
@@ -118,8 +119,8 @@ export default class DiskModule extends IslandModule {
         if (this.ctx?.isExpanded?.() || !this.ctx?.showActivity)
             return;
         const view = on
-            ? {title: 'Büyük dosya işlemi', sub: `↓ ${formatRate(r.readBps)}  ↑ ${formatRate(r.writeBps)}`}
-            : {title: 'Dosya işlemi bitti', sub: `${formatBytes(r.moved)} aktarıldı`};
+            ? {title: _('Large file operation'), sub: `↓ ${formatRate(r.readBps)}  ↑ ${formatRate(r.writeBps)}`}
+            : {title: _('File operation done'), sub: _f('%s transferred', formatBytes(r.moved))};
         this.ctx.showActivity('diskio', {
             priority: 0,
             duration: 3000,

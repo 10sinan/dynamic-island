@@ -9,6 +9,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {NotificationDestroyedReason} from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import {IslandModule} from './base.js';
+import {_, _f} from '../lib/i18n.js';
 
 const MAX_ROWS = 4;
 
@@ -21,9 +22,9 @@ function ago(dt) {
         return '';
     const secs = GLib.DateTime.new_now_local().difference(dt) / GLib.USEC_PER_SEC;
     if (secs < 60)
-        return 'şimdi';
+        return _('now');
     if (secs < 3600)
-        return `${Math.floor(secs / 60)} dk`;
+        return `${Math.floor(secs / 60)} ${_('min')}`;
     return dt.format('%H:%M');
 }
 
@@ -78,11 +79,11 @@ export default class NotificationListModule extends IslandModule {
         const header = new St.BoxLayout({style_class: 'di-notifs-header'});
         header.add_child(new St.Label({
             style_class: 'di-section-title',
-            text: 'BİLDİRİMLER',
+            text: _('NOTIFICATIONS'),
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         }));
-        this._clear = new St.Button({style_class: 'di-chip', label: 'Temizle', can_focus: false});
+        this._clear = new St.Button({style_class: 'di-chip', label: _('Clear'), can_focus: false});
         this._clear.connect('clicked', () => this._clearAll());
         header.add_child(this._clear);
         box.add_child(header);
@@ -118,7 +119,7 @@ export default class NotificationListModule extends IslandModule {
         const all = this._notifications();
         this._clear.visible = all.length > 0;
         if (!all.length) {
-            this._list.add_child(new St.Label({style_class: 'di-notifs-empty', text: 'Bildirim yok'}));
+            this._list.add_child(new St.Label({style_class: 'di-notifs-empty', text: _('No notifications')}));
             return;
         }
         for (const n of all.slice(0, MAX_ROWS))
@@ -126,7 +127,7 @@ export default class NotificationListModule extends IslandModule {
         if (all.length > MAX_ROWS) {
             this._list.add_child(new St.Label({
                 style_class: 'di-notifs-more',
-                text: `+${all.length - MAX_ROWS} bildirim daha`,
+                text: _f('+%s more notifications', all.length - MAX_ROWS),
             }));
         }
     }
@@ -141,7 +142,7 @@ export default class NotificationListModule extends IslandModule {
             icon.icon_name = 'preferences-system-notifications-symbolic';
         const col = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true});
         const meta = new St.Label({style_class: 'di-notif-app',
-            text: `${plain(n.source?.title) || 'Bildirim'} · ${ago(n.datetime)}`});
+            text: `${plain(n.source?.title) || _('Notification')} · ${ago(n.datetime)}`});
         const title = new St.Label({style_class: 'di-notif-row-title', text: plain(n.title)});
         const body = new St.Label({style_class: 'di-notif-row-body', text: plain(n.body)});
         body.visible = body.text.length > 0;

@@ -15,6 +15,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Urgency} from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import * as C from './constants.js';
+import {_} from './i18n.js';
 
 const OFFSCREEN = -100000;
 
@@ -178,9 +179,9 @@ export class NotificationPreview {
 
         const col = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true,
             y_align: Clutter.ActorAlign.CENTER});
-        const title = new St.Label({style_class: 'di-event-title', text: 'Ekran görüntüsü alındı'});
+        const title = new St.Label({style_class: 'di-event-title', text: _('Screenshot taken')});
         const sub = new St.Label({style_class: 'di-event-sub'});
-        const hint = new St.Label({style_class: 'di-shot-hint', text: 'Tıkla: aç  ·  sağ tık: kapat'});
+        const hint = new St.Label({style_class: 'di-shot-hint', text: _('Click: open  ·  right click: dismiss')});
         col.add_child(title);
         col.add_child(sub);
         col.add_child(hint);
@@ -209,7 +210,7 @@ export class NotificationPreview {
         const k = Math.min(176 / w, 108 / h);
         r.frame.set_size(Math.max(48, Math.round(w * k)), Math.max(30, Math.round(h * k)));
         r.image.set_content(content);
-        r.sub.text = n.actions?.length ? 'Panoya kopyalandı · dosyaya kaydedildi' : 'Panoya kopyalandı';
+        r.sub.text = n.actions?.length ? _('Copied to clipboard · saved to file') : _('Copied to clipboard');
 
         // shutter flash + pop-in
         r.frame.remove_all_transitions();
@@ -227,7 +228,7 @@ export class NotificationPreview {
         this._icon.gicon = n.gicon ?? n.source?.icon ?? null;
         if (!this._icon.gicon)
             this._icon.icon_name = 'preferences-system-notifications-symbolic';
-        this._app.text = `${plain(n.source?.title) || 'Bildirim'} · şimdi`;
+        this._app.text = `${plain(n.source?.title) || _('Notification')} · ${_('now')}`;
         this._title.text = plain(n.title) || plain(n.source?.title);
         const body = plain(n.body);
         this._body.text = body;

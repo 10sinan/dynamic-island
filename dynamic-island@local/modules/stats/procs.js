@@ -7,6 +7,7 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import {IslandModule} from '../base.js';
+import {_} from '../../lib/i18n.js';
 import {listDir, tryReadText, parseProcStat, topProcesses} from '../../lib/proc.js';
 
 const BATCH = 24;
@@ -45,8 +46,8 @@ export default class ProcsModule extends IslandModule {
 
     buildExpanded() {
         const box = new St.BoxLayout({style_class: 'di-procs'});
-        this._cpu = this._column('EN ÇOK CPU');
-        this._mem = this._column('EN ÇOK BELLEK');
+        this._cpu = this._column(_('TOP CPU'));
+        this._mem = this._column(_('TOP MEMORY'));
         box.add_child(this._cpu.col);
         box.add_child(this._mem.col);
         box.connect('destroy', () => {

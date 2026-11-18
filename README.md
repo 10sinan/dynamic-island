@@ -142,6 +142,7 @@ di-config reset                                       # hepsini varsayılana dö
 | `stats-modules` | cpu, ram, temp, net, battery, gpu, disk, graph, procs | sol island içeriği |
 | `stats-compact-modules` | cpu, ram, disk | sol pill'de panelde görünenler |
 | `events` | power, battery-low, wifi, bluetooth, privacy, thermal, memory, disk, lockkey, layout, meeting, powersaver | island'ı kısa süre açan olaylar |
+| `language` | tr | arayüz dili: `tr` (Türkçe) ya da `en` (English). Cihazın diline **bağlı değildir**; yalnızca buradan değişir |
 | `theme` | ink | `ink`, `midnight`, `sunset`, `forest`, `rose` |
 | `accent-color` | boş | vurgu rengi (#rrggbb); boş = temanın rengi |
 | `clipboard-history` | açık | son 10 kopyayı bellekte tut, sağ island'da göster |
@@ -186,6 +187,10 @@ Pil %20'nin (ayarlanabilir) altına düşünce ve şarjda değilken `power-profi
 ### Disk hızı göstergesi
 
 Diskte iki ölçüm üst üste yüksek okuma+yazma (≥50 MB/s) görünce sol pill'de küçük bir disk simgesi ve toplam hız (`190 MB/s`) belirir ve island `Büyük dosya işlemi · ↓ 100 MB/s ↑ 90 MB/s` diye kısa süre açılır. Hız 20 MB/s'nin altına inince `Dosya işlemi bitti · 12.4 GB aktarıldı` der. Açık island'ın DISK karosunda da canlı hız görünür. **Yüzde ve kalan süre yoktur:** işletim sistemi işlemin toplam boyutunu bildirmez (Nautilus 50 ilerlemeyi yalnızca kendi penceresinde gösterir, dışarıya sunmaz). USB bellek, SD kart ve NVMe/SATA diskler sayılır; bölümler ve sanal cihazlar (loop, dm, zram) hariç.
+
+### Dil (Türkçe / English)
+
+Arayüz dili cihazın diline göre **değil**, `language` ayarına göre belirlenir (varsayılan `tr`). `di-config` → Genel → **Dil / Language** ile ya da `di-config set language en` ile değişir; island'lar ve `di-config` arayüzü anında yeni dile geçer. Tarih/ay/gün adları ve takvimin hafta başlangıcı da dile bağlıdır (Türkçe: Pazartesi, English: Sunday). Yeni dil eklemek için `lib/i18n.js` içindeki tabloya (İngilizce metin → çeviri) ve `tools/di-config` içindeki `EN` sözlüğüne bakın.
 
 ### Temalar
 
@@ -254,6 +259,7 @@ tests/
 ├── diskio.test.js         # disk hızı ölçer testleri (gjs)
 ├── glyphs.test.js         # ikon seviye/renk kararları testleri (gjs)
 ├── cliplist.test.js       # pano geçmişi listesi testleri (gjs)
+├── i18n.test.js           # dil katmanı testleri (gjs)
 ├── windowmatch.test.js    # oynatıcı penceresi eşleştirme testleri (gjs)
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
@@ -309,6 +315,7 @@ gjs -m tests/history.test.js
 gjs -m tests/diskio.test.js
 gjs -m tests/glyphs.test.js
 gjs -m tests/cliplist.test.js
+gjs -m tests/i18n.test.js
 gjs -m tests/windowmatch.test.js
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots

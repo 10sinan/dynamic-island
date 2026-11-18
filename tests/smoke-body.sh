@@ -541,6 +541,16 @@ dset stats-enabled false; sleep 1
 echo "   stats-enabled=false -> islands=$(ev "$ISL.length") Activities button back: opacity=$(ev "$ACT.container.opacity") w==natural: $(ev "$ACT.container.width === $ACT.container.get_preferred_width(-1)[1]")"
 dreset stats-enabled; sleep 1
 
+echo "== language (independent of the device locale)"
+CLK="$C._modules.find(m => m.constructor.id === 'clock')._date.text"
+echo "   default tr -> date: $(ev "$CLK")"
+dset language en; sleep 1.5
+echo "   en -> date: $(ev "$CLK")  qs modules: $(ev "JSON.stringify($Q._modules.map(m=>m.constructor.id))")"
+echo "   en toggles labels: $(ev "JSON.stringify(Object.values($Q._modules.find(m=>m.constructor.id==='toggles')._toggles).map(t=>t.title ?? t._title?.text ?? ''))")"
+dreset language; sleep 1.5
+echo "   tr again -> date: $(ev "$CLK")"
+echo
+
 echo "== $CYCLES disable/enable cycles"
 echo "   before: $(ev "$COUNTS")"
 for i in $(seq 1 "$CYCLES"); do

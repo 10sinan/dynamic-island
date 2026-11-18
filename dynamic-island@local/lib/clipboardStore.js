@@ -96,7 +96,7 @@ export class ClipboardStore {
             if (this._dead)
                 return;
             const key = `i:${GLib.compute_checksum_for_bytes(GLib.ChecksumType.MD5, bytes)}`;
-            this._add({key, kind: 'image', bytes, thumb, preview: 'Resim'});
+            this._add({key, kind: 'image', bytes, thumb, preview: ''});
         }
     }
 

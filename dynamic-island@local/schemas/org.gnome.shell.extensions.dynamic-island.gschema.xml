@@ -119,6 +119,14 @@
     </key>
 
     <!-- Look -->
+    <key name="language" type="s">
+      <choices>
+        <choice value="tr"/>
+        <choice value="en"/>
+      </choices>
+      <default>'tr'</default>
+      <summary>Interface language (does not follow the system locale)</summary>
+    </key>
     <key name="theme" type="s">
       <choices>
         <choice value="ink"/>

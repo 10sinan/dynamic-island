@@ -9,6 +9,7 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
+import {shortDate} from '../lib/i18n.js';
 
 export default class ClockModule extends IslandModule {
     static id = 'clock';
@@ -99,7 +100,7 @@ export default class ClockModule extends IslandModule {
         for (const l of this._timeLabels)
             l.text = time;
         if (this._date)
-            this._date.text = GLib.DateTime.new_now_local().format('%a %-d %b');
+            this._date.text = shortDate(GLib.DateTime.new_now_local());
         const target = this._indicator?.visible ? 255 : 0;
         for (const d of this._dots) {
             if (d.opacity !== target)

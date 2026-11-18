@@ -1,10 +1,10 @@
 // Month calendar for the centre island (replaces GNOME's calendar popover).
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
-import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
+import {weekStart, weekdayName, monthTitle} from '../lib/i18n.js';
 
 const CELLS = 42;   // 6 weeks
 
@@ -22,7 +22,7 @@ export default class CalendarModule extends IslandModule {
 
     async init() {
         // 0 = Sunday ... 6 = Saturday, from the locale (same as GNOME's calendar).
-        this._weekStart = Shell.util_get_week_start();
+        this._weekStart = weekStart();
         this._resetMonth();
     }
 
@@ -66,7 +66,7 @@ export default class CalendarModule extends IslandModule {
         const sunday = GLib.DateTime.new_local(2023, 1, 1, 12, 0, 0);   // a Sunday
         for (let i = 0; i < 7; i++) {
             const d = sunday.add_days((this._weekStart + i) % 7);
-            names.add_child(new St.Label({style_class: 'di-cal-weekday', text: d.format('%a').slice(0, 2)}));
+            names.add_child(new St.Label({style_class: 'di-cal-weekday', text: weekdayName(d.get_day_of_week() % 7, true).slice(0, 2)}));
         }
         box.add_child(names);
 
@@ -104,7 +104,7 @@ export default class CalendarModule extends IslandModule {
         if (!this._cells)
             return;
         const first = GLib.DateTime.new_local(this._year, this._month, 1, 12, 0, 0);
-        this._title.text = first.format('%B %Y');
+        this._title.text = monthTitle(this._year, this._month);
         // get_day_of_week: 1 = Monday ... 7 = Sunday
         const offset = (first.get_day_of_week() % 7 - this._weekStart + 7) % 7;
         const start = first.add_days(-offset);

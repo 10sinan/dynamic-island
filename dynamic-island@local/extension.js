@@ -15,6 +15,7 @@ import {ClipboardStore} from './lib/clipboardStore.js';
 import {MeetingMode} from './lib/meeting.js';
 import {AutoPowerSaver} from './lib/powerPolicy.js';
 import {readConfig} from './lib/settings.js';
+import {setLanguage} from './lib/i18n.js';
 import {LOG_PREFIX, REBUILD_DEBOUNCE_MS} from './lib/constants.js';
 import {CENTER_FIXED, CENTER_MODULES, QS_FIXED, QS_MODULES, STATS_FIXED, STATS_MODULES} from './modules/index.js';
 
@@ -163,6 +164,7 @@ export default class DynamicIslandExtension extends Extension {
 
     _build(animateIn) {
         const cfg = readConfig(this._settings);
+        setLanguage(cfg.language);
         // The clipboard store outlives island rebuilds (a setting change must not
         // wipe the history); it exists only while the setting is on.
         if (cfg.clipboardHistory && !this._clip)

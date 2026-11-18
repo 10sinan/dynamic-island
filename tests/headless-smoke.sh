@@ -15,7 +15,7 @@ export UUID="dynamic-island@local"
 export HELPER="di-test-helper@local"
 export SCHEMA="org.gnome.shell.extensions.dynamic-island"
 export SANDBOX="$(mktemp -d -t di-smoke-XXXXXX)"
-trap 'rm -rf "$SANDBOX"' EXIT
+[ -n "${KEEP:-}" ] || trap 'rm -rf "$SANDBOX"' EXIT
 
 glib-compile-schemas "$HERE/$UUID/schemas"
 

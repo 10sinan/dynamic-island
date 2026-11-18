@@ -48,6 +48,123 @@ def open_settings():
 
 # ----------------------------------------------------------------- model
 
+# ------------------------------------------------------------- language
+# The UI is written in Turkish; EN maps each Turkish text to English. The
+# language is the extension's own `language` setting (not the system locale).
+LANG = "tr"
+
+EN = {
+    "Genel": "General", "Zamanlama": "Timing", "Görünüm": "Look", "Orta": "Center", "Sol": "Left",
+    "Sağ": "Right", "Olaylar": "Events",
+    "Dil / Language": "Language",
+    "Arayüz dili. ←/→ ile seç; island'lar ve bu arayüz anında değişir.":
+        "Interface language. Pick with ←/→; the islands and this UI change right away.",
+    "Orta island (saatin yerine)": "Center island (replaces the clock)",
+    "Paneldeki saatin yerine geçen island. Kapatınca orijinal saat geri gelir.":
+        "The island that replaces the panel clock. Turning it off brings the original clock back.",
+    "Sol island (istatistik, Activities yerine)": "Left island (stats, replaces Activities)",
+    "Üst sol köşede CPU, RAM, ağ... Kapatınca GNOME'un Activities düğmesi geri gelir.":
+        "CPU, RAM, network... in the top-left corner. Turning it off brings GNOME's Activities button back.",
+    "Pano geçmişi (son 10 kopya, yalnızca bellekte)": "Clipboard history (last 10 copies, memory only)",
+    "Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır.":
+        "What you copy is listed in the right island; click to put it back. Never written to disk; password-manager content is skipped.",
+    "Müzik kartında video önizleme düğmesi": "Video preview button on the music card",
+    "Oynatıcının penceresi bulunursa karttaki Video düğmesi kapak yerine pencerenin canlı görüntüsünü gösterir.":
+        "If the player's window is found, the Video button shows its live view instead of the cover.",
+    "Toplantı modu (mikrofon/kamera → Rahatsız Etme)": "Meeting mode (mic/camera → Do Not Disturb)",
+    "Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner.":
+        "Do Not Disturb turns on while the mic or camera is in use and goes back 10 s after it stops.",
+    "Pil azalınca otomatik Güç Tasarrufu": "Auto Power Saver on low battery",
+    "Pil aşağıdaki seviyeye inince güç profili 'Güç Tasarrufu' olur, şarja takınca eskisine döner.":
+        "Below the level set here the power profile becomes 'Power Saver'; plugging in restores it.",
+    "Güç tasarrufu pil seviyesi": "Power saver battery level",
+    "Pil bu yüzdenin altına düşünce (şarjda değilken) Güç Tasarrufu istenir.":
+        "Power Saver is requested when the battery falls below this percentage (not charging).",
+    "Super+A sağ island'ı açsın": "Super+A opens the right island",
+    "GNOME'un Quick Settings kısayolu (Super+A) GNOME menüsü yerine sağ island'ı açar; tekrar basınca ya da Esc ile kapanır.":
+        "GNOME's Quick Settings shortcut (Super+A) opens the right island instead; press again or Esc to close.",
+    "Sağ island (Quick Settings)": "Right island (Quick Settings)",
+    "Sağ üstteki durum ikonlarını siyah hapın içine alır.": "Puts the top-right status icons in the black pill.",
+    "Üstüne gelince aç": "Open on hover",
+    "Island'lar yalnızca üstüne gelince açılır (tıklama yok). Kapatırsan hiç açılmazlar.":
+        "Islands open only on hover (no clicks). If off, they never open.",
+    "Saatte saniye göster": "Show seconds on the clock",
+    "Island'daki saat saniyeyi de gösterir (saniyede bir güncellenir).":
+        "The clock also shows seconds (updates every second).",
+    "Ses/parlaklık göstergesi island'da": "Volume/brightness indicator in the island",
+    "Ses ya da parlaklık değişince GNOME'un kutusu yerine orta island kısa süre açılır.":
+        "On volume/brightness changes the center island opens briefly instead of GNOME's popup.",
+    "Şarkı değişince önizleme": "Preview on track change",
+    "Yeni şarkı başlayınca orta island kısa süre kapak, başlık ve sanatçıyı gösterir.":
+        "When a new track starts the center island briefly shows cover, title and artist.",
+    "Ekran görüntüsü küçük resmi": "Screenshot thumbnail",
+    "Ekran görüntüsü alınınca küçük resim island'da belirir. Tıkla: aç · sağ tık: kapat. Bildirim önizlemeye bağlıdır.":
+        "A thumbnail appears in the island after a screenshot. Click: open · right click: dismiss. Needs notification preview.",
+    "Bildirim önizleme": "Notification preview",
+    "Yeni bildirimler GNOME balonu yerine orta island'da gösterilir. Tık: aç · sağ tık: kapat.":
+        "New notifications show in the center island instead of GNOME's banner. Click: open · right click: dismiss.",
+    "Açılma bekleme": "Open delay",
+    "Üstüne geldikten sonra açılmadan önce beklenecek süre. 0 = anında.": "Wait before opening after hovering. 0 = instant.",
+    "Kapanma bekleme": "Close delay", "İmleç çekildikten sonra kapanmadan önce beklenecek süre.":
+        "Wait before closing after the pointer leaves.",
+    "Kendiliğinden kapanma": "Auto close", "asla": "never",
+    "İmleç üstünde değilken bu süre sonunda kapanır. 0 = asla.": "Closes after this time when not hovered. 0 = never.",
+    "Açılma animasyonu": "Open animation", "Yaylanarak açılma animasyonunun süresi.": "Duration of the spring-open animation.",
+    "Bildirim önizleme süresi": "Notification preview time",
+    "Bildirim önizlemesinin ekranda kalma süresi (üstüne gelince durur).": "How long the notification preview stays (pauses on hover).",
+    "Yaylanma efekti": "Spring effect", "Açılırken hafifçe taşıp geri gelir (EASE_OUT_BACK).": "Slightly overshoots when opening (EASE_OUT_BACK).",
+    "Yenileme (kapalıyken)": "Refresh (collapsed)", "CPU/RAM gibi verilerin kapalı haldeyken yenilenme aralığı.":
+        "Refresh interval for CPU/RAM data while collapsed.",
+    "Yenileme (açıkken)": "Refresh (expanded)", "Island açıkken verilerin yenilenme aralığı.": "Refresh interval while the island is open.",
+    "Renk teması": "Color theme", "Mürekkep": "Ink", "Gece mavisi": "Midnight", "Gün batımı": "Sunset", "Orman": "Forest", "Gül": "Rose",
+    "Island'ın zemin, kenar ve vurgu rengi. ←/→ ile seç; anında uygulanır.": "Island body, outline and accent color. Pick with ←/→; applies instantly.",
+    "Vurgu rengi": "Accent color",
+    "←/→ hazır renkler ('tema rengi' = seçili temanın rengi) · Enter ile #rrggbb gir.":
+        "←/→ presets ('theme color' = the theme's own) · Enter to type #rrggbb.",
+    "tema rengi": "theme color", "Nane": "Mint", "Gök": "Sky", "Lavanta": "Lavender", "Mercan": "Coral", "Kehribar": "Amber", "Kar": "Snow",
+    "özel": "custom",
+    "Saatin altında açılanlar": "Shown under the clock",
+    "Müzik kartı, takvim, bildirim listesi. Space: göster/gizle · p: panelde de göster · J/K: sıra":
+        "Music card, calendar, notification list. Space: show/hide · p: also in panel · J/K: order",
+    "İstatistikler (üst sol köşe)": "Statistics (top-left corner)",
+    "Space: göster/gizle · p: panelde de göster (CPU, RAM, ...) · J/K: sıra":
+        "Space: show/hide · p: also in panel (CPU, RAM, ...) · J/K: order",
+    "Panel bölümleri (yukarıdan aşağı)": "Panel sections (top to bottom)",
+    "Space: göster/gizle · J/K: sırayı değiştir": "Space: show/hide · J/K: reorder",
+    "Island'ı kısa süre açan olaylar": "Events that open the island briefly",
+    "Space: aç/kapa. Seçilen olaylar olunca orta island kendiliğinden açılıp durumu gösterir.":
+        "Space: on/off. When a chosen event happens the center island opens by itself to show it.",
+    "GPU kullanımı": "GPU usage", "Disk doluluğu": "Disk usage", "Canlı grafikler (60 sn)": "Live graphs (60 s)",
+    "En çok kaynak kullanan uygulamalar": "Top resource-using apps", "Şarj takıldı / çıkarıldı": "Charger plugged / unplugged",
+    "Pil düşük (%20, %10)": "Battery low (20%, 10%)", "Wi-Fi bağlandı / koptu": "Wi-Fi connected / lost",
+    "Bluetooth cihazı bağlandı / ayrıldı": "Bluetooth device connected / disconnected",
+    "Mikrofon / kamera kullanımda": "Microphone / camera in use", "Caps Lock / Num Lock açıldı-kapandı": "Caps Lock / Num Lock toggled",
+    "Klavye dili değişti": "Keyboard layout changed", "Toplantı modu açıldı / kapandı": "Meeting mode on / off",
+    "Güç tasarrufu açıldı / kapandı": "Power saver on / off", "Sistem ısındı (CPU 90°C üstü)": "System hot (CPU above 90°C)",
+    "Bellek az (%90 üstü)": "Low memory (above 90%)", "Disk dolmak üzere (%95 üstü)": "Disk almost full (above 95%)",
+    "Müzik oynatıcı": "Music player", "Takvim": "Calendar", "Bildirim listesi": "Notification list",
+    "Ses + parlaklık kaydırıcıları": "Volume + brightness sliders", "Pano geçmişi (son 10)": "Clipboard history (last 10)",
+    "Düğmeler (Wi-Fi, Bluetooth, ...)": "Toggles (Wi-Fi, Bluetooth, ...)", "Pil + sistem düğmeleri": "Battery + system buttons",
+    "CPU kullanımı": "CPU usage", "RAM kullanımı": "RAM usage", "CPU sıcaklığı": "CPU temperature", "Ağ hızı (↓ ↑)": "Network speed (↓ ↑)",
+    "Pil": "Battery",
+    "açık": "on", "kapalı": "off", "● açık ": "● on ", "○ kapalı": "○ off",
+    T("(boş)"): "(empty)", "panelde gösterilen metrikler": "metrics shown in the panel",
+    "karo   panelde": "tile   panel",
+    "değişiklikler anında uygulanır": "changes apply instantly", "· ayarlar": "· settings",
+    "↑↓ gez  ←→ değiştir  Space aç/kapa  Tab/1-7 sekme  r varsayılan  R hepsi  q çık":
+        "↑↓ move  ←→ change  Space toggle  Tab/1-7 tab  r default  R all  q quit",
+    "Önce Space ile modülü aç, sonra taşı.": "Turn the module on with Space first, then move it.",
+    "güncellendi": "updated", "taşındı": "moved", "panelde gösterilemez.": "cannot be shown in the panel.",
+    "panelde gösterim değişti": "panel display changed", "vurgu rengi": "accent color",
+    "Geçersiz renk. Örnek: #5ab8ff": "Invalid color. Example: #5ab8ff", T("Renk (#rrggbb): "): "Color (#rrggbb): ",
+    "varsayılana döndü": "reset to default", "tüm ayarlar varsayılana döndü": "all settings reset to defaults",
+}
+
+
+def T(s):
+    return EN.get(s, s) if LANG == "en" else s
+
+
 CENTER_ALL = ["music", "calendar", "notifications"]
 STATS_ALL = ["cpu", "ram", "temp", "net", "battery", "gpu", "disk", "graph", "procs"]
 QS_ALL = ["sliders", "toggles", "clipboard", "system"]
@@ -100,6 +217,9 @@ COLOR_PRESETS = [
 # kind: bool | int | choice | color | modules
 TABS = [
     ("Genel", [
+        dict(key="language", kind="choice", label="Dil / Language",
+             choices=[("tr", "Türkçe"), ("en", "English")],
+             help="Arayüz dili. ←/→ ile seç; island'lar ve bu arayüz anında değişir."),
         dict(key="center-enabled", kind="bool", label="Orta island (saatin yerine)",
              help="Paneldeki saatin yerine geçen island. Kapatınca orijinal saat geri gelir."),
         dict(key="stats-enabled", kind="bool", label="Sol island (istatistik, Activities yerine)",
@@ -198,21 +318,23 @@ def write(settings, fn, key, value):
 def format_value(settings, key):
     v = settings.get_value(key).unpack()
     if isinstance(v, bool):
-        return "açık" if v else "kapalı"
+        return T("açık") if v else T("kapalı")
     if isinstance(v, list):
-        return ", ".join(v) if v else "(boş)"
+        return ", ".join(v) if v else T("(boş)")
     return str(v)
 
 
 def cli(settings, schema, argv):
+    global LANG
+    LANG = settings.get_string("language") if schema.has_key("language") else "tr"
     cmd = argv[0]
     if cmd == "list":
         ordered = [k for k in ALL_ITEMS if schema.has_key(k)]
         ordered += [k for k in ("center-compact-modules",) if schema.has_key(k)]
         ordered += sorted(k for k in schema.list_keys() if k not in ordered)
         for k in ordered:
-            label = ALL_ITEMS.get(k, {}).get("label", "panelde gösterilen metrikler"
-                                             if k == "center-compact-modules" else "")
+            label = T(ALL_ITEMS.get(k, {}).get("label", "panelde gösterilen metrikler"
+                                             if k == "center-compact-modules" else ""))
             print(f"{k:24} = {format_value(settings, k):28} {label}")
     elif cmd == "get" and len(argv) == 2:
         print(settings.get_value(argv[1]).print_(False))
@@ -311,6 +433,8 @@ class App:
     # -- drawing
     def draw(self):
         scr = self.scr
+        global LANG
+        LANG = self.s.get_string("language") if self.schema.has_key("language") else "tr"
         scr.erase()
         h, w = scr.getmaxyx()
         if w < self.MIN_W or h < self.MIN_H:
@@ -319,13 +443,13 @@ class App:
             return
 
         self.put(0, 2, "Dynamic Island", self.attr(2, curses.A_BOLD))
-        self.put(0, 17, "· ayarlar", self.attr(3))
-        note = "değişiklikler anında uygulanır"
+        self.put(0, 17, T("· ayarlar"), self.attr(3))
+        note = T("değişiklikler anında uygulanır")
         self.put(0, w - len(note) - 2, note, self.attr(3))
 
         x = 2
         for i, (name, _) in enumerate(TABS):
-            label = f" {i + 1} {name} "
+            label = f" {i + 1} {T(name)} "
             self.put(2, x, label, self.attr(1, curses.A_BOLD) if i == self.tab else self.attr(3))
             x += len(label) + 1
         self.put(3, 2, "─" * (w - 4), self.attr(3))
@@ -336,21 +460,21 @@ class App:
         last_item = None
         for i, (item, mid) in enumerate(rows):
             if item["kind"] == "modules" and item is not last_item:
-                self.put(y, 2, item["label"], self.attr(2, curses.A_BOLD))
+                self.put(y, 2, T(item["label"]), self.attr(2, curses.A_BOLD))
                 if item.get("panel_key"):
-                    self.put(y, w - 22, "karo   panelde", self.attr(3))
+                    self.put(y, w - 22, T("karo   panelde"), self.attr(3))
                 y += 1
             last_item = item
             sel = i == self.row
             self.draw_row(y, w, item, mid, sel)
             y += 1
 
-        help_text = rows[self.row][0]["help"] if rows else ""
+        help_text = T(rows[self.row][0]["help"]) if rows else ""
         self.put(h - 4, 2, "─" * (w - 4), self.attr(3))
         self.put(h - 3, 2, help_text, self.attr(0))
         if self.msg:
             self.put(h - 2, 2, self.msg, self.attr(4, curses.A_BOLD))
-        keys = "↑↓ gez  ←→ değiştir  Space aç/kapa  Tab/1-7 sekme  r varsayılan  R hepsi  q çık"
+        keys = T("↑↓ gez  ←→ değiştir  Space aç/kapa  Tab/1-7 sekme  r varsayılan  R hepsi  q çık")
         self.put(h - 1, 2, keys, self.attr(3))
         scr.refresh()
 
@@ -361,7 +485,7 @@ class App:
         if kind == "modules":
             enabled = mid in self.s.get_strv(key)
             box = "[x]" if enabled else "[ ]"
-            text = f"{marker} {box} {MODULE_NAMES.get(mid, mid)}"
+            text = f"{marker} {box} {T(MODULE_NAMES.get(mid, mid))}"
             self.put(y, 2, text.ljust(w - 26), base | (0 if enabled else self.attr(3)))
             if item.get("panel_key"):
                 if mid in COMPACT_CAPABLE:
@@ -371,23 +495,23 @@ class App:
                     self.put(y, w - 15, " – ", base | self.attr(3))
             return
 
-        label = f"{marker} {item['label']}"
+        label = f"{marker} {T(item['label'])}"
         self.put(y, 2, label.ljust(w - 30), base)
         vx = w - 28
         if kind == "bool":
             on = self.s.get_boolean(key)
-            self.put(y, vx, "● açık " if on else "○ kapalı", self.attr(4 if on else 3, base))
+            self.put(y, vx, T("● açık ") if on else T("○ kapalı"), self.attr(4 if on else 3, base))
         elif kind == "int":
             v = self.s.get_int(key)
-            text = item.get("zero") if v == 0 and item.get("zero") else f"{v} {item['unit']}"
+            text = T(item.get("zero")) if v == 0 and item.get("zero") else f"{v} {item['unit']}"
             self.put(y, vx, f"◀ {text:>10} ▶", base)
         elif kind == "choice":
             v = self.s.get_string(key)
-            text = dict(item["choices"]).get(v, v)
+            text = T(dict(item["choices"]).get(v, v))
             self.put(y, vx, f"◀ {text} ▶", base)
         elif kind == "color":
             v = self.s.get_string(key)
-            name = next((n for n, c in COLOR_PRESETS if c.lower() == v.lower()), "özel")
+            name = T(next((n for n, c in COLOR_PRESETS if c.lower() == v.lower()), "özel"))
             self.put(y, vx, f"◀ {v or '—'} {name} ▶", base)
             if v and self.colors and curses.COLORS >= 256:
                 try:
@@ -424,7 +548,7 @@ class App:
             # the list re-sorts (enabled first); keep the cursor on this module
             rows = self.rows()
             self.row = next((i for i, (it, m) in enumerate(rows) if it is item and m == mid), self.row)
-        self.msg = f"✓ {key} güncellendi"
+        self.msg = f"✓ {key} {T('güncellendi')}"
 
     def toggle_module(self, item, mid, key):
         cur = self.s.get_strv(key)
@@ -443,7 +567,7 @@ class App:
             return
         cur = self.s.get_strv(item["key"])
         if mid not in cur:
-            self.msg = "Önce Space ile modülü aç, sonra taşı."
+            self.msg = T("Önce Space ile modülü aç, sonra taşı.")
             return
         i = cur.index(mid)
         j = i + step
@@ -451,21 +575,21 @@ class App:
             cur[i], cur[j] = cur[j], cur[i]
             write(self.s, "set_strv", item["key"], cur)
             self.row += step
-            self.msg = f"✓ {mid} taşındı"
+            self.msg = f"✓ {mid} {T('taşındı')}"
 
     def toggle_panel(self):
         item, mid = self.rows()[self.row]
         if item["kind"] == "modules" and item.get("panel_key") and mid not in COMPACT_CAPABLE:
-            self.msg = f"{MODULE_NAMES.get(mid, mid)} panelde gösterilemez."
+            self.msg = f"{T(MODULE_NAMES.get(mid, mid))} {T('panelde gösterilemez.')}"
             return
         if item["kind"] == "modules" and item.get("panel_key"):
             self.toggle_module(item, mid, item["panel_key"])
-            self.msg = f"✓ {mid}: panelde gösterim değişti"
+            self.msg = f"✓ {mid}: {T('panelde gösterim değişti')}"
 
     def edit_color(self):
         h, _ = self.scr.getmaxyx()
         self.put(h - 2, 2, " " * 60)
-        self.put(h - 2, 2, "Renk (#rrggbb): ", self.attr(2, curses.A_BOLD))
+        self.put(h - 2, 2, T("Renk (#rrggbb): "), self.attr(2, curses.A_BOLD))
         curses.echo()
         curses.curs_set(1)
         try:
@@ -482,9 +606,9 @@ class App:
             ok = False
         if ok:
             write(self.s, "set_string", "accent-color", raw.lower())
-            self.msg = f"✓ vurgu rengi {raw.lower()}"
+            self.msg = f"✓ {T('vurgu rengi')} {raw.lower()}"
         else:
-            self.msg = "Geçersiz renk. Örnek: #5ab8ff"
+            self.msg = T("Geçersiz renk. Örnek: #5ab8ff")
 
     def reset_current(self):
         item, _ = self.rows()[self.row]
@@ -492,13 +616,13 @@ class App:
         if item.get("panel_key"):
             self.s.reset(item["panel_key"])
         Gio.Settings.sync()
-        self.msg = f"✓ {item['key']} varsayılana döndü"
+        self.msg = f"✓ {item['key']} {T('varsayılana döndü')}"
 
     def reset_all(self):
         for k in self.schema.list_keys():
             self.s.reset(k)
         Gio.Settings.sync()
-        self.msg = "✓ tüm ayarlar varsayılana döndü"
+        self.msg = T("✓ tüm ayarlar varsayılana döndü")
 
     def run(self):
         while True:

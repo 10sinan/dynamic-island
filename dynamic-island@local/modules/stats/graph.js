@@ -5,6 +5,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 import {IslandModule} from '../base.js';
+import {_} from '../../lib/i18n.js';
 import {Graph} from '../../lib/graph.js';
 import {formatRate} from '../../lib/proc.js';
 
@@ -33,7 +34,7 @@ export default class GraphModule extends IslandModule {
         this._rows = {
             cpu: this._row('CPU', this.accent, () => h.series('cpu'), () => 1),
             ram: this._row('RAM', '#b48cff', () => h.series('ram'), () => 1),
-            net: this._row('AĞ  ↓', '#5ab8ff', () => h.series('net-down'),
+            net: this._row(`${_('NET')}  ↓`, '#5ab8ff', () => h.series('net-down'),
                 () => Math.max(100 * 1024, ...h.series('net-down').map(s => s.v))),
         };
         for (const r of Object.values(this._rows))

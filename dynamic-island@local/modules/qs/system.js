@@ -8,6 +8,7 @@ import St from 'gi://St';
 import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
 
 import {IslandModule} from '../base.js';
+import {_} from '../../lib/i18n.js';
 import {listDir, tryReadText} from '../../lib/proc.js';
 
 const PS = '/sys/class/power_supply';
@@ -63,13 +64,13 @@ export default class SystemModule extends IslandModule {
             row.add_child(new St.Widget({x_expand: true}));
 
         const a = this._actions;
-        row.add_child(this._iconButton('screenshooter-symbolic', 'Ekran görüntüsü',
+        row.add_child(this._iconButton('screenshooter-symbolic', _('Screenshot'),
             () => this._run(() => a.activateScreenshotUI())));
-        row.add_child(this._iconButton('org.gnome.Settings-symbolic', 'Ayarlar',
+        row.add_child(this._iconButton('org.gnome.Settings-symbolic', _('Settings'),
             () => this._run(() => Shell.AppSystem.get_default().lookup_app('org.gnome.Settings.desktop')?.activate())));
-        row.add_child(this._iconButton('system-lock-screen-symbolic', 'Kilitle',
+        row.add_child(this._iconButton('system-lock-screen-symbolic', _('Lock'),
             () => this._run(() => a.activateLockScreen())));
-        this._powerButton = this._iconButton('system-shutdown-symbolic', 'Güç', () => this._togglePowerRow());
+        this._powerButton = this._iconButton('system-shutdown-symbolic', _('Power'), () => this._togglePowerRow());
         row.add_child(this._powerButton);
         box.add_child(row);
 
@@ -84,10 +85,10 @@ export default class SystemModule extends IslandModule {
             this._powerRow.add_child(b);
             this._choices.push([b, can]);
         };
-        choice('Uyku', () => a.activateSuspend(), () => a.canSuspend ?? true);
-        choice('Yeniden başlat', () => a.activateRestart(), () => a.canRestart ?? true);
-        choice('Kapat', () => a.activatePowerOff(), () => a.canPowerOff ?? true);
-        choice('Oturumu kapat', () => a.activateLogout(), () => a.canLogout ?? true);
+        choice(_('Sleep'), () => a.activateSuspend(), () => a.canSuspend ?? true);
+        choice(_('Restart'), () => a.activateRestart(), () => a.canRestart ?? true);
+        choice(_('Shut down'), () => a.activatePowerOff(), () => a.canPowerOff ?? true);
+        choice(_('Log out'), () => a.activateLogout(), () => a.canLogout ?? true);
         box.add_child(this._powerRow);
 
         box.connect('destroy', () => {
@@ -127,7 +128,7 @@ export default class SystemModule extends IslandModule {
         if (!this._batLabel || !Number.isFinite(pct))
             return;
         const charging = status === 'Charging';
-        const text = `${pct}%${charging ? ' · şarj oluyor' : status === 'Full' ? ' · dolu' : ''}`;
+        const text = `${pct}%${charging ? ` · ${_('charging')}` : status === 'Full' ? ` · ${_('full')}` : ''}`;
         if (this._batLabel.text !== text)
             this._batLabel.text = text;
         this._batIcon.icon_name = batteryIcon(pct, charging);
