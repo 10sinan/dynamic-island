@@ -211,7 +211,13 @@ Arayüz dili cihazın diline göre **değil**, `language` ayarına göre belirle
 
 ### Claude Code kullanımı (orta island)
 
-Orta island'da **CLAUDE** kartı: 5 saatlik oturumda kullanılan token ve oturumun ne zaman sıfırlanacağı. Veri, bu bilgisayardaki `~/.claude/projects/**/*.jsonl` kayıtlarından **tahmin edilir**; hiçbir şey internete gönderilmez, hesap bilgin/token'ın okunmaz. Anthropic planındaki kalan kotayı yerelde yayımlamadığı için "kalan" bir limite göredir: ayarlardan **Claude token limiti** (bin token) girersen kalan yüzde görünür (örn. `di-config set claude-token-limit 20000` = 20M). Hesap yalnızca girdi + çıktı + önbellek yazma tokenlarını sayar, önbellek okumayı saymaz; resmî `/usage` ekranıyla birebir aynı olmayabilir.
+Orta island'da **CLAUDE** kartı: 5 saatlik oturumda kullanılan token ve oturumun ne zaman sıfırlanacağı. Veri, bu bilgisayardaki `~/.claude/projects/**/*.jsonl` kayıtlarından **tahmin edilir**; hiçbir şey internete gönderilmez, hesap bilgin/token'ın okunmaz. Anthropic planındaki kalan kotayı yerelde yayımlamadığı için "kalan" bir limite göredir: ayarlardan **Claude token limiti** (bin token) girersen kalan yüzde görünür (örn. `di-config set claude-token-limit 20000` = 20M). Hesap yalnızca girdi + çıktı + önbellek yazma tokenlarını sayar, önbellek okumayı saymaz; resmî `/usage` ekranıyla birebir aynı değildir (Anthropic limiti farklı ağırlıklarla sayar ve yüzdeyi yerelde yayımlamaz).
+
+**Kalibrasyon:** Claude Code'da `/usage`'ın gösterdiği oturum yüzdesini bir kez gir; limit, yerelde sayılan tokenlarla o yüzde eşleşecek şekilde ayarlanır:
+
+```bash
+di-config claude-calibrate 37      # ya da: Ayarlar penceresi → Özellikler → "Kalibre et"
+```
 
 ### Arama (Super+R)
 
@@ -220,6 +226,29 @@ Orta island'da **CLAUDE** kartı: 5 saatlik oturumda kullanılan token ve oturum
 ### Sağ island
 
 Düğmeler koyu cam kartlar; açık olanın simgesi vurgu renginde bir dairede. Wi-Fi ve Bluetooth ›  sayfası island'ın tamamını kaplar (ses, pano ve sistem bölümleri o sırada gizlenir), sağdan kayarak açılır: üstte geri düğmesi + aç/kapa anahtarı, "Bağlı ağ / Diğer ağlar" (Bluetooth: "Bağlı / Cihazlarım") bölümleri, kayıtlı/güvenli/açık ağ bilgisi, bağlanırken dönen gösterge, bağlı Bluetooth cihazında pil yüzdesi, en altta "Diğer ayarlar…" (GNOME Ayarlar'ın ilgili sayfası).
+
+### Claude Code bildirimleri
+
+Claude Code **bir işi bitirince** ya da **senden izin/yanıt beklerken** orta island bildirim gibi büyür; kenarında **turuncu, dalgalı, hareketli bir çizgi** döner (beklerken daha hızlı). Claude'un çalıştığı pencere (VS Code / terminal) zaten öndeyse ya da Rahatsız Etme açıksa gösterilmez. Tıklayınca o pencere öne gelir, sağ tık kapatır.
+
+Claude'a bir mesaj gönderdiğinde panel hapında **küçük turuncu bir dalga + proje adı** belirir (birden çok oturum varsa `proje +1`); Claude bitince dalga kaybolur ve bildirim açılır.
+
+Bir kez kurulum (Claude Code'un kendi hook özelliğini kullanır, `~/.claude/settings.json`'a üç girdi ekler, önce yedek alır):
+
+```bash
+ln -sfn "$PWD/tools/di-claude-hook" ~/.local/bin/di-claude-hook   # install.sh bunu zaten yapar
+di-config claude-hooks install    # kaldırmak: di-config claude-hooks remove · durum: status
+```
+
+Akış: Claude Code → `tools/di-claude-hook` → yerel D-Bus (`/org/gnome/Shell/Extensions/DynamicIsland`) → island. İnternete hiçbir şey gitmez; betik her koşulda anında çıkar, Claude'u bekletmez. Kapatmak için ayar: `claude-notify`.
+
+### Uygulama başına ses
+
+Sağ island'da ses çalan her uygulama (tarayıcı, Spotify, Discord...) için ayrı kaydırıcı; simgeye tıklayınca o uygulama sessize alınır. Hiçbir uygulama ses çalmıyorsa bölüm gizlenir.
+
+### Pil simgesi
+
+Bilgisayar prizdeyken pil simgesi yeşil ve şimşekli olur — şarj sınırı (örn. ASUS %80) yüzünden pil "şarj olmuyor" görünse bile; sistem satırında "prizde" yazar.
 
 ### Temalar
 
@@ -291,6 +320,8 @@ tests/
 ├── i18n.test.js           # dil katmanı testleri (gjs)
 ├── spring.test.js         # yay fiziği testleri (gjs)
 ├── claudeusage.test.js    # Claude kullanım hesabı testleri (gjs)
+├── wave.test.js           # dalgalı çizgi geometrisi testleri (gjs)
+├── claudehook.test.py     # Claude Code hook betiği testleri
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
 ├── headless-smoke.sh      # izole headless shell başlatır
@@ -348,6 +379,8 @@ gjs -m tests/cliplist.test.js
 gjs -m tests/i18n.test.js
 gjs -m tests/spring.test.js
 gjs -m tests/claudeusage.test.js
+gjs -m tests/wave.test.js
+python3 tests/claudehook.test.py
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots
 ```
