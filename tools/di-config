@@ -112,7 +112,12 @@ EN = {
     "Açılma animasyonu": "Open animation", "Yaylanarak açılma animasyonunun süresi.": "Duration of the spring-open animation.",
     "Bildirim önizleme süresi": "Notification preview time",
     "Bildirim önizlemesinin ekranda kalma süresi (üstüne gelince durur).": "How long the notification preview stays (pauses on hover).",
-    "Yaylanma efekti": "Spring effect", "Açılırken hafifçe taşıp geri gelir (EASE_OUT_BACK).": "Slightly overshoots when opening (EASE_OUT_BACK).",
+    "Yaylanma efekti": "Spring effect",
+    "Açılırken hafifçe esneyip yerine oturur (yay fiziği). Kapalıyken de yay kullanılır ama esnemez.":
+        "Opens with a slight bounce (spring physics). When off, the spring still drives it but without bounce.",
+    "Açılıp kapanırken bulanıklık": "Blur while opening/closing",
+    "iOS gibi: island şekil değiştirirken içerik bulanıklaşır, yerine oturunca netleşir.":
+        "iOS-like: content blurs while the island changes shape and sharpens as it settles.",
     "Yenileme (kapalıyken)": "Refresh (collapsed)", "CPU/RAM gibi verilerin kapalı haldeyken yenilenme aralığı.":
         "Refresh interval for CPU/RAM data while collapsed.",
     "Yenileme (açıkken)": "Refresh (expanded)", "Island açıkken verilerin yenilenme aralığı.": "Refresh interval while the island is open.",
@@ -263,7 +268,9 @@ TABS = [
         dict(key="notification-duration", kind="int", step=500, unit="ms", label="Bildirim önizleme süresi",
              help="Bildirim önizlemesinin ekranda kalma süresi (üstüne gelince durur)."),
         dict(key="spring", kind="bool", label="Yaylanma efekti",
-             help="Açılırken hafifçe taşıp geri gelir (EASE_OUT_BACK)."),
+             help="Açılırken hafifçe esneyip yerine oturur (yay fiziği). Kapalıyken de yay kullanılır ama esnemez."),
+        dict(key="morph-blur", kind="bool", label="Açılıp kapanırken bulanıklık",
+             help="iOS gibi: island şekil değiştirirken içerik bulanıklaşır, yerine oturunca netleşir."),
         dict(key="poll-compact", kind="int", step=250, unit="ms", label="Yenileme (kapalıyken)",
              help="CPU/RAM gibi verilerin kapalı haldeyken yenilenme aralığı."),
         dict(key="poll-expanded", kind="int", step=250, unit="ms", label="Yenileme (açıkken)",

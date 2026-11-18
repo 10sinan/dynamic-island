@@ -146,7 +146,8 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         this._spin(s, g, 'notification-duration', _('Notification preview time'), '', 500);
         this._spin(s, g, 'poll-compact', _('Refresh (collapsed)'), '', 250);
         this._spin(s, g, 'poll-expanded', _('Refresh (expanded)'), '', 250);
-        this._switch(s, g, 'spring', _('Spring effect'));
+        this._switch(s, g, 'spring', _('Spring effect'), _('A slight bounce when opening'));
+        this._switch(s, g, 'morph-blur', _('Blur while opening/closing'), _('Content blurs while the island changes shape'));
         page.add(g);
         return page;
     }

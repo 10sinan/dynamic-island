@@ -9,6 +9,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GdkPixbuf from 'gi://GdkPixbuf';
+import Graphene from 'gi://Graphene';
 import Pango from 'gi://Pango';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
@@ -22,7 +23,8 @@ const PATH = '/org/mpris/MediaPlayer2';
 const PLAYER_IFACE = 'org.mpris.MediaPlayer2.Player';
 const COVER_PX = 176;            // decoded cover size (88 logical px at 2x)
 const ART_CACHE = 8;
-const ART_SETTLE_MS = 350;   // wait for a late cover URL after a track change
+const ART_SETTLE_MS = 350;
+const COLOR_GLIDE_MS = 700;   // palette change on a new cover   // wait for a late cover URL after a track change
 const POPUP_MS = 4000;
 const VIDEO_MAX_W = 232;   // the live window preview fits into this box
 const VIDEO_MAX_H = 130;
@@ -74,8 +76,8 @@ class Cover {
         });
         this._placeholder = new St.Icon({icon_name: 'audio-x-generic-symbolic', icon_size: Math.round(size * 0.45),
             x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER, opacity: 120});
-        this._bottom = new St.Icon({icon_size: size});
-        this._top = new St.Icon({icon_size: size, opacity: 0});
+        this._bottom = new St.Icon({icon_size: size, pivot_point: new Graphene.Point({x: 0.5, y: 0.5})});
+        this._top = new St.Icon({icon_size: size, opacity: 0, pivot_point: new Graphene.Point({x: 0.5, y: 0.5})});
         this.actor.add_child(this._placeholder);
         this.actor.add_child(this._bottom);
         this.actor.add_child(this._top);
@@ -100,18 +102,32 @@ class Cover {
             this._top.opacity = 0;
             return;
         }
+        // new cover zooms in over the old one, which sinks back and dims
+        this._bottom.remove_all_transitions();
         this._top.gicon = pixbuf;
         this._top.opacity = 0;
+        this._top.set_scale(1.14, 1.14);
         this._top.ease({
             opacity: 255,
-            duration: 380,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            scale_x: 1,
+            scale_y: 1,
+            duration: 460,
+            mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
             onComplete: () => {
                 if (this._dead)
                     return;
                 this._bottom.gicon = pixbuf;
+                this._bottom.set_scale(1, 1);
+                this._bottom.opacity = 255;
                 this._top.opacity = 0;
             },
+        });
+        this._bottom.ease({
+            scale_x: 0.9,
+            scale_y: 0.9,
+            opacity: 120,
+            duration: 460,
+            mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
         });
     }
 }
@@ -325,9 +341,10 @@ export default class MusicModule extends IslandModule {
         this._trackKey = key;
 
         this._applyVisibility(was);
-        this._renderText();
+        this._renderText(changed && was);
         this._renderStatus();
         if (changed) {
+            this._skipDir = 1;
             this._pos = 0;
             this._renderProgress(true);
             // Players often send the new title first and the new cover URL a
@@ -373,17 +390,44 @@ export default class MusicModule extends IslandModule {
         return [this._compactEq, this._cardEq, this._popupEq].filter(Boolean);
     }
 
-    _renderText() {
+    _renderText(slide = false) {
         const i = this._info;
         if (!i)
             return;
-        const set = (label, text) => {
-            if (label && label.text !== text)
+        // On a track change (card visible) the lines slide out and the new
+        // ones slide in, one after another, in the skip direction.
+        const animate = slide && this.ctx?.isExpanded?.() && this._title?.mapped;
+        const dir = this._skipDir ?? 1;
+        const lines = [[this._title, i.title], [this._artist, i.artist || '—'], [this._album, i.album]];
+        lines.forEach(([label, text], n) => {
+            if (!label || label.text === text)
+                return;
+            label.remove_all_transitions();
+            if (!animate) {
                 label.text = text;
-        };
-        set(this._title, i.title);
-        set(this._artist, i.artist || '—');
-        set(this._album, i.album);
+                label.set({translation_x: 0, opacity: 255});
+                return;
+            }
+            label.ease({
+                translation_x: -18 * dir,
+                opacity: 0,
+                delay: n * 45,
+                duration: 150,
+                mode: Clutter.AnimationMode.EASE_IN_QUAD,
+                onComplete: () => {
+                    if (this._dead)
+                        return;
+                    label.text = text;
+                    label.translation_x = 22 * dir;
+                    label.ease({
+                        translation_x: 0,
+                        opacity: 255,
+                        duration: 340,
+                        mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+                    });
+                },
+            });
+        });
         if (this._album)
             this._album.visible = i.album.length > 0;
     }
@@ -506,23 +550,56 @@ export default class MusicModule extends IslandModule {
         this._cardCover?.set(art?.pixbuf ?? null);
         this._compactCover?.set(art?.thumb ?? null);
         this._popupCover?.set(art?.popup ?? null);
-        const accent2 = art?.accent2 ?? accent;
-        this._eqs().forEach(e => e.setColors(accent, accent2));
         this._setTint(tint);
         this._accentNow = accent;
-        const a = hexToRgb(accent);
-        const fade = (c, al) => `rgba(${c.r}, ${c.g}, ${c.b}, ${al})`;
-        const grad = (dir, from, to) => `background-gradient-direction: ${dir}; background-gradient-start: ${from}; background-gradient-end: ${to};`;
-        if (this._fill)
-            this._fill.set_style(grad('horizontal', accent, accent2));
-        if (this._playButton)
-            this._playButton.set_style(`background-color: ${accent};`);
-        // flowing colour layers behind the content, and the glow behind the cover
-        const f1 = art?.flow1 ?? tint, f2 = art?.flow2 ?? tint;
-        this._flowA?.set_style(grad('horizontal', fade(f1, 0.95), fade(f1, 0)));
-        this._flowB?.set_style(grad('horizontal', fade(f2, 0), fade(f2, 0.95)));
-        this._glow?.set_style(grad('radial', fade(a, 0.55), fade(a, 0)));
+        const target = {
+            a: hexToRgb(accent),
+            a2: hexToRgb(art?.accent2 ?? accent),
+            f1: art?.flow1 ?? tint,
+            f2: art?.flow2 ?? tint,
+        };
+        this._glideColors(target);
         this._updateBorder();
+    }
+
+    /** Accent, equalizer, progress, flow layers and glow glide to the new palette. */
+    _glideColors(target) {
+        this._colorTl?.stop();
+        this._colorTl = null;
+        const from = this._colorsNow;
+        if (!from || !this._card?.mapped) {
+            this._paintColors(target);
+            return;
+        }
+        const tl = new Clutter.Timeline({actor: this._card, duration: COLOR_GLIDE_MS});
+        tl.set_progress_mode(Clutter.AnimationMode.EASE_IN_OUT_QUAD);
+        const lerp = t => Object.fromEntries(Object.keys(target).map(k => [k, mix(from[k], target[k], t)]));
+        tl.connect('new-frame', () => {
+            if (!this._dead)
+                this._paintColors(lerp(tl.get_progress()));
+        });
+        tl.connect('completed', () => {
+            if (this._colorTl === tl)
+                this._colorTl = null;
+            if (!this._dead)
+                this._paintColors(target);
+        });
+        this._colorTl = tl;
+        tl.start();
+    }
+
+    _paintColors(c) {
+        this._colorsNow = c;
+        const hex = toHex;
+        const fade = (x, al) => `rgba(${x.r}, ${x.g}, ${x.b}, ${al})`;
+        const grad = (dir, from, to) => `background-gradient-direction: ${dir}; background-gradient-start: ${from}; background-gradient-end: ${to};`;
+        this._eqs().forEach(e => e.setColors(hex(c.a), hex(c.a2)));
+        this._fill?.set_style(grad('horizontal', hex(c.a), hex(c.a2)));
+        this._playButton?.set_style(`background-color: ${hex(c.a)};`);
+        // flowing colour layers behind the content, and the glow behind the cover
+        this._flowA?.set_style(grad('horizontal', fade(c.f1, 0.95), fade(c.f1, 0)));
+        this._flowB?.set_style(grad('horizontal', fade(c.f2, 0), fade(c.f2, 0.95)));
+        this._glow?.set_style(grad('radial', fade(c.a, 0.55), fade(c.a, 0)));
     }
 
     /**
@@ -754,7 +831,10 @@ export default class MusicModule extends IslandModule {
             controls.add_child(b);
             return [b, icon];
         };
-        [this._prev] = button('media-skip-backward-symbolic', 'di-music-btn', () => this._call('Previous'));
+        [this._prev] = button('media-skip-backward-symbolic', 'di-music-btn', () => {
+            this._skipDir = -1;
+            this._call('Previous');
+        });
         [this._playButton, this._playIcon] = button('media-playback-start-symbolic', 'di-music-btn di-music-play',
             () => this._call('PlayPause'));
         [this._next] = button('media-skip-forward-symbolic', 'di-music-btn', () => this._call('Next'));
@@ -950,6 +1030,8 @@ export default class MusicModule extends IslandModule {
     destroy() {
         this._dead = true;
         this._clearArtTimer();
+        this._colorTl?.stop();
+        this._colorTl = null;
         this.ctx?.setAccentBorder?.(null);
         this.ctx?.setBodyTint?.(null);
         if (this._subId) {

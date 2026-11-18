@@ -78,19 +78,29 @@ ev "global._di = {hb: 0, inner: 0, row: 0, frames: 0, bad: 0, radii: []};
           const d = global._di; d.frames++;
           if (c._radius > Math.floor(c._bg.height / 2)) d.bad++;
           if (d.radii[d.radii.length - 1] !== c._radius) d.radii.push(c._radius);
+          (d.sizes ??= []).push([Math.round(imports.gi.GLib.get_monotonic_time() / 1000) % 100000, Math.round(c._bg.width), Math.round(c._bg.height)]);
       })]];
     true" >/dev/null
 ev "$C.actor.hover = true; true" >/dev/null
 sleep 0.06; shot morph-060 560 0 800 200
+echo "   60 ms in: spring running=$(ev "!!$C._springTl") blur on expanded=$(ev "$C._expandedBox.get_effect('di-blur')?.radius") on compact=$(ev "$C._compactBox.get_effect('di-blur')?.radius")"
 sleep 0.06; shot morph-120 560 0 800 200
 sleep 0.12; shot morph-240 560 0 800 200
 sleep 0.4;  shot center-expanded 460 0 1000 200
-echo "   expand:   $(ev "JSON.stringify(global._di)")"
+echo "   expand:   $(ev "JSON.stringify({...global._di, sizes: undefined})")"
+echo "   expand frames [ms, w, h]: $(ev "JSON.stringify(global._di.sizes)")"
 echo "   header first: $(ev "$C._expandedInner.get_child_at_index(0) === $C._headerRow && $C._headerRow.visible")  big clock: $(ev "$C._headerRow.get_child_at_index(0).get_child_at_index(0).text")"
-ev "Object.assign(global._di, {hb: 0, inner: 0, row: 0, frames: 0, bad: 0, radii: []}); $C.actor.hover = false; true" >/dev/null
+ev "Object.assign(global._di, {hb: 0, inner: 0, row: 0, frames: 0, bad: 0, radii: [], sizes: []}); $C.actor.hover = false; true" >/dev/null
 sleep 0.08; echo "   80 ms after leave:  mode=$(ev "$C.mode")"
-sleep 0.6;  echo "   collapse: $(ev "JSON.stringify(global._di)")  mode=$(ev "$C.mode")"
-echo "   spring: mode=$(ev "$C._cfg.expandMode") (EASE_OUT_BACK=$(ev "imports.gi.Clutter.AnimationMode.EASE_OUT_BACK")), duration=$(ev "$C._cfg.expandMs")"
+sleep 0.6;  echo "   collapse: $(ev "JSON.stringify({...global._di, sizes: undefined})")  mode=$(ev "$C.mode")"
+echo "   collapse frames [ms, w, h]: $(ev "JSON.stringify(global._di.sizes)")"
+echo "   spring: bouncy=$(ev "$C._cfg.spring") blur=$(ev "$C._cfg.morphBlur") duration=$(ev "$C._cfg.expandMs") rested: timeline=$(ev "!!$C._springTl") blur effects left=$(ev "[$C._compactBox, $C._expandedBox, $C._activityBox].filter(b => b.get_effect('di-blur')).length")"
+ev "$C.actor.hover = true; true" >/dev/null; sleep 0.12
+W1=$(ev "Math.round($C._bg.width)")
+ev "$C.actor.hover = false; true" >/dev/null; sleep 0.25
+echo "   reverse mid-morph: width at 120 ms=$W1 -> mode=$(ev "$C.mode") still moving=$(ev "!!$C._springTl")"
+sleep 0.8
+echo "   after reverse: mode=$(ev "$C.mode") pill=$(ev "JSON.stringify([$C._bg.width, $C._bg.height])") compact rect=$(ev "JSON.stringify([$C._rects.compact.w, $C._rects.compact.h])") blur effects left=$(ev "[$C._compactBox, $C._expandedBox, $C._activityBox].filter(b => b.get_effect('di-blur')).length")"
 ev "global._diIds.forEach(([a, id]) => a.disconnect(id)); delete global._diIds; true" >/dev/null
 
 echo "== hit area: the gap between pill and panel edge belongs to the island"
@@ -108,7 +118,7 @@ ev "Main.osdWindowManager.showAll($VOL, null, 0.5, 1); true" >/dev/null; sleep 0
 echo "   volume 50%: activity=$(ev "$C.activityKey") text=$(ev "$C._activityInner.get_child().get_child_at_index(2).text") gnomeOsdVisible=$(ev "Main.osdWindowManager._osdWindows[0].visible")"
 shot osd 560 0 800 80
 ev "Main.osdWindowManager.showAll($VOL, null, 0.6, 1); true" >/dev/null; sleep 0.1
-echo "   volume 60% (in place): text=$(ev "$C._activityInner.get_child().get_child_at_index(2).text") morphRunning=$(ev "!!$C._bg.get_transition('width')")"
+echo "   volume 60% (in place): text=$(ev "$C._activityInner.get_child().get_child_at_index(2).text") morphRunning=$(ev "!!$C._springTl")"
 ev "Main.osdWindowManager.showAll(imports.gi.Gio.ThemedIcon.new('input-keyboard-symbolic'), 'Caps Lock', null, null); true" >/dev/null; sleep 0.3
 echo "   caps-lock style OSD -> GNOME: gnomeOsdVisible=$(ev "Main.osdWindowManager._osdWindows[0].visible")"
 sleep 2

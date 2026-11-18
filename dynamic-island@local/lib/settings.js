@@ -1,6 +1,5 @@
 // GSettings -> plain config snapshot. Islands are rebuilt when settings
 // change (see extension.js), so nothing below needs to be live.
-import Clutter from 'gi://Clutter';
 
 import {themeFor} from './themes.js';
 
@@ -22,9 +21,8 @@ export function readConfig(settings) {
         autoCollapse: settings.get_int('auto-collapse'),
 
         expandMs: settings.get_int('animation-duration'),
-        expandMode: settings.get_boolean('spring')
-            ? Clutter.AnimationMode.EASE_OUT_BACK
-            : Clutter.AnimationMode.EASE_OUT_CUBIC,
+        spring: settings.get_boolean('spring'),
+        morphBlur: settings.get_boolean('morph-blur'),
 
         pollCompact: settings.get_int('poll-compact'),
         pollExpanded: settings.get_int('poll-expanded'),

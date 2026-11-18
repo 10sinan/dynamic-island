@@ -19,6 +19,10 @@ export const HIT_SLACK_X = 4;        // = SLOT_MARGIN / 2: hover area reaches th
 
 // Timing (ms) that is not user-configurable
 export const COLLAPSE_MS = 260;
+export const SPRING_DAMPING = 0.74;            // < 1: a small bounce when opening ('spring' setting)
+export const SPRING_DAMPING_COLLAPSE = 0.92;
+export const MORPH_BLUR = 14;                  // px, content blur at the start of a morph
+export const MORPH_BLUR_SHARE = 0.8;           // blur fades over this share of the animation duration
 export const FADE_OUT_MS = 110;
 export const FADE_IN_MS = 220;
 export const FADE_IN_DELAY_MS = 90;

@@ -132,6 +132,9 @@ const TR = {
     'Low memory (above 90%)': 'Bellek az (%90 üstü)', 'Caps Lock / Num Lock toggled': 'Caps Lock / Num Lock açıldı-kapandı',
     'Keyboard layout changed': 'Klavye dili değişti', 'Meeting mode on / off': 'Toplantı modu açıldı / kapandı',
     'Power saver on / off': 'Güç tasarrufu açıldı / kapandı',
+    'A slight bounce when opening': 'Açılırken hafifçe esner',
+    'Blur while opening/closing': 'Açılıp kapanırken bulanıklık',
+    'Content blurs while the island changes shape': 'Island şekil değiştirirken içerik bulanıklaşır',
     'Battery': 'Pil', 'Settings': 'Ayarlar', 'Lock': 'Kilitle',
     // themes
     'Ink': 'Mürekkep',

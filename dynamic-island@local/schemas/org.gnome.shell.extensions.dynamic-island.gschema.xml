@@ -75,6 +75,10 @@
       <default>420</default>
       <summary>Expand animation length (ms)</summary>
     </key>
+    <key name="morph-blur" type="b">
+      <default>true</default>
+      <summary>Blur the content while an island opens or closes (iOS-like)</summary>
+    </key>
     <key name="spring" type="b">
       <default>true</default>
       <summary>Springy overshoot when expanding</summary>

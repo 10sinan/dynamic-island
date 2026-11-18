@@ -19,6 +19,7 @@
 // (offscreen-redirected, so a fade is one texture, not N children).
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import Graphene from 'gi://Graphene';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
@@ -30,6 +31,7 @@ import {Disposer} from './disposer.js';
 import {PanelSlot} from './panelSlot.js';
 import {History} from './history.js';
 import {hexToRgb, mix} from './color.js';
+import {SpringGroup} from './spring.js';
 
 function isCancelled(e) {
     return e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED) ?? false;
@@ -527,9 +529,10 @@ export class Island {
         if (this._destroyed || this._actorGone)
             return;
         // Don't fight a running morph; its onComplete settles with fresh geometry.
-        if (this._bg.get_transition('width') || this._bg.get_transition('height') ||
-            this._bg.get_transition('x'))
+        if (this._springTl) {
+            this._refineSpringTarget();   // steer the running morph instead
             return;
+        }
         this._settle();
     }
 
@@ -691,29 +694,16 @@ export class Island {
 
         const growing = mode !== 'compact';
         const duration = growing ? this._cfg.expandMs : Math.min(C.COLLAPSE_MS, this._cfg.expandMs);
-        const easing = growing ? this._cfg.expandMode : C.COLLAPSE_MODE;
         const animating = animate && duration > 0 && from && !sameRect(from, to);
 
         this._bg.remove_all_transitions();
         this._bg.remove_style_class_name('di-settled');
         if (animating) {
-            // Hit box covers start and end for the whole morph: resized once.
+            // Hit box covers start and end for the whole morph.
             this._setHitbox(this._hitboxFor([from, to], f));
-            this._bg.set_position(from.x - this._hb.x, from.y - this._hb.y);
-            this._bg.set_size(from.w, from.h);
-            this._bg.ease({
-                x: to.x - this._hb.x,
-                y: to.y - this._hb.y,
-                width: to.w,
-                height: to.h,
-                duration,
-                mode: easing,
-                onComplete: () => {
-                    if (!this._destroyed)
-                        this._settle();
-                },
-            });
+            this._springTo(from, to, growing, duration, mode);
         } else {
+            this._stopSpring();
             this._settle();
         }
 
@@ -775,6 +765,131 @@ export class Island {
             if (mode === 'compact')
                 this._collapseTimer.clear();
         }
+    }
+
+    // ------------------------------------------------------------ spring morph
+
+    /**
+     * Drive the pill with a damped spring (lib/spring.js). A morph that starts
+     * while another is running keeps the pill's current speed, so quick
+     * hover in/out turns around smoothly instead of jumping.
+     */
+    _springTo(from, to, growing, durationMs, mode) {
+        const g = this._springs ??= new SpringGroup(['x', 'y', 'w', 'h']);
+        const bouncy = this._cfg.spring;
+        // response ~ the configured duration; growing may bounce a little,
+        // collapsing barely does (it should feel like it snaps shut).
+        g.configure(durationMs / 1000 * (growing ? 1.0 : 0.9),
+            growing ? (bouncy ? C.SPRING_DAMPING : 1) : (bouncy ? C.SPRING_DAMPING_COLLAPSE : 1));
+        if (!this._springTl)
+            g.reset(from);
+        g.retarget(to);
+        this._blurTarget = this._cfg.morphBlur ? this._boxFor(mode) : null;
+        this._blurT0 = GLib.get_monotonic_time();
+        this._blurMs = Math.max(160, durationMs * C.MORPH_BLUR_SHARE);
+        this._setupBlur();
+
+        if (this._springTl)
+            return;
+        let last = 0, n = 0;
+        const tl = new Clutter.Timeline({actor: this._bg, duration: 60000});
+        tl.connect('new-frame', (_t, msecs) => {
+            if (this._destroyed || this._actorGone)
+                return;
+            const dt = Math.max(0, msecs - last) / 1000;
+            last = msecs;
+            const v = g.step(dt);
+            const hb = this._hb;
+            this._bg.set_position(v.x - hb.x, v.y - hb.y);
+            this._bg.set_size(Math.max(1, v.w), Math.max(1, v.h));
+            this._updateBlur();
+            // content measured after the morph started (modules filling in
+            // on show): follow the real size, keeping the current speed
+            if (++n % 3 === 0 && this._refineSpringTarget())
+                return;
+            if (g.resting)
+                this._finishSpring();
+        });
+        // the timeline's own end is only a safety net; resting ends it first
+        tl.connect('completed', () => this._finishSpring());
+        this._springTl = tl;
+        tl.start();
+    }
+
+    /** Re-measure the target of a running morph. True if it moved. */
+    _refineSpringTarget() {
+        const g = this._springs;
+        const f = this._frame();
+        if (!g || !f || !this._springTl)
+            return false;
+        const rects = this._computeRects(f);
+        const to = rects[this._mode];
+        if (!to || ![to.x, to.y, to.w, to.h].every(Number.isFinite))
+            return false;
+        const t = g.targets();
+        if (sameRect(to, {x: t.x, y: t.y, w: t.w, h: t.h}))
+            return false;
+        const v = g.values();
+        this._rects = rects;
+        this._setHitbox(this._hitboxFor([{x: v.x, y: v.y, w: v.w, h: v.h}, to], f));
+        g.retarget(to, true);
+        return true;
+    }
+
+    _finishSpring() {
+        if (!this._springTl)
+            return;
+        this._stopSpring();
+        if (!this._destroyed && !this._actorGone)
+            this._settle();
+    }
+
+    _stopSpring() {
+        const tl = this._springTl;
+        this._springTl = null;
+        tl?.stop();
+        this._clearBlur();
+    }
+
+    // iOS-like: content is blurred while the pill changes shape and sharpens
+    // as it arrives; the outgoing content blurs away as it fades.
+    _setupBlur() {
+        if (!this._blurTarget) {
+            this._clearBlur();
+            return;
+        }
+        for (const m of ['compact', 'expanded', 'activity']) {
+            const box = this._boxFor(m);
+            if (!box.get_effect('di-blur'))
+                box.add_effect_with_name('di-blur', new Shell.BlurEffect({mode: Shell.BlurMode.ACTOR, brightness: 1, radius: 0}));
+        }
+        this._updateBlur();
+    }
+
+    _updateBlur() {
+        if (!this._blurTarget)
+            return;
+        // time-based: the spring covers most of the distance early, the
+        // blur should still read as part of the motion
+        const p = Math.max(0, Math.min(1, (GLib.get_monotonic_time() - this._blurT0) / 1000 / this._blurMs));
+        for (const m of ['compact', 'expanded', 'activity']) {
+            const box = this._boxFor(m);
+            const fx = box.get_effect('di-blur');
+            if (!fx)
+                continue;
+            const incoming = box === this._blurTarget;
+            // ease-out on the way in: sharp well before the bounce settles
+            const amount = incoming ? (1 - p) ** 1.6 : Math.min(1, p * 3);
+            const r = Math.round(C.MORPH_BLUR * amount);
+            if (fx.radius !== r)
+                fx.radius = r;
+        }
+    }
+
+    _clearBlur() {
+        this._blurTarget = null;
+        for (const m of ['compact', 'expanded', 'activity'])
+            this._boxFor(m)?.remove_effect_by_name('di-blur');
     }
 
     /** Back to compact, dropping any activity. */
@@ -1039,6 +1154,7 @@ export class Island {
         this._slot.destroy();
         this._slot = null;
 
+        this._stopSpring();
         this._bg.remove_all_transitions();
         this.actor.remove_all_transitions();
         Main.layoutManager.removeChrome(this.actor);
