@@ -10,7 +10,6 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
-import {hexToRgb} from '../lib/color.js';
 import {_, _f} from '../lib/i18n.js';
 import {WINDOW_MS, addEntry, formatTokens, parseLine, splitDuration, windowStats} from '../lib/claudeUsage.js';
 
@@ -21,6 +20,9 @@ Gio._promisify(Gio.InputStream.prototype, 'read_bytes_async', 'read_bytes_finish
 Gio._promisify(Gio.InputStream.prototype, 'close_async', 'close_finish');
 
 const RESCAN_S = 15;
+// Claude's warm terracotta orange (colour only; no logo is drawn)
+const ORANGE = {r: 217, g: 119, b: 87};
+const RED = {r: 255, g: 99, b: 84};
 const MAX_DEPTH = 4;
 const CHUNK = 1 << 20;
 
@@ -44,7 +46,7 @@ export default class ClaudeUsageModule extends IslandModule {
 
         // ring: how much of the session is left (or of the limit, when one is set)
         this._ringFrac = 0;
-        this._ringColor = hexToRgb(this.accent);
+        this._ringColor = ORANGE;
         this._ring = new St.DrawingArea({style_class: 'di-claude-ring', width: 54, height: 54,
             y_align: Clutter.ActorAlign.CENTER});
         this._ring.connect('repaint', () => this._paintRing());
@@ -287,7 +289,7 @@ export default class ClaudeUsageModule extends IslandModule {
             if (label && label.text !== text)
                 label.text = text;
         };
-        const accent = hexToRgb(this.accent);
+        const accent = ORANGE;
         set(this._today, w.today ? _f('Today %s', formatTokens(w.today)) : '');
 
         if (!w.active) {
@@ -314,7 +316,7 @@ export default class ClaudeUsageModule extends IslandModule {
 
         if (limit > 0) {
             const used = w.used / limit;
-            const color = used > 0.9 ? {r: 255, g: 107, b: 94} : used > 0.75 ? {r: 245, g: 184, b: 65} : accent;
+            const color = used > 0.9 ? RED : accent;
             this._setRing(Math.max(0, 1 - used), color);
             set(this._ringText, `${Math.max(0, Math.round((1 - used) * 100))}%`);
             set(this._value, formatTokens(w.used));

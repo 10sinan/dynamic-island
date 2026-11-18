@@ -46,15 +46,9 @@ Spotify, tarayıcılar (YouTube Music dahil), VLC, Rhythmbox gibi **MPRIS** dest
 - Kapaklar `file://` ya da `https://` adresinden alınır. `https` için yalnızca oynatıcının bildirdiği kapak adresi istenir, başka bir şey gönderilmez.
 - `dynamic-music-pill` eklentisi dock'ta çalışmaya devam eder; ikisi birbirini etkilemez.
 
-### Video önizleme
+### Plak animasyonu
 
-Müzik kartında, çalan oynatıcının **penceresi bulunursa** bir 📹 **Video** düğmesi çıkar. Basınca kapak yerine o pencerenin **canlı küçük görüntüsü** gösterilir (mpv, VLC, Totem, tarayıcıdaki YouTube...), tekrar basınca kapağa döner. Nasıl çalışır ve sınırları:
-
-- Oynatıcılar video karelerini dışarıya vermez; eklenti GNOME'un kendi genel bakış küçük resimlerinin kullandığı yolla pencerenin kendisini klonlar (`Shell.WindowPreviewLayout`). Bu yüzden tarayıcıda **tüm pencere** görünür, yalnızca video kısmı değil.
-- Pencere, oynatıcının kimliğinden (MPRIS `Identity` / `DesktopEntry` / veri yolu adı) bulunur. Birden çok pencere varsa başlığı şarkı/video başlığını içeren seçilir (Türkçe `ı`/`i` ve aksan farkı yok sayılır).
-- Kart kapanınca klon bırakılır; pencere kapanırsa düğme ve önizleme kendiliğinden gider.
-- Pencere başka çalışma alanında ya da simge durumundaysa uygulama kare üretmeyebilir; görüntü donabilir.
-- `music-video=false` ile düğme tamamen kaldırılır.
+Müzik çalarken kart açıksa, kapağın arkasından bir **plak** kayarak çıkar ve döner; etiketi albüm renginde. Duraklayınca durduğu yerde kalıp kapağın arkasına geri kayar. (Daha önceki "video önizleme" kaldırıldı: oynatıcılar videonun kendisini vermiyor, eklenti yalnızca tüm pencereyi gösterebiliyordu.)
 
 ### Pano geçmişi
 
@@ -163,7 +157,6 @@ di-config reset                                       # hepsini varsayılana dö
 | `theme` | ink | `ink`, `midnight`, `sunset`, `forest`, `rose` |
 | `accent-color` | boş | vurgu rengi (#rrggbb); boş = temanın rengi |
 | `clipboard-history` | açık | son 10 kopyayı bellekte tut, sağ island'da göster |
-| `music-video` | açık | müzik kartında Video (pencere önizleme) düğmesi |
 | `meeting-mode` | açık | mikrofon/kamera kullanılırken Rahatsız Etme |
 | `auto-power-saver` / `auto-power-saver-level` | açık / 20 | düşük pilde Güç Tasarrufu / pil yüzdesi eşiği |
 | `shortcut-qs` | açık | Super+A (GNOME'un Quick Settings kısayolu) sağ island'ı açar |
@@ -274,7 +267,6 @@ dynamic-island@local/
 │   ├── events.js          # olay göstergeleri (şarj, pil, Wi-Fi, Bluetooth, mikrofon/kamera)
 │   ├── history.js graph.js# canlı grafikler için örnek tamponu + Cairo çizimi
 │   ├── clipboardStore.js  # pano geçmişi (bellekte), clipList.js: liste mantığı
-│   ├── windows.js         # oynatıcının penceresini bulur (windowMatch.js: eşleştirme kuralları)
 │   ├── glyphs.js          # sağ ikon satırının Cairo ile çizilmiş ikonları (glyphLogic.js: seviye/renk kararları)
 │   ├── color.js           # albüm kapağından renk çıkarma (saf fonksiyonlar)
 │   ├── panelSlot.js       # panel düğmesini gizler, yerini ayırır, menüsüne erişim
@@ -299,7 +291,6 @@ tests/
 ├── i18n.test.js           # dil katmanı testleri (gjs)
 ├── spring.test.js         # yay fiziği testleri (gjs)
 ├── claudeusage.test.js    # Claude kullanım hesabı testleri (gjs)
-├── windowmatch.test.js    # oynatıcı penceresi eşleştirme testleri (gjs)
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
 ├── headless-smoke.sh      # izole headless shell başlatır
@@ -357,7 +348,6 @@ gjs -m tests/cliplist.test.js
 gjs -m tests/i18n.test.js
 gjs -m tests/spring.test.js
 gjs -m tests/claudeusage.test.js
-gjs -m tests/windowmatch.test.js
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots
 ```

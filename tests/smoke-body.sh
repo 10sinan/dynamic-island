@@ -327,22 +327,9 @@ echo "   PlayPause clicked -> status=$(ev "$MU._info?.status") icon=$(ev "$MU._p
 ev "$MU._playButton.emit('clicked', 1); true" >/dev/null; sleep 1
 ev "$MU._call('SetPosition', new (imports.gi.GLib.Variant)('(ox)', ['/fake/track/1', 90000000])); true" >/dev/null; sleep 2.3
 echo "   SetPosition(90 s) -> elapsed=$(ev "$MU._elapsed.text") (expect ~1:3x)"
-echo "   video preview (a real window of the player's app, in the sandbox compositor):"
-echo "      before the app runs: Video button visible=$(ev "$MU._videoBtn.visible")"
-WAYLAND_DISPLAY=di-wl-test gnome-text-editor >/dev/null 2>&1 &
-EDITOR_PID=$!
-sleep 7
-echo "      window found: '$(ev "$MU._findWindow()?.get_title()")' app=$(ev "Shell.AppSystem.get_default().get_running().map(a => a.get_id()).join(',')" 2>/dev/null | head -c 120)"
-sleep 1.6
-echo "      button visible after a tick: $(ev "$MU._videoBtn.visible")"
-ev "$MU._videoBtn.emit('clicked', 1); true" >/dev/null; sleep 2
-echo "      video on: frame visible=$(ev "$MU._videoFrame.visible") cover hidden=$(ev "!$MU._coverWrap.visible") frame=$(ev "[Math.round($MU._videoFrame.width), Math.round($MU._videoFrame.height)].join('x')") scale=$(ev "$MU._vc?.container.scale_x.toFixed(2)") clone children=$(ev "$MU._vc?.container.get_n_children()")"
-shot music-video 300 0 1320 330
-ev "$MU._videoBtn.emit('clicked', 1); true" >/dev/null; sleep 1
-echo "      video off: cover back=$(ev "$MU._coverWrap.visible") frame hidden=$(ev "!$MU._videoFrame.visible") clone released=$(ev "$MU._vc === null")"
-ev "$MU._videoBtn.emit('clicked', 1); true" >/dev/null; sleep 1.2
-kill $EDITOR_PID 2>/dev/null; sleep 3
-echo "      app closed -> preview and button gone: button=$(ev "$MU._videoBtn.visible") on=$(ev "$MU._videoOn") frame hidden=$(ev "!$MU._videoFrame.visible")"
+VI="$MU._vinyl"
+echo "   vinyl: out=$(ev "$VI.translation_x") spinning=$(ev "$VI.get_transition('rotation-angle-z') !== null")"
+shot music-vinyl 300 0 1320 330
 echo "   hover-activity: collapse, then change track -> popup"
 ev "$C._hold(false); $C._setMode('compact'); true" >/dev/null; sleep 0.8
 ev "$MU._call('Next'); true" >/dev/null; sleep 1.8

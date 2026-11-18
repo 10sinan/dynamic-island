@@ -68,9 +68,6 @@ EN = {
     "Pano geçmişi (son 10 kopya, yalnızca bellekte)": "Clipboard history (last 10 copies, memory only)",
     "Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır.":
         "What you copy is listed in the right island; click to put it back. Never written to disk; password-manager content is skipped.",
-    "Müzik kartında video önizleme düğmesi": "Video preview button on the music card",
-    "Oynatıcının penceresi bulunursa karttaki Video düğmesi kapak yerine pencerenin canlı görüntüsünü gösterir.":
-        "If the player's window is found, the Video button shows its live view instead of the cover.",
     "Toplantı modu (mikrofon/kamera → Rahatsız Etme)": "Meeting mode (mic/camera → Do Not Disturb)",
     "Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner.":
         "Do Not Disturb turns on while the mic or camera is in use and goes back 10 s after it stops.",
@@ -239,8 +236,6 @@ TABS = [
              help="Üst sol köşede CPU, RAM, ağ... Kapatınca GNOME'un Activities düğmesi geri gelir."),
         dict(key="clipboard-history", kind="bool", label="Pano geçmişi (son 10 kopya, yalnızca bellekte)",
              help="Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır."),
-        dict(key="music-video", kind="bool", label="Müzik kartında video önizleme düğmesi",
-             help="Oynatıcının penceresi bulunursa karttaki Video düğmesi kapak yerine pencerenin canlı görüntüsünü gösterir."),
         dict(key="meeting-mode", kind="bool", label="Toplantı modu (mikrofon/kamera → Rahatsız Etme)",
              help="Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner."),
         dict(key="claude-token-limit", kind="int", step=1000, unit="K", label="Claude token limiti (5 saatte)",

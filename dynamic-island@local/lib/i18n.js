@@ -107,7 +107,6 @@ const TR = {
     'Accent color (#rrggbb, empty = theme color)': 'Vurgu rengi (#rrggbb, boş = tema rengi)',
     'Show seconds on the clock': 'Saatte saniye göster', 'Features': 'Özellikler', 'Clipboard history': 'Pano geçmişi',
     'Last 10 copies, memory only, never written to disk': 'Son 10 kopya, yalnızca bellekte, diske yazılmaz',
-    'Video preview button on the music card': 'Müzik kartında video önizleme düğmesi',
     'Preview on track change': 'Şarkı değişince önizleme',
     'Volume/brightness indicator in the island': 'Ses/parlaklık göstergesi island\'da',
     'Notification preview': 'Bildirim önizleme', 'Screenshot thumbnail': 'Ekran görüntüsü küçük resmi',

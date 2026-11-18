@@ -6,6 +6,7 @@
 //   new track    short "now playing" preview
 // Everything is tinted with colours taken from the cover art.
 import Clutter from 'gi://Clutter';
+import Cairo from 'gi://cairo';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GdkPixbuf from 'gi://GdkPixbuf';
@@ -15,7 +16,6 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
-import {findPlayerWindow} from '../lib/windows.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
 
 const MPRIS = 'org.mpris.MediaPlayer2.';
@@ -24,6 +24,9 @@ const PLAYER_IFACE = 'org.mpris.MediaPlayer2.Player';
 const COVER_PX = 176;            // decoded cover size (88 logical px at 2x)
 const ART_CACHE = 8;
 const ART_SETTLE_MS = 350;
+const VINYL_PX = 84;          // record behind the cover
+const VINYL_SLIDE = 34;       // how far it slides out while playing
+const VINYL_TURN_MS = 3200;   // one turn
 const COLOR_GLIDE_MS = 700;   // palette change on a new cover   // wait for a late cover URL after a track change
 const POPUP_MS = 4000;
 const VIDEO_MAX_W = 232;   // the live window preview fits into this box
@@ -619,6 +622,7 @@ export default class MusicModule extends IslandModule {
 
     _paintColors(c) {
         this._colorsNow = c;
+        this._vinyl?.queue_repaint();
         const hex = toHex;
         const fade = (x, al) => `rgba(${x.r}, ${x.g}, ${x.b}, ${al})`;
         const grad = (dir, from, to) => `background-gradient-direction: ${dir}; background-gradient-start: ${from}; background-gradient-end: ${to};`;
@@ -652,6 +656,7 @@ export default class MusicModule extends IslandModule {
             stop(a);
         if (!this._flowA)
             return;
+        this._vinylMotion(on);
         if (!on) {
             this._flowA.opacity = this._flowB.opacity = 150;
             this._glow.set({opacity: 150, scale_x: 1, scale_y: 1});
@@ -667,6 +672,77 @@ export default class MusicModule extends IslandModule {
             repeatCount: -1, autoReverse: true});
         this._cardCover?.actor.ease({scale_x: 1.025, scale_y: 1.025, duration: 1700, mode: E,
             repeatCount: -1, autoReverse: true});
+    }
+
+    /**
+     * Playing: the record slides out from behind the cover and spins; paused:
+     * it stops where it is and slides back in.
+     */
+    _vinylMotion(on) {
+        const v = this._vinyl;
+        if (!v)
+            return;
+        v.remove_transition('translation-x');
+        if (on) {
+            v.ease({translation_x: VINYL_SLIDE, duration: 700, mode: Clutter.AnimationMode.EASE_OUT_BACK});
+            if (!v.get_transition('rotation-angle-z')) {
+                // spin from wherever it stopped
+                const from = v.rotation_angle_z % 360;
+                v.rotation_angle_z = from;
+                v.ease({rotation_angle_z: from + 360, duration: VINYL_TURN_MS, mode: Clutter.AnimationMode.LINEAR,
+                    repeatCount: -1});
+            }
+        } else {
+            const angle = v.rotation_angle_z;
+            v.remove_transition('rotation-angle-z');
+            v.rotation_angle_z = angle;
+            v.ease({translation_x: 0, duration: 500, mode: Clutter.AnimationMode.EASE_IN_OUT_CUBIC});
+        }
+            }
+
+    /** An original drawing: black disc, grooves with a soft sheen, label in the album colour. */
+    _paintVinyl() {
+        const cr = this._vinyl.get_context();
+        try {
+            const [w] = this._vinyl.get_surface_size();
+            const c = w / 2, R = w / 2 - 0.5, TAU = Math.PI * 2;
+            cr.setSourceRGBA(0.06, 0.06, 0.07, 1);
+            cr.arc(c, c, R, 0, TAU);
+            cr.fill();
+            // grooves
+            cr.setLineWidth(0.6);
+            for (let r = R - 3; r > R * 0.42; r -= 2.6) {
+                cr.setSourceRGBA(1, 1, 1, 0.045 + ((r * 7) % 3) * 0.012);
+                cr.arc(c, c, r, 0, TAU);
+                cr.stroke();
+            }
+            // sheen: two light wedges (makes the spin visible)
+            for (const a0 of [0.6, 0.6 + Math.PI]) {
+                const g = new Cairo.RadialGradient(c, c, R * 0.4, c, c, R);
+                g.addColorStopRGBA(0, 1, 1, 1, 0);
+                g.addColorStopRGBA(0.6, 1, 1, 1, 0.10);
+                g.addColorStopRGBA(1, 1, 1, 1, 0);
+                cr.setSource(g);
+                cr.moveTo(c, c);
+                cr.arc(c, c, R, a0, a0 + 0.45);
+                cr.closePath();
+                cr.fill();
+            }
+            // label in the album colour, with a darker ring and the spindle hole
+            const col = this._colorsNow?.a ?? hexToRgb(this.accent);
+            cr.setSourceRGBA(col.r / 255, col.g / 255, col.b / 255, 1);
+            cr.arc(c, c, R * 0.34, 0, TAU);
+            cr.fill();
+            cr.setSourceRGBA(0, 0, 0, 0.25);
+            cr.setLineWidth(1.2);
+            cr.arc(c, c, R * 0.24, 0, TAU);
+            cr.stroke();
+            cr.setSourceRGBA(0.06, 0.06, 0.07, 1);
+            cr.arc(c, c, 2.4, 0, TAU);
+            cr.fill();
+        } finally {
+            cr.$dispose();
+        }
     }
 
     /** Cross-fade the card background to the new colour. */
@@ -799,21 +875,20 @@ export default class MusicModule extends IslandModule {
         const row = new St.BoxLayout({style_class: 'di-music-row', x_expand: true});
         this._cardCover = new Cover(88, 14);
         this._cardCover.actor.set_pivot_point(0.5, 0.5);
-        // the glow lives in a 112 px square around the 88 px cover, inside the card
-        const coverWrap = new St.Widget({style_class: 'di-music-coverwrap', layout_manager: new Clutter.BinLayout(),
-            width: 112, height: 112, y_align: Clutter.ActorAlign.CENTER});
-        this._glow = new St.Widget({style_class: 'di-music-glow', x_expand: true, y_expand: true, opacity: 150});
+        // [glow 112 px] [vinyl that slides out from behind the cover] [cover 88 px]
+        const coverWrap = new St.Widget({style_class: 'di-music-coverwrap', layout_manager: new Clutter.FixedLayout(),
+            width: 112 + VINYL_SLIDE, height: 112, y_align: Clutter.ActorAlign.CENTER});
+        this._glow = new St.Widget({style_class: 'di-music-glow', width: 112, height: 112, opacity: 150});
         this._glow.set_pivot_point(0.5, 0.5);
+        this._vinyl = new St.DrawingArea({width: VINYL_PX, height: VINYL_PX,
+            x: (112 - VINYL_PX) / 2, y: (112 - VINYL_PX) / 2});
+        this._vinyl.set_pivot_point(0.5, 0.5);
+        this._vinyl.connect('repaint', () => this._paintVinyl());
+        this._cardCover.actor.set_position(12, 12);
         coverWrap.add_child(this._glow);
+        coverWrap.add_child(this._vinyl);
         coverWrap.add_child(this._cardCover.actor);
-        this._coverWrap = coverWrap;
-        // the Video button swaps the cover for a live preview of the player's window
-        this._videoFrame = new St.Widget({style_class: 'di-music-video', clip_to_allocation: true,
-            y_align: Clutter.ActorAlign.CENTER, visible: false});
-        const media = new St.Widget({layout_manager: new Clutter.BinLayout(), y_align: Clutter.ActorAlign.CENTER});
-        media.add_child(coverWrap);
-        media.add_child(this._videoFrame);
-        row.add_child(media);
+        row.add_child(coverWrap);
 
         const col = new St.BoxLayout({style_class: 'di-music-col', orientation: Clutter.Orientation.VERTICAL,
             x_expand: true, y_align: Clutter.ActorAlign.CENTER});
@@ -867,8 +942,6 @@ export default class MusicModule extends IslandModule {
         [this._playButton, this._playIcon] = button('media-playback-start-symbolic', 'di-music-btn di-music-play',
             () => this._call('PlayPause'));
         [this._next] = button('media-skip-forward-symbolic', 'di-music-btn', () => this._call('Next'));
-        [this._videoBtn] = button('camera-video-symbolic', 'di-music-btn', () => this._toggleVideo());
-        this._videoBtn.visible = false;
         col.add_child(controls);
 
         row.add_child(col);
@@ -880,8 +953,7 @@ export default class MusicModule extends IslandModule {
             this._title = this._artist = this._album = this._fill = this._track = null;
             this._progressBox = this._elapsed = this._remaining = null;
             this._prev = this._next = this._playButton = this._playIcon = null;
-            this._hideVideoPreview();
-            this._videoBtn = this._videoFrame = this._coverWrap = null;
+            this._vinyl = null;
         });
 
         this._renderText();
@@ -939,121 +1011,16 @@ export default class MusicModule extends IslandModule {
     onShown() {
         this._fetchPosition();
         this._cardMotion(this._info?.status === 'Playing');
-        this._updateVideo();
     }
 
     onHidden() {
         this._cardMotion(false);   // nothing animates while the card is closed
-        this._hideVideoPreview();  // ... and no window clone is kept alive
     }
 
     async tick() {
         if (!this._info || !this.ctx?.isExpanded?.())
             return;   // position is only needed while the card is open
-        this._updateVideo();       // the player's window may have opened / closed
         await this._fetchPosition();
-    }
-
-    // ------------------------------------------------------------ video: live window preview
-
-    _findWindow() {
-        const p = this._player;
-        if (!p || !this.ctx?.config?.musicVideo)
-            return null;
-        try {
-            return findPlayerWindow({...p.root, busName: p.name}, this._info?.title);
-        } catch (e) {
-            console.debug(`[dynamic-island] window lookup failed: ${e.message}`);
-            return null;
-        }
-    }
-
-    /** Show the Video button when the player has a window; keep the preview in step. */
-    _updateVideo() {
-        if (!this._videoBtn)
-            return;
-        const win = this._findWindow();
-        const changed = win !== this._win;
-        this._win = win;
-        if (this._videoBtn.visible !== !!win) {
-            this._videoBtn.visible = !!win;
-            this.ctx?.requestExpandedRelayout?.();
-        }
-        if (!win && this._videoOn)
-            this._videoOn = false;
-        this._styleVideoButton();
-        if (this._videoOn && (changed || !this._vc))
-            this._showVideoPreview();
-        else if (!this._videoOn && this._vc)
-            this._hideVideoPreview();
-    }
-
-    _toggleVideo() {
-        if (!this._win)
-            return;
-        this._videoOn = !this._videoOn;
-        this._styleVideoButton();
-        if (this._videoOn)
-            this._showVideoPreview();
-        else
-            this._hideVideoPreview();
-    }
-
-    _styleVideoButton() {
-        this._videoBtn?.set_style(this._videoOn ? `background-color: ${this._accentNow ?? this.accent}; color: #000000;` : null);
-    }
-
-    _showVideoPreview() {
-        this._hideVideoPreview();
-        const win = this._win;
-        if (!win || !this._videoFrame)
-            return;
-        const container = new Clutter.Actor();
-        // GNOME's own window previews do it in this order (gjs cannot set a
-        // layout manager that tracks its container while the actor is created)
-        container.layout_manager = new Shell.WindowPreviewLayout();
-        const layout = container.layout_manager;
-        layout.add_window(win);
-        container.set_pivot_point(0, 0);
-        this._videoFrame.add_child(container);
-
-        const fit = () => {
-            const bb = layout.bounding_box;
-            const bw = bb.get_width(), bh = bb.get_height();
-            if (!(bw > 0 && bh > 0) || !this._videoFrame)
-                return;
-            const k = Math.min(VIDEO_MAX_W / bw, VIDEO_MAX_H / bh);
-            container.set_scale(k, k);
-            this._videoFrame.set_size(Math.max(60, Math.round(bw * k)), Math.max(40, Math.round(bh * k)));
-            this.ctx?.requestExpandedRelayout?.();
-        };
-        const ids = [[layout, layout.connect('notify::bounding-box', fit)],
-            [win, win.connect('unmanaged', () => this._updateVideo())]];
-        this._vc = {container, layout, win, ids};
-        this._coverWrap.visible = false;
-        this._videoFrame.visible = true;
-        fit();
-    }
-
-    _hideVideoPreview() {
-        const vc = this._vc;
-        this._vc = null;
-        if (vc) {
-            for (const [obj, id] of vc.ids) {
-                try {
-                    obj.disconnect(id);
-                } catch {}
-            }
-            try {
-                vc.layout.remove_window(vc.win);
-            } catch {}
-            vc.container.destroy();
-        }
-        if (this._coverWrap)
-            this._coverWrap.visible = true;
-        if (this._videoFrame)
-            this._videoFrame.visible = false;
-        this.ctx?.requestExpandedRelayout?.();
     }
 
     destroy() {
@@ -1073,8 +1040,6 @@ export default class MusicModule extends IslandModule {
             for (const id of p.ids)
                 p.proxy.disconnect(id);
         }
-        this._hideVideoPreview();
-        this._win = null;
         this._players?.clear();
         this._artCache?.clear();
         this._soup?.abort();

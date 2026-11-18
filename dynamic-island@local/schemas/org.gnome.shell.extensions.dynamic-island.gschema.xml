@@ -159,10 +159,6 @@
       <default>true</default>
       <summary>Keep the last 10 copies (in memory only) and show them in the right island</summary>
     </key>
-    <key name="music-video" type="b">
-      <default>true</default>
-      <summary>Show a Video button on the music card that previews the player's window</summary>
-    </key>
     <key name="meeting-mode" type="b">
       <default>true</default>
       <summary>Turn Do Not Disturb on while the microphone or camera is in use</summary>

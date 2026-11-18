@@ -1019,8 +1019,10 @@
 
 /* ---- Claude usage card (centre island) */
 .di-claude {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background-gradient-direction: horizontal;
+    background-gradient-start: rgba(217, 119, 87, 0.26);
+    background-gradient-end: rgba(217, 119, 87, 0.06);
+    border: 1px solid rgba(217, 119, 87, 0.38);
     border-radius: 18px;
     padding: 10px 16px 10px 12px;
     spacing: 14px;
@@ -1041,12 +1043,12 @@
     font-size: 10px;
     font-weight: bold;
     letter-spacing: 1px;
-    color: rgba(255, 255, 255, 0.55);
+    color: #e08a6c;
 }
 
 .di-claude-today {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(240, 190, 170, 0.75);
 }
 
 .di-claude-mid {
@@ -1066,13 +1068,13 @@
 }
 
 .di-claude-track {
-    background-color: rgba(255, 255, 255, 0.10);
+    background-color: rgba(217, 119, 87, 0.20);
     border-radius: 2px;
     margin-top: 3px;
 }
 
 .di-claude-fill {
-    background-color: rgba(255, 255, 255, 0.55);
+    background-color: #d97757;
     border-radius: 2px;
 }
 

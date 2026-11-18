@@ -125,7 +125,6 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         const feat = new Adw.PreferencesGroup({title: _('Features')});
         this._switch(s, feat, 'clipboard-history', _('Clipboard history'),
             _('Last 10 copies, memory only, never written to disk'));
-        this._switch(s, feat, 'music-video', _('Video preview button on the music card'));
         this._switch(s, feat, 'music-popup', _('Preview on track change'));
         this._switch(s, feat, 'osd-enabled', _('Volume/brightness indicator in the island'));
         this._switch(s, feat, 'notification-preview', _('Notification preview'));
