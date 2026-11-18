@@ -55,6 +55,9 @@ export default class TogglesModule extends IslandModule {
         for (const s of [this._iface, this._color, this._notif])
             this._on(s, 'changed', () => this._sync());
 
+        this._caffeine = this.ctx?.services?.caffeine ?? null;
+        this._unsubCaffeine = this._caffeine?.subscribe(() => this._sync()) ?? null;
+
         this._rfkill = getRfkillManager();
         this._on(this._rfkill, 'notify::airplane-mode', () => this._sync());
 
@@ -126,8 +129,9 @@ export default class TogglesModule extends IslandModule {
                 this._rfkill.airplaneMode = !this._rfkill.airplaneMode;
             }),
             power: this._toggle('power-profile-balanced-symbolic', _('Power mode'), () => this._cyclePower()),
+            awake: this._toggle('weather-clear-symbolic', _('Keep awake'), () => this._caffeine?.cycle()),
         };
-        const order = ['wifi', 'bt', 'dark', 'night', 'dnd', 'airplane', 'power'];
+        const order = ['wifi', 'bt', 'dark', 'night', 'dnd', 'airplane', 'power', 'awake'];
         let row = null;
         for (const [i, key] of order.entries()) {
             if (i % 2 === 0) {
@@ -229,6 +233,16 @@ export default class TogglesModule extends IslandModule {
         const air = !!this._rfkill?.airplaneMode;
         T.airplane.set({visible: !!this._rfkill?.showAirplaneMode || air, on: air,
             subtitle: air ? _('On') : _('Off')});
+
+        if (T.awake) {
+            const left = this._caffeine?.remaining ?? 0;
+            T.awake.set({
+                visible: !!this._caffeine,
+                on: left > 0,
+                subtitle: left === Infinity ? _('Until turned off')
+                    : left > 0 ? _f('%s min left', Math.max(1, Math.ceil(left / 60))) : _('Off'),
+            });
+        }
 
         const profile = this._pp?.get_cached_property('ActiveProfile')?.unpack() ?? '';
         T.power.set({
@@ -431,6 +445,8 @@ export default class TogglesModule extends IslandModule {
     }
 
     destroy() {
+        this._unsubCaffeine?.();
+        this._unsubCaffeine = this._caffeine = null;
         for (const [obj, id] of this._ids ?? []) {
             try {
                 obj.disconnect(id);

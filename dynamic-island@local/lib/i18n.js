@@ -136,6 +136,16 @@ const TR = {
     'Blur while opening/closing': 'Açılıp kapanırken bulanıklık',
     'Content blurs while the island changes shape': 'Island şekil değiştirirken içerik bulanıklaşır',
     'Battery': 'Pil', 'Settings': 'Ayarlar', 'Lock': 'Kilitle',
+    // workspaces / audio / keep awake
+    'Desktop %s': 'Masaüstü %s', 'No windows': 'Pencere yok', '+%s more windows': '+%s pencere daha',
+    'SOUND OUTPUT': 'SES ÇIKIŞI', 'Keep awake': 'Uyanık tut', 'Until turned off': 'Kapatana kadar',
+    '%s min left': '%s dk kaldı',
+    'Workspaces and windows': 'Çalışma alanları ve pencereler', 'Sound output': 'Ses çıkışı',
+    // claude usage
+    'Claude Code usage': 'Claude Code kullanımı', 'Claude token limit (K per 5 h)': 'Claude token limiti (5 saatte, bin)',
+    '0 = just show the tokens used; set your own limit to see how much is left': '0 = yalnızca kullanılan token; kendi limitini yazarsan kalanı görürsün',
+    'Today %s': 'Bugün %s', 'No active session': 'Aktif oturum yok',
+    'resets in %s h %s min': '%s sa %s dk sonra sıfırlanır', 'resets in %s min': '%s dk sonra sıfırlanır',
     // themes
     'Ink': 'Mürekkep',
     'Midnight': 'Gece mavisi',

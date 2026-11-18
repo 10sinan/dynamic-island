@@ -209,6 +209,17 @@ Diskte iki ölçüm üst üste yüksek okuma+yazma (≥50 MB/s) görünce sol pi
 
 Arayüz dili cihazın diline göre **değil**, `language` ayarına göre belirlenir (varsayılan `tr`). `di-config` → Genel → **Dil / Language** ile ya da `di-config set language en` ile değişir; island'lar ve `di-config` arayüzü anında yeni dile geçer. Tarih/ay/gün adları ve takvimin hafta başlangıcı da dile bağlıdır (Türkçe: Pazartesi, English: Sunday). Yeni dil eklemek için `lib/i18n.js` içindeki tabloya (İngilizce metin → çeviri) ve `tools/di-config` içindeki `EN` sözlüğüne bakın.
 
+### Çalışma alanları, ses çıkışı, uyanık tut
+
+- **Çalışma alanları (sol island):** Her çalışma alanı bir kart; içindeki pencereler listelenir. Pencereye tıkla → o pencereye geçer, başlığa tıkla → o çalışma alanına geçer (Activities düğmesinin yerini tutar).
+- **Ses çıkışı (sağ island):** Birden fazla çıkış varsa (hoparlör, kulaklık, Bluetooth, HDMI) listelenir; tıklayınca varsayılan çıkış olur.
+- **Uyanık tut (sağ island, düğmeler):** Ekranın kararmasını ve uykuya geçmeyi engeller. Her tıkta: 30 dk → 1 sa → 3 sa → kapatana kadar → kapalı. Açıkken panelde küçük bir güneş simgesi görünür.
+- **Disk bildirimi:** "Büyük dosya işlemi" artık yalnızca yaklaşık 10 sn boyunca sürekli ~150 MB/s üstü disk kullanımında çıkar, 2 dakikada en fazla bir kez; biten işlem için de en az 2 GB taşınmış olmalıdır.
+
+### Claude Code kullanımı (orta island)
+
+Orta island'da **CLAUDE** kartı: 5 saatlik oturumda kullanılan token ve oturumun ne zaman sıfırlanacağı. Veri, bu bilgisayardaki `~/.claude/projects/**/*.jsonl` kayıtlarından **tahmin edilir**; hiçbir şey internete gönderilmez, hesap bilgin/token'ın okunmaz. Anthropic planındaki kalan kotayı yerelde yayımlamadığı için "kalan" bir limite göredir: ayarlardan **Claude token limiti** (bin token) girersen kalan yüzde görünür (örn. `di-config set claude-token-limit 20000` = 20M). Hesap yalnızca girdi + çıktı + önbellek yazma tokenlarını sayar, önbellek okumayı saymaz; resmî `/usage` ekranıyla birebir aynı olmayabilir.
+
 ### Temalar
 
 `di-config` → Görünüm → **Renk teması**: Mürekkep (siyah, varsayılan), Gece mavisi, Gün batımı, Orman, Gül. Tema island'ın zeminini, kenarını (üstüne gelince parlar) ve varsayılan vurgu rengini birlikte değiştirir. **Vurgu rengini** ayrıca elle seçersen o, temanın rengini ezer; "tema rengi" seçeneği temanınkine döner. Müzik çalarken kenar albüm renginde yanmaya devam eder.
@@ -278,6 +289,8 @@ tests/
 ├── glyphs.test.js         # ikon seviye/renk kararları testleri (gjs)
 ├── cliplist.test.js       # pano geçmişi listesi testleri (gjs)
 ├── i18n.test.js           # dil katmanı testleri (gjs)
+├── spring.test.js         # yay fiziği testleri (gjs)
+├── claudeusage.test.js    # Claude kullanım hesabı testleri (gjs)
 ├── windowmatch.test.js    # oynatıcı penceresi eşleştirme testleri (gjs)
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
@@ -334,6 +347,8 @@ gjs -m tests/diskio.test.js
 gjs -m tests/glyphs.test.js
 gjs -m tests/cliplist.test.js
 gjs -m tests/i18n.test.js
+gjs -m tests/spring.test.js
+gjs -m tests/claudeusage.test.js
 gjs -m tests/windowmatch.test.js
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots

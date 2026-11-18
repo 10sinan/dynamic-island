@@ -10,9 +10,9 @@ import {_, setLanguage} from './lib/i18n.js';
 import {THEMES} from './lib/themes.js';
 
 const MODULES = {
-    'center-modules': ['music', 'calendar', 'notifications'],
-    'stats-modules': ['cpu', 'ram', 'temp', 'net', 'battery', 'gpu', 'disk', 'graph', 'procs'],
-    'qs-modules': ['sliders', 'toggles', 'clipboard', 'system'],
+    'center-modules': ['music', 'calendar', 'notifications', 'claude'],
+    'stats-modules': ['workspaces', 'cpu', 'ram', 'temp', 'net', 'battery', 'gpu', 'disk', 'graph', 'procs'],
+    'qs-modules': ['sliders', 'audio', 'toggles', 'clipboard', 'system'],
     'events': ['power', 'battery-low', 'wifi', 'bluetooth', 'privacy', 'thermal', 'memory', 'disk',
         'lockkey', 'layout', 'meeting', 'powersaver'],
 };
@@ -20,10 +20,11 @@ const COMPACT_CAPABLE = new Set(['music', 'cpu', 'ram', 'temp', 'net', 'battery'
 const PANEL_KEY = {'center-modules': 'center-compact-modules', 'stats-modules': 'stats-compact-modules'};
 
 const NAMES = () => ({
-    music: _('Music player'), calendar: _('Calendar'), notifications: _('Notification list'),
+    claude: _('Claude Code usage'), music: _('Music player'), calendar: _('Calendar'), notifications: _('Notification list'),
     cpu: _('CPU usage'), ram: _('RAM usage'), temp: _('CPU temperature'), net: _('Network speed'),
     battery: _('Battery'), gpu: _('GPU usage'), disk: _('Disk usage'), graph: _('Live graphs (60 s)'),
     procs: _('Top resource-using apps'),
+    workspaces: _('Workspaces and windows'), audio: _('Sound output'),
     sliders: _('Volume + brightness sliders'), toggles: _('Toggles (Wi-Fi, Bluetooth, ...)'),
     clipboard: _('Clipboard history (last 10)'), system: _('Battery + system buttons'),
     power: _('Charger plugged / unplugged'), 'battery-low': _('Battery low (20%, 10%)'),
@@ -130,6 +131,8 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         this._switch(s, feat, 'notification-preview', _('Notification preview'));
         this._switch(s, feat, 'screenshot-preview', _('Screenshot thumbnail'));
         this._switch(s, feat, 'meeting-mode', _('Meeting mode (mic/camera → Do Not Disturb)'));
+        this._spin(s, feat, 'claude-token-limit', _('Claude token limit (K per 5 h)'),
+            _('0 = just show the tokens used; set your own limit to see how much is left'), 1000);
         this._switch(s, feat, 'auto-power-saver', _('Auto Power Saver on low battery'));
         this._spin(s, feat, 'auto-power-saver-level', _('Power saver battery level'), '%', 5);
         page.add(feat);

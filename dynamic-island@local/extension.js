@@ -12,6 +12,7 @@ import {OsdRouter} from './lib/osd.js';
 import {NotificationPreview} from './lib/notifications.js';
 import {EventHub} from './lib/events.js';
 import {ClipboardStore} from './lib/clipboardStore.js';
+import {Caffeine} from './lib/caffeine.js';
 import {MeetingMode} from './lib/meeting.js';
 import {AutoPowerSaver} from './lib/powerPolicy.js';
 import {readConfig} from './lib/settings.js';
@@ -20,7 +21,7 @@ import {LOG_PREFIX, REBUILD_DEBOUNCE_MS} from './lib/constants.js';
 import {CENTER_FIXED, CENTER_MODULES, QS_FIXED, QS_MODULES, STATS_FIXED, STATS_MODULES} from './modules/index.js';
 
 const STAT_IDS = ['cpu', 'ram', 'temp', 'net', 'battery'];
-const LAYOUT_VERSION = 4;
+const LAYOUT_VERSION = 5;
 // Written by the extension itself; changing them must not rebuild the islands.
 const INTERNAL_KEYS = new Set(['meeting-dnd-active', 'layout-version']);
 
@@ -35,6 +36,7 @@ export default class DynamicIslandExtension extends Extension {
                 this._scheduleRebuild();
         });
         this._clip = null;
+        this._caffeine = new Caffeine();   // survives island rebuilds
         this._build(true);
         this._takeOverQuickSettingsShortcut();
     }
@@ -47,6 +49,8 @@ export default class DynamicIslandExtension extends Extension {
         this._settings?.disconnect(this._settingsId);
         this._restoreQuickSettingsShortcut();
         this._teardown();
+        this._caffeine?.destroy();
+        this._caffeine = null;
         this._clip?.destroy();   // the clipboard history ends with the extension
         this._clip = null;
         this._settings = null;
@@ -138,6 +142,21 @@ export default class DynamicIslandExtension extends Extension {
                 s.set_strv('qs-modules', at >= 0 ? [...cur.slice(0, at), 'clipboard', ...cur.slice(at)] : [...cur, 'clipboard']);
             }
         }
+
+        if (from < 5) {
+            // v5: workspaces card (left island), sound output chooser (right island)
+            const center = userList('center-modules');
+            if (center && !center.includes('claude'))
+                s.set_strv('center-modules', [...center, 'claude']);
+            const stats = userList('stats-modules');
+            if (stats && !stats.includes('workspaces'))
+                s.set_strv('stats-modules', ['workspaces', ...stats]);
+            const qs = userList('qs-modules');
+            if (qs && !qs.includes('audio')) {
+                const at = qs.indexOf('sliders');
+                s.set_strv('qs-modules', at >= 0 ? [...qs.slice(0, at + 1), 'audio', ...qs.slice(at + 1)] : ['audio', ...qs]);
+            }
+        }
         s.set_int('layout-version', LAYOUT_VERSION);
     }
 
@@ -173,7 +192,7 @@ export default class DynamicIslandExtension extends Extension {
             this._clip.destroy();
             this._clip = null;
         }
-        const services = {clipboard: this._clip};
+        const services = {clipboard: this._clip, caffeine: this._caffeine};
         cfg.centerModules = this._modules('center-modules', CENTER_MODULES);
         cfg.centerCompactModules = this._modules('center-compact-modules', CENTER_MODULES);
         cfg.qsModules = this._modules('qs-modules', QS_MODULES);

@@ -102,11 +102,16 @@
       <summary>Modules shown next to the clock in the panel</summary>
     </key>
     <key name="center-modules" type="as">
-      <default>['music', 'calendar', 'notifications']</default>
+      <default>['music', 'calendar', 'notifications', 'claude']</default>
       <summary>Content of the expanded centre island, in order</summary>
     </key>
+    <key name="claude-token-limit" type="i">
+      <range min="0" max="100000000"/>
+      <default>0</default>
+      <summary>Claude Code tokens (in thousands) per 5-hour session, used to show how much is left; 0 = just show the tokens used</summary>
+    </key>
     <key name="stats-modules" type="as">
-      <default>['cpu', 'ram', 'temp', 'net', 'battery', 'gpu', 'disk', 'graph', 'procs']</default>
+      <default>['workspaces', 'cpu', 'ram', 'temp', 'net', 'battery', 'gpu', 'disk', 'graph', 'procs']</default>
       <summary>Content of the expanded statistics island</summary>
     </key>
     <key name="stats-compact-modules" type="as">
@@ -118,7 +123,7 @@
       <summary>Events that briefly open the centre island</summary>
     </key>
     <key name="qs-modules" type="as">
-      <default>['sliders', 'toggles', 'clipboard', 'system']</default>
+      <default>['sliders', 'audio', 'toggles', 'clipboard', 'system']</default>
       <summary>Sections of the Quick Settings island, top to bottom</summary>
     </key>
 

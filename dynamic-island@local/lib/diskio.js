@@ -28,7 +28,11 @@ export class IoMeter {
      * @param {number} o.startSamples  busy samples in a row before announcing
      * @param {number} o.stopSamples   quiet samples in a row before declaring it finished
      */
-    constructor({on = 50e6, off = 20e6, startSamples = 2, stopSamples = 3} = {}) {
+    // Defaults are strict on purpose: browsers, package updates, compilers and
+    // indexers easily hit 50-100 MB/s for a few seconds on an NVMe disk. A "large
+    // file operation" is a *sustained* ~150 MB/s or more (samples are 2 s apart,
+    // so 5 samples = about 10 s).
+    constructor({on = 150e6, off = 40e6, startSamples = 5, stopSamples = 3} = {}) {
         this._o = {on, off, startSamples, stopSamples};
         this._prev = null;
         this.active = false;

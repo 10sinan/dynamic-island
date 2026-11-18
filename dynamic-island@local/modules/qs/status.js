@@ -108,12 +108,18 @@ export default class QsStatusModule extends IslandModule {
         this._vol = new Glyph('volume', {level: 3, muted: false});
         this._btIcon = new Glyph('bluetooth');
         this._dnd = new Glyph('dnd');
-        for (const g of [this._wifi, this._vol, this._btIcon, this._dnd]) {
+        this._awake = new Glyph('awake');
+        for (const g of [this._wifi, this._vol, this._btIcon, this._dnd, this._awake]) {
             g.actor.y_align = Clutter.ActorAlign.CENTER;
             row.add_child(g.actor);
         }
         this._btIcon.actor.visible = false;
         this._dnd.actor.visible = false;
+        this._awake.actor.visible = (this.ctx?.services?.caffeine?.remaining ?? 0) > 0;
+        this._unsubAwake = this.ctx?.services?.caffeine?.subscribe(() => {
+            if (this._show(this._awake?.actor, (this.ctx?.services?.caffeine?.remaining ?? 0) > 0))
+                this.ctx?.requestRelayout?.(true);
+        }) ?? null;
 
         // battery: one drawn glyph (rounded body + rounded fill + terminal) and the percentage
         this._batBox = new St.BoxLayout({style_class: 'di-qs-battery', y_align: Clutter.ActorAlign.CENTER,
@@ -127,7 +133,7 @@ export default class QsStatusModule extends IslandModule {
 
         row.connect('destroy', () => {
             this._dead = true;
-            this._row = this._wifi = this._vol = this._btIcon = this._dnd = null;
+            this._row = this._wifi = this._vol = this._btIcon = this._dnd = this._awake = null;
             this._batBox = this._batGlyph = this._batLabel = null;
             this._rare = [];
         });
@@ -235,6 +241,8 @@ export default class QsStatusModule extends IslandModule {
 
     destroy() {
         this._dead = true;
+        this._unsubAwake?.();
+        this._unsubAwake = null;
         for (const [obj, id] of this._ids ?? []) {
             try {
                 obj.disconnect(id);

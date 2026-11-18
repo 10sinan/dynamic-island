@@ -22,6 +22,8 @@ import {clamp01, formatRate, readText, severity} from '../../lib/proc.js';
 Gio._promisify(Gio.File.prototype, 'query_filesystem_info_async', 'query_filesystem_info_finish');
 
 const GB = 1024 ** 3;
+const MIN_MOVED = 2 * GB;           // a finished operation is announced only if it moved this much
+const TOAST_COOLDOWN_S = 120;       // at most one "large file operation" toast per this long
 
 export default class DiskModule extends IslandModule {
     static id = 'disk';
@@ -118,6 +120,19 @@ export default class DiskModule extends IslandModule {
         // not while the user has the island open
         if (this.ctx?.isExpanded?.() || !this.ctx?.showActivity)
             return;
+        const now = GLib.get_monotonic_time() / 1e6;
+        if (on) {
+            if (this._lastToast && now - this._lastToast < TOAST_COOLDOWN_S) {
+                this._skipEnd = true;   // no "started" toast -> no "finished" toast either
+                return;
+            }
+            this._lastToast = now;
+            this._skipEnd = false;
+        } else {
+            if (this._skipEnd || r.moved < MIN_MOVED)
+                return;
+            this._lastToast = now;
+        }
         const view = on
             ? {title: _('Large file operation'), sub: `↓ ${formatRate(r.readBps)}  ↑ ${formatRate(r.writeBps)}`}
             : {title: _('File operation done'), sub: _f('%s transferred', formatBytes(r.moved))};

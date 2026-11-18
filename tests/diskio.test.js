@@ -23,7 +23,7 @@ check('empty input', parseDiskstats('').readBytes === 0);
 
 print('IoMeter');
 const MB = 1024 * 1024;
-const m = new IoMeter({on: 50 * MB, off: 20 * MB, startSamples: 2, stopSamples: 3});
+const m = new IoMeter({on: 50 * MB, off: 20 * MB, startSamples: 2, stopSamples: 3});   // explicit: the test uses its own limits
 let r = 0, w = 0, now = 0;
 const step = (readMb, writeMb, dt = 2) => {
     r += readMb * MB * dt; w += writeMb * MB * dt; now += dt;
@@ -45,6 +45,23 @@ check('after the end it can start again', step(100, 100).event === null && step(
 const c = new IoMeter();
 c.push({readBytes: 1000, writeBytes: 0}, 1);
 check('counter reset never gives negative rates', c.push({readBytes: 0, writeBytes: 0}, 2).readBps === 0);
+
+print('defaults ignore everyday bursts');
+const d = new IoMeter();
+let dr = 0, dn = 0;
+const dstep = mbps => { dr += mbps * MB * 2; dn += 2; return d.push({readBytes: dr, writeBytes: 0}, dn); };
+dstep(0);
+let started = false;
+for (let i = 0; i < 4; i++)    // 8 s of 100 MB/s: a browser / update burst
+    started ||= dstep(100).event === 'start';
+check('8 s at 100 MB/s is not a large file operation', !started && !d.active);
+for (let i = 0; i < 3; i++)
+    dstep(5);
+for (let i = 0; i < 4; i++)    // 8 s at 400 MB/s: short copy burst
+    started ||= dstep(400).event === 'start';
+check('8 s at 400 MB/s is still not announced', !started);
+dstep(400);
+check('10 s sustained at 400 MB/s is', dstep(400).event === 'start' || d.active);
 
 print('formatBytes');
 check('MB', formatBytes(860 * MB) === '860 MB', formatBytes(860 * MB));

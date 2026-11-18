@@ -127,6 +127,22 @@ const DRAW = {
         cr.setOperator(Cairo.Operator.OVER);
     },
 
+    // Keep awake: a small sun (disc + eight short rays)
+    awake(cr, w, h) {
+        const cx = w / 2, cy = h / 2;
+        cr.setSourceRGBA(1, 1, 1, 1);
+        cr.arc(cx, cy, 3.1, 0, TAU);
+        cr.fill();
+        cr.setLineWidth(1.3);
+        cr.setLineCap(Cairo.LineCap.ROUND);
+        for (let i = 0; i < 8; i++) {
+            const a = i * TAU / 8;
+            cr.moveTo(cx + Math.cos(a) * 5.0, cy + Math.sin(a) * 5.0);
+            cr.lineTo(cx + Math.cos(a) * 6.6, cy + Math.sin(a) * 6.6);
+            cr.stroke();
+        }
+    },
+
     // rounded body, rounded fill that follows the charge, small terminal
     battery(cr, w, h, {pct = 100, charging = false}) {
         const bodyW = w - 3.2, bodyH = 10, top = (h - bodyH) / 2;
@@ -163,10 +179,10 @@ const DRAW = {
 };
 
 /** Default widths (logical px) of each glyph at GLYPH_H. */
-export const GLYPH_W = {wifi: 19, wired: 18, volume: 19, bluetooth: 11, dnd: 14, battery: 27};
+export const GLYPH_W = {wifi: 19, wired: 18, volume: 19, bluetooth: 11, dnd: 14, awake: 15, battery: 27};
 
 export class Glyph {
-    /** @param {'wifi'|'wired'|'volume'|'bluetooth'|'dnd'|'battery'} kind */
+    /** @param {'wifi'|'wired'|'volume'|'bluetooth'|'dnd'|'awake'|'battery'} kind */
     constructor(kind, state = {}) {
         this._kind = kind;
         this._state = state;

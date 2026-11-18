@@ -107,7 +107,10 @@ EN = {
     "Üstüne geldikten sonra açılmadan önce beklenecek süre. 0 = anında.": "Wait before opening after hovering. 0 = instant.",
     "Kapanma bekleme": "Close delay", "İmleç çekildikten sonra kapanmadan önce beklenecek süre.":
         "Wait before closing after the pointer leaves.",
-    "Kendiliğinden kapanma": "Auto close", "asla": "never",
+    "Kendiliğinden kapanma": "Auto close", "asla": "never", "yok": "none",
+    "Claude token limiti (5 saatte)": "Claude token limit (per 5 h)",
+    "Orta island'daki Claude kartı için 5 saatlik oturum limitin (bin token). 0 = yalnızca kullanılanı göster; yazarsan kalan yüzdeyi görürsün. Kullanım yerel kayıtlardan tahmin edilir.":
+        "Your 5-hour session limit (thousands of tokens) for the Claude card in the center island. 0 = just show what was used; set it to see the percentage left. Usage is estimated from local logs.",
     "İmleç üstünde değilken bu süre sonunda kapanır. 0 = asla.": "Closes after this time when not hovered. 0 = never.",
     "Açılma animasyonu": "Open animation", "Yaylanarak açılma animasyonunun süresi.": "Duration of the spring-open animation.",
     "Bildirim önizleme süresi": "Notification preview time",
@@ -139,6 +142,8 @@ EN = {
     "Island'ı kısa süre açan olaylar": "Events that open the island briefly",
     "Space: aç/kapa. Seçilen olaylar olunca orta island kendiliğinden açılıp durumu gösterir.":
         "Space: on/off. When a chosen event happens the center island opens by itself to show it.",
+    "Claude Code kullanımı (5 saatlik oturum)": "Claude Code usage (5-hour session)",
+    "Çalışma alanları ve pencereler": "Workspaces and windows", "Ses çıkışı seçici": "Sound output chooser",
     "GPU kullanımı": "GPU usage", "Disk doluluğu": "Disk usage", "Canlı grafikler (60 sn)": "Live graphs (60 s)",
     "En çok kaynak kullanan uygulamalar": "Top resource-using apps", "Şarj takıldı / çıkarıldı": "Charger plugged / unplugged",
     "Pil düşük (%20, %10)": "Battery low (20%, 10%)", "Wi-Fi bağlandı / koptu": "Wi-Fi connected / lost",
@@ -170,15 +175,18 @@ def T(s):
     return EN.get(s, s) if LANG == "en" else s
 
 
-CENTER_ALL = ["music", "calendar", "notifications"]
-STATS_ALL = ["cpu", "ram", "temp", "net", "battery", "gpu", "disk", "graph", "procs"]
-QS_ALL = ["sliders", "toggles", "clipboard", "system"]
+CENTER_ALL = ["music", "calendar", "notifications", "claude"]
+STATS_ALL = ["workspaces", "cpu", "ram", "temp", "net", "battery", "gpu", "disk", "graph", "procs"]
+QS_ALL = ["sliders", "audio", "toggles", "clipboard", "system"]
 EVENTS_ALL = ["power", "battery-low", "wifi", "bluetooth", "privacy", "thermal", "memory", "disk",
               "lockkey", "layout", "meeting", "powersaver"]
 # modules that have a view in the panel pill (the "panelde" column)
 COMPACT_CAPABLE = {"music", "cpu", "ram", "temp", "net", "battery", "disk"}
 
 MODULE_NAMES = {
+    "claude": "Claude Code kullanımı (5 saatlik oturum)",
+    "workspaces": "Çalışma alanları ve pencereler",
+    "audio": "Ses çıkışı seçici",
     "gpu": "GPU kullanımı",
     "disk": "Disk doluluğu",
     "graph": "Canlı grafikler (60 sn)",
@@ -235,6 +243,8 @@ TABS = [
              help="Oynatıcının penceresi bulunursa karttaki Video düğmesi kapak yerine pencerenin canlı görüntüsünü gösterir."),
         dict(key="meeting-mode", kind="bool", label="Toplantı modu (mikrofon/kamera → Rahatsız Etme)",
              help="Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner."),
+        dict(key="claude-token-limit", kind="int", step=1000, unit="K", label="Claude token limiti (5 saatte)",
+             zero="yok", help="Orta island'daki Claude kartı için 5 saatlik oturum limitin (bin token). 0 = yalnızca kullanılanı göster; yazarsan kalan yüzdeyi görürsün. Kullanım yerel kayıtlardan tahmin edilir."),
         dict(key="auto-power-saver", kind="bool", label="Pil azalınca otomatik Güç Tasarrufu",
              help="Pil aşağıdaki seviyeye inince güç profili 'Güç Tasarrufu' olur, şarja takınca eskisine döner."),
         dict(key="auto-power-saver-level", kind="int", step=5, unit="%", label="Güç tasarrufu pil seviyesi",

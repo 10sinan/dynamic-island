@@ -20,6 +20,9 @@ import GpuModule from './stats/gpu.js';
 import DiskModule from './stats/disk.js';
 import GraphModule from './stats/graph.js';
 import ProcsModule from './stats/procs.js';
+import ClaudeUsageModule from './claude.js';
+import WorkspacesModule from './stats/workspaces.js';
+import AudioOutputModule from './qs/audio.js';
 import TogglesModule from './qs/toggles.js';
 import ClipboardModule from './qs/clipboard.js';
 import SystemModule from './qs/system.js';
@@ -34,6 +37,7 @@ export const CENTER_MODULES = {
     music: MusicModule,
     calendar: CalendarModule,
     notifications: NotificationListModule,
+    claude: ClaudeUsageModule,
 };
 
 /** The statistics island (top left). */
@@ -47,10 +51,12 @@ export const STATS_MODULES = {
     disk: DiskModule,
     graph: GraphModule,
     procs: ProcsModule,
+    workspaces: WorkspacesModule,
 };
 
 export const QS_MODULES = {
     sliders: SlidersModule,
+    audio: AudioOutputModule,
     toggles: TogglesModule,
     clipboard: ClipboardModule,
     system: SystemModule,
