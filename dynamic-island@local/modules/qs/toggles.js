@@ -4,14 +4,16 @@
 // Every toggle talks to the same service GNOME's own toggle uses.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
+import Graphene from 'gi://Graphene';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import {getRfkillManager} from 'resource:///org/gnome/shell/ui/status/rfkill.js';
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import {IslandModule} from '../base.js';
-import {_, _f} from '../../lib/i18n.js';
+import {_, _f, pct} from '../../lib/i18n.js';
 
 const PP_BUS = 'org.freedesktop.UPower.PowerProfiles';
 const PP_PATH = '/org/freedesktop/UPower/PowerProfiles';
@@ -131,15 +133,8 @@ export default class TogglesModule extends IslandModule {
             power: this._toggle('power-profile-balanced-symbolic', _('Power mode'), () => this._cyclePower()),
             awake: this._toggle('weather-clear-symbolic', _('Keep awake'), () => this._caffeine?.cycle()),
         };
-        const order = ['wifi', 'bt', 'dark', 'night', 'dnd', 'airplane', 'power', 'awake'];
-        let row = null;
-        for (const [i, key] of order.entries()) {
-            if (i % 2 === 0) {
-                row = new St.BoxLayout({style_class: 'di-toggle-row'});
-                this._grid.add_child(row);
-            }
-            row.add_child(this._toggles[key].actor);
-        }
+        this._order = ['wifi', 'bt', 'dark', 'night', 'dnd', 'airplane', 'power', 'awake'];
+        this._packed = null;
 
         this._root.connect('destroy', () => {
             this._root = this._grid = this._pageBox = this._toggles = null;
@@ -148,10 +143,43 @@ export default class TogglesModule extends IslandModule {
         return this._root;
     }
 
-    /** [icon  Title / subtitle] (+ optional › arrow opening a sub-page) */
+    /** Two per row, only the visible ones: no gaps when a toggle is hidden. */
+    _pack() {
+        if (!this._grid || !this._toggles)
+            return;
+        const keys = this._order.filter(k => this._toggles[k].actor.visible);
+        const sig = keys.join(',');
+        if (sig === this._packed)
+            return;
+        this._packed = sig;
+        for (const k of this._order) {
+            const a = this._toggles[k].actor;
+            a.get_parent()?.remove_child(a);
+        }
+        this._grid.destroy_all_children();
+        let row = null;
+        keys.forEach((k, i) => {
+            if (i % 2 === 0) {
+                row = new St.BoxLayout({style_class: 'di-toggle-row'});
+                this._grid.add_child(row);
+            }
+            row.add_child(this._toggles[k].actor);
+        });
+        // hidden ones stay parented (in a hidden holder) so they can be re-shown by _sync()
+        this._hiddenHolder = new St.Widget({visible: false});
+        this._grid.add_child(this._hiddenHolder);
+        for (const k of this._order.filter(k => !keys.includes(k)))
+            this._hiddenHolder.add_child(this._toggles[k].actor);
+        this.ctx?.requestExpandedRelayout?.();
+    }
+
+    /** [(icon)  Title / subtitle] (+ optional › opening a sub-page) */
     _toggle(iconName, title, onToggle, onArrow = null) {
         const outer = new St.BoxLayout({style_class: 'di-toggle', x_expand: true});
-        const icon = new St.Icon({icon_name: iconName, icon_size: 16, y_align: Clutter.ActorAlign.CENTER});
+        const bubble = new St.Bin({style_class: 'di-toggle-bubble', y_align: Clutter.ActorAlign.CENTER,
+            pivot_point: new Graphene.Point({x: 0.5, y: 0.5})});
+        const icon = new St.Icon({icon_name: iconName, icon_size: 16});
+        bubble.set_child(icon);
         const text = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true,
             y_align: Clutter.ActorAlign.CENTER});
         const t = label(title, 'di-toggle-title');
@@ -159,32 +187,43 @@ export default class TogglesModule extends IslandModule {
         text.add_child(t);
         text.add_child(sub);
         const inner = new St.BoxLayout({style_class: 'di-toggle-inner', x_expand: true});
-        inner.add_child(icon);
+        inner.add_child(bubble);
         inner.add_child(text);
         const main = new St.Button({style_class: 'di-toggle-main', child: inner, x_expand: true, can_focus: false});
-        main.connect('clicked', () => onToggle());
+        main.connect('clicked', () => {
+            // small press bounce on the icon
+            bubble.remove_all_transitions();
+            bubble.set_scale(0.82, 0.82);
+            bubble.ease({scale_x: 1, scale_y: 1, duration: 380, mode: Clutter.AnimationMode.EASE_OUT_BACK});
+            onToggle();
+        });
         outer.add_child(main);
         if (onArrow) {
             const arrow = new St.Button({style_class: 'di-toggle-arrow', can_focus: false,
-                child: new St.Icon({icon_name: 'go-next-symbolic', icon_size: 14})});
+                y_align: Clutter.ActorAlign.CENTER,
+                child: new St.Icon({icon_name: 'go-next-symbolic', icon_size: 12})});
             arrow.connect('clicked', () => onArrow());
             outer.add_child(arrow);
         }
+        let wasOn = null;
         return {
             actor: outer,
             icon,
             set: ({on, subtitle, visible = true, iconName: name}) => {
                 outer.visible = visible;
-                if (on) {
-                    outer.add_style_pseudo_class('checked');
-                    outer.set_style(`background-color: ${this.accent};`);
-                } else {
-                    outer.remove_style_pseudo_class('checked');
-                    outer.set_style(null);
+                if (on !== wasOn) {
+                    wasOn = on;
+                    if (on) {
+                        outer.add_style_pseudo_class('checked');
+                        bubble.set_style(`background-color: ${this.accent}; color: #0b0b0b;`);
+                    } else {
+                        outer.remove_style_pseudo_class('checked');
+                        bubble.set_style(null);
+                    }
                 }
                 if (sub.text !== (subtitle ?? ''))
                     sub.text = subtitle ?? '';
-                if (name)
+                if (name && icon.icon_name !== name)
                     icon.icon_name = name;
             },
         };
@@ -252,6 +291,7 @@ export default class TogglesModule extends IslandModule {
             iconName: PP_ICONS[profile],
         });
 
+        this._pack();
         if (this._page === 'wifi')
             this._renderWifi();
         else if (this._page === 'bt')
@@ -263,8 +303,12 @@ export default class TogglesModule extends IslandModule {
     }
 
     onShown() {
-        this._closePage();
+        this._closePage(false);
         this._sync();
+    }
+
+    onHidden() {
+        this._closePage(false);   // reopen on the toggles, with every section back
     }
 
     // ------------------------------------------------------------ actions
@@ -298,9 +342,14 @@ export default class TogglesModule extends IslandModule {
     }
 
     // ------------------------------------------------------------ sub-pages
+    // A page takes the whole island (other sections hide, see ctx.focus) and
+    // slides in from the right; "back" slides the toggles in from the left.
 
     _openPage(page) {
         this._page = page;
+        this._pageSig = null;
+        this._pageFresh = true;   // stagger the rows of the first render
+        this.ctx?.focus?.(this);
         this._grid.hide();
         this._pageBox.show();
         if (page === 'wifi') {
@@ -309,58 +358,137 @@ export default class TogglesModule extends IslandModule {
         } else {
             this._renderBt();
         }
-        this.ctx?.requestExpandedRelayout?.();
+        this._slideIn(this._pageBox, 1);
     }
 
-    _closePage() {
+    _closePage(animate = true) {
         if (this._page === 'grid' || !this._pageBox)
             return;
         this._page = 'grid';
         this._pageSig = null;
+        this._connecting = null;
         this._pageBox.hide();
         this._pageBox.destroy_all_children();
         this._grid.show();
-        this.ctx?.requestExpandedRelayout?.();
+        this.ctx?.focus?.(null);
+        if (animate)
+            this._slideIn(this._grid, -1);
     }
 
-    _pageHeader(title) {
-        const header = new St.BoxLayout({style_class: 'di-subpage-header'});
-        const back = new St.Button({style_class: 'di-icon-button', can_focus: false,
+    _slideIn(actor, dir) {
+        actor.remove_all_transitions();
+        actor.set({opacity: 0, translation_x: 26 * dir});
+        actor.ease({opacity: 255, translation_x: 0, duration: 300, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+    }
+
+    _switch(on, onToggle) {
+        const knob = new St.Widget({style_class: 'di-switch-knob'});
+        const sw = new St.Button({style_class: 'di-switch', can_focus: false, y_align: Clutter.ActorAlign.CENTER,
+            child: knob, x_align: Clutter.ActorAlign.END});
+        const paint = state => {
+            knob.translation_x = state ? 16 : 0;
+            sw.set_style(state ? `background-color: ${this.accent};` : null);
+        };
+        paint(on);
+        sw.connect('clicked', () => {
+            on = !on;
+            knob.ease({translation_x: on ? 16 : 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+            sw.set_style(on ? `background-color: ${this.accent};` : null);
+            onToggle();
+        });
+        return sw;
+    }
+
+    _pageHeader(title, on, onToggle) {
+        const header = new St.BoxLayout({style_class: 'di-page-header'});
+        const back = new St.Button({style_class: 'di-page-back', can_focus: false, y_align: Clutter.ActorAlign.CENTER,
             child: new St.Icon({icon_name: 'go-previous-symbolic', icon_size: 14})});
         back.connect('clicked', () => this._closePage());
         header.add_child(back);
-        const t = label(title, 'di-section-title');
+        const t = label(title, 'di-page-title');
         t.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         t.x_expand = true;
         header.add_child(t);
+        header.add_child(this._switch(on, onToggle));
         return header;
     }
 
-    /** Rebuild a page only if its visible content changed (no flicker on ticks). */
-    _renderPage(signature, title, rows, empty) {
+    _section(text) {
+        return label(text, 'di-page-section');
+    }
+
+    /**
+     * Rebuild a page only if its visible content changed (no flicker on ticks).
+     * @param {() => Clutter.Actor} header  built only when the page is rebuilt
+     * @param {Array<Clutter.Actor>} body  section labels and rows, top to bottom
+     */
+    _renderPage(signature, header, body, empty, settingsPanel) {
         if (signature === this._pageSig)
             return;
         this._pageSig = signature;
         this._pageBox.destroy_all_children();
-        this._pageBox.add_child(this._pageHeader(title));
-        const list = new St.BoxLayout({style_class: 'di-list', orientation: Clutter.Orientation.VERTICAL});
-        if (!rows.length)
-            list.add_child(new St.Label({style_class: 'di-notifs-empty', text: empty}));
-        for (const r of rows)
-            list.add_child(r);
+        this._pageBox.add_child(header());
+        const list = new St.BoxLayout({style_class: 'di-page-list', orientation: Clutter.Orientation.VERTICAL});
+        if (!body.length) {
+            const e = new St.BoxLayout({style_class: 'di-page-empty', orientation: Clutter.Orientation.VERTICAL,
+                x_expand: true});
+            e.add_child(new St.Label({style_class: 'di-page-empty-text', text: empty, x_align: Clutter.ActorAlign.CENTER}));
+            list.add_child(e);
+        }
+        body.forEach((actor, i) => {
+            list.add_child(actor);
+            if (this._pageFresh) {
+                actor.set({opacity: 0, translation_y: 8});
+                actor.ease({opacity: 255, translation_y: 0, delay: 40 + i * 28, duration: 260,
+                    mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+            }
+        });
+        this._pageFresh = false;
         this._pageBox.add_child(list);
+
+        const more = new St.Button({style_class: 'di-page-more', can_focus: false, x_align: Clutter.ActorAlign.START,
+            label: _('More settings…')});
+        more.connect('clicked', () => {
+            try {
+                Util.spawn(['gnome-control-center', settingsPanel]);
+            } catch (e) {
+                console.warn(`[dynamic-island] settings: ${e.message}`);
+            }
+            this.ctx?.collapse?.();
+        });
+        this._pageBox.add_child(more);
         this.ctx?.requestExpandedRelayout?.();
     }
 
-    _listRow(iconName, text, status, onClick, active = false) {
-        const box = new St.BoxLayout({style_class: 'di-list-row-box', x_expand: true});
-        box.add_child(new St.Icon({icon_name: iconName, icon_size: 16, y_align: Clutter.ActorAlign.CENTER}));
-        box.add_child(Object.assign(label(text, 'di-list-name'), {x_expand: true}));
-        if (status)
-            box.add_child(label(status, active ? 'di-list-status di-list-active' : 'di-list-status'));
-        const row = new St.Button({style_class: 'di-list-row', child: box, x_expand: true, can_focus: false});
+    /** Card row: (icon) Name / status ...... trailing */
+    _row({icon, name, status, trailing = null, active = false, busy = false, onClick}) {
+        const box = new St.BoxLayout({style_class: 'di-page-row-box', x_expand: true});
+        const bubble = new St.Bin({style_class: 'di-page-bubble', y_align: Clutter.ActorAlign.CENTER,
+            child: new St.Icon({icon_name: icon, icon_size: 15})});
         if (active)
-            row.set_style(`color: ${this.accent};`);
+            bubble.set_style(`background-color: ${this.accent}; color: #0b0b0b;`);
+        box.add_child(bubble);
+        const col = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER});
+        col.add_child(label(name, 'di-page-row-name'));
+        if (status) {
+            const st = label(status, 'di-page-row-status');
+            if (active)
+                st.set_style(`color: ${this.accent};`);
+            col.add_child(st);
+        }
+        box.add_child(col);
+        if (busy) {
+            const spin = new St.Icon({icon_name: 'process-working-symbolic', icon_size: 14,
+                y_align: Clutter.ActorAlign.CENTER, pivot_point: new Graphene.Point({x: 0.5, y: 0.5})});
+            spin.ease({rotation_angle_z: 360, duration: 900, mode: Clutter.AnimationMode.LINEAR, repeatCount: -1});
+            box.add_child(spin);
+        } else if (trailing) {
+            box.add_child(new St.Icon({icon_name: trailing, icon_size: 13, y_align: Clutter.ActorAlign.CENTER,
+                style_class: 'di-page-row-trailing'}));
+        }
+        const row = new St.Button({style_class: active ? 'di-page-row di-page-row-active' : 'di-page-row',
+            child: box, x_expand: true, can_focus: false});
         row.connect('clicked', onClick);
         return row;
     }
@@ -372,8 +500,10 @@ export default class TogglesModule extends IslandModule {
 
     _renderWifi() {
         const dev = this._wifiDevice();
-        if (!dev || !this._nm.wireless_enabled) {
-            this._renderPage('off', 'Wi-Fi', [], _('Wi-Fi off'));
+        const on = !!this._nm?.wireless_enabled;
+        const header = () => this._pageHeader('Wi-Fi', on, () => this._toggleWifi());
+        if (!dev || !on) {
+            this._renderPage('off', header, [], _('Wi-Fi off'), 'wifi');
             return;
         }
         const active = dev.active_access_point;
@@ -387,22 +517,47 @@ export default class TogglesModule extends IslandModule {
                 best.set(ssid, ap);
         }
         const activeSsid = active ? this._ssid(active) : null;
+        if (this._connecting && this._connecting === activeSsid)
+            this._connecting = null;
+        const saved = dev.get_available_connections();
         const aps = [...best.entries()]
             .sort(([a, x], [b, y]) => (b === activeSsid) - (a === activeSsid) || y.strength - x.strength)
             .slice(0, MAX_NETWORKS);
-        const sig = aps.map(([s, ap]) => `${s}:${Math.round(ap.strength / 25)}:${s === activeSsid}`).join('|');
-        const rows = aps.map(([ssid, ap]) => {
+        const sig = aps.map(([s, ap]) => `${s}:${Math.round(ap.strength / 25)}:${s === activeSsid}`).join('|') +
+            `#${this._connecting}`;
+        const body = [];
+        const others = [];
+        for (const [ssid, ap] of aps) {
             const secured = (ap.flags | ap.wpa_flags | ap.rsn_flags) !== 0;
+            const known = saved.some(c => ap.connection_valid(c));
             const isActive = ssid === activeSsid;
-            return this._listRow(signalIcon(ap.strength), ssid,
-                isActive ? _('Connected') : secured ? '🔒' : '', () => this._connectAp(dev, ap), isActive);
-        });
-        this._renderPage(sig, _('Wi-Fi networks'), rows, _('Scanning for networks…'));
+            const row = this._row({
+                icon: signalIcon(ap.strength),
+                name: ssid,
+                status: isActive ? _('Connected')
+                    : this._connecting === ssid ? _('Connecting…')
+                        : known ? _('Saved') : secured ? _('Secured') : _('Open network'),
+                trailing: isActive ? 'object-select-symbolic' : secured ? 'changes-prevent-symbolic' : null,
+                active: isActive,
+                busy: this._connecting === ssid,
+                onClick: () => this._connectAp(dev, ap, ssid),
+            });
+            if (isActive)
+                body.push(this._section(_('CURRENT NETWORK')), row);
+            else
+                others.push(row);
+        }
+        if (others.length)
+            body.push(this._section(_('OTHER NETWORKS')), ...others);
+        this._renderPage(sig, header, body, _('Scanning for networks…'), 'wifi');
     }
 
-    _connectAp(dev, ap) {
+    _connectAp(dev, ap, ssid) {
         if (ap === dev.active_access_point)
             return;
+        this._connecting = ssid;
+        this._pageSig = null;
+        this._renderWifi();
         const conn = dev.get_available_connections().find(c => ap.connection_valid(c));
         // Secured networks without a saved connection: GNOME's own network
         // agent asks for the password.
@@ -410,6 +565,15 @@ export default class TogglesModule extends IslandModule {
             this._nm.activate_connection_async(conn, dev, null, null, null);
         else
             this._nm.add_and_activate_connection_async(null, dev, ap.get_path(), null, null);
+        // give up the spinner if nothing happens
+        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 20, () => {
+            if (this._connecting === ssid) {
+                this._connecting = null;
+                this._pageSig = null;
+                this._sync();
+            }
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _btDevices() {
@@ -424,21 +588,50 @@ export default class TogglesModule extends IslandModule {
     }
 
     _renderBt() {
-        if (!this._bt?.default_adapter_powered) {
-            this._renderPage('off', 'Bluetooth', [], _('Bluetooth off'));
+        const on = !!this._bt?.default_adapter_powered;
+        const header = () => this._pageHeader('Bluetooth', on, () => this._toggleBt());
+        if (!on) {
+            this._renderPage('off', header, [], _('Bluetooth off'), 'bluetooth');
             return;
         }
+        this._btBusy ??= new Set();
         const devices = this._btDevices().sort((a, b) => b.connected - a.connected);
-        const sig = devices.map(d => `${d.alias}:${d.connected}`).join('|');
-        const rows = devices.map(d => this._listRow(d.icon || 'bluetooth-active-symbolic', d.alias || d.name,
-            d.connected ? _('Connected') : _('Connect'), () => this._toggleDevice(d), d.connected));
-        this._renderPage(sig, _('Bluetooth devices'), rows, _('No paired devices'));
+        const sig = devices.map(d => `${d.alias}:${d.connected}:${d.battery_percentage ?? ''}:${this._btBusy.has(d.get_object_path())}`).join('|');
+        const connected = [], paired = [];
+        for (const d of devices) {
+            const busy = this._btBusy.has(d.get_object_path());
+            const battery = d.connected && d.battery_percentage > 0 ? ` · ${_f('Battery %s', pct(d.battery_percentage))}` : '';
+            const row = this._row({
+                icon: d.icon || 'bluetooth-active-symbolic',
+                name: d.alias || d.name,
+                status: busy ? (d.connected ? _('Disconnecting…') : _('Connecting…'))
+                    : d.connected ? `${_('Connected')}${battery}` : _('Not connected'),
+                trailing: d.connected && !busy ? 'object-select-symbolic' : null,
+                active: d.connected,
+                busy,
+                onClick: () => this._toggleDevice(d),
+            });
+            (d.connected ? connected : paired).push(row);
+        }
+        const body = [];
+        if (connected.length)
+            body.push(this._section(_('CONNECTED')), ...connected);
+        if (paired.length)
+            body.push(this._section(_('MY DEVICES')), ...paired);
+        this._renderPage(sig, header, body, _('No paired devices'), 'bluetooth');
     }
 
     _toggleDevice(device) {
-        this._bt.connect_service(device.get_object_path(), !device.connected, null)
+        const path = device.get_object_path();
+        this._btBusy ??= new Set();
+        if (this._btBusy.has(path))
+            return;
+        this._btBusy.add(path);
+        this._renderBt();
+        this._bt.connect_service(path, !device.connected, null)
             .catch(e => console.warn(`[dynamic-island] Bluetooth ${device.alias}: ${e.message}`))
             .finally(() => {
+                this._btBusy?.delete(path);
                 this._pageSig = null;
                 this._sync();
             });

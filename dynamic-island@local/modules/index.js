@@ -5,6 +5,7 @@
 // IslandModule from ./base.js), add it to a map below, then enable it with
 // `di-config` (or `di-config set center-modules "['calendar','<name>']"`).
 import ClockModule from './clock.js';
+import SearchModule from './search.js';
 import MusicModule from './music.js';
 import CalendarModule from './calendar.js';
 import NotificationListModule from './notificationList.js';
@@ -28,7 +29,7 @@ import ClipboardModule from './qs/clipboard.js';
 import SystemModule from './qs/system.js';
 
 /** Always present, before the configurable ones. */
-export const CENTER_FIXED = [ClockModule];
+export const CENTER_FIXED = [ClockModule, SearchModule];
 export const QS_FIXED = [QsStatusModule];
 export const STATS_FIXED = [];
 

@@ -16,6 +16,10 @@
       <default>0</default>
       <summary>Internal: settings layout version (used to migrate saved module lists)</summary>
     </key>
+    <key name="shortcut-search" type="as">
+      <default><![CDATA[['<Super>r']]]></default>
+      <summary>Shortcut that opens search in the centre island</summary>
+    </key>
     <key name="shortcut-qs" type="b">
       <default>true</default>
       <summary>GNOME's Quick Settings shortcut (Super+A) opens the right island instead of the GNOME menu</summary>

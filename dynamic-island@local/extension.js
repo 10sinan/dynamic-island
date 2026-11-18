@@ -3,6 +3,8 @@
 // whenever a setting changes (e.g. from the `di-config` terminal UI), so
 // changes apply live without logging out.
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -39,6 +41,7 @@ export default class DynamicIslandExtension extends Extension {
         this._caffeine = new Caffeine();   // survives island rebuilds
         this._build(true);
         this._takeOverQuickSettingsShortcut();
+        this._addSearchShortcut();
     }
 
     disable() {
@@ -48,12 +51,46 @@ export default class DynamicIslandExtension extends Extension {
         }
         this._settings?.disconnect(this._settingsId);
         this._restoreQuickSettingsShortcut();
+        this._removeSearchShortcut();
         this._teardown();
         this._caffeine?.destroy();
         this._caffeine = null;
         this._clip?.destroy();   // the clipboard history ends with the extension
         this._clip = null;
         this._settings = null;
+    }
+
+    /** Super+R (setting `shortcut-search`): search from the centre island. */
+    _addSearchShortcut() {
+        try {
+            Main.wm.addKeybinding('shortcut-search', this._settings, Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
+                Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW, () => this._toggleSearch());
+            this._searchKey = true;
+        } catch (e) {
+            console.warn(`${LOG_PREFIX} search shortcut not available: ${e.message}`);
+        }
+    }
+
+    _removeSearchShortcut() {
+        if (this._searchKey)
+            Main.wm.removeKeybinding('shortcut-search');
+        this._searchKey = false;
+    }
+
+    _toggleSearch() {
+        const center = this._islands?.find(i => i._id === 'center');
+        const search = center?.moduleById('search');
+        if (!search)
+            return;
+        if (search.isOpen) {
+            center.unpin();
+            center._maybeCollapse?.();
+            return;
+        }
+        if (Main.overview.visible)
+            Main.overview.hide();
+        if (center.pin())
+            search.open();
     }
 
     /**

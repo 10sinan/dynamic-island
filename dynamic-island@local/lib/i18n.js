@@ -144,8 +144,17 @@ const TR = {
     // claude usage
     'Claude Code usage': 'Claude Code kullanımı', 'Claude token limit (K per 5 h)': 'Claude token limiti (5 saatte, bin)',
     '0 = just show the tokens used; set your own limit to see how much is left': '0 = yalnızca kullanılan token; kendi limitini yazarsan kalanı görürsün',
-    'Today %s': 'Bugün %s', 'No active session': 'Aktif oturum yok',
+    'Today %s': 'Bugün %s', 'tokens': 'token', 'tokens used': 'token kullanıldı',
+    'A new session starts with your next message': 'Yeni oturum bir sonraki mesajınla başlar',
+    'Resets %s · %s left': 'Sıfırlanma %s · %s kaldı', '%s h %s min': '%s sa %s dk', '%s min': '%s dk', 'No active session': 'Aktif oturum yok',
     'resets in %s h %s min': '%s sa %s dk sonra sıfırlanır', 'resets in %s min': '%s dk sonra sıfırlanır',
+    // wifi / bluetooth pages
+    'More settings…': 'Diğer ayarlar…', 'Saved': 'Kayıtlı', 'Secured': 'Güvenli', 'Open network': 'Açık ağ',
+    'Connecting…': 'Bağlanıyor…', 'Disconnecting…': 'Bağlantı kesiliyor…', 'CURRENT NETWORK': 'BAĞLI AĞ',
+    'OTHER NETWORKS': 'DİĞER AĞLAR', 'CONNECTED': 'BAĞLI', 'MY DEVICES': 'CİHAZLARIM', 'Battery %s': 'Pil %s',
+    // search
+    'Search apps, files, settings…': 'Uygulama, dosya, ayar ara…', 'Applications': 'Uygulamalar',
+    'No results': 'Sonuç yok', 'Searching…': 'Aranıyor…', 'Type to search · Enter opens · Esc closes': 'Yazmaya başla · Enter açar · Esc kapatır',
     // themes
     'Ink': 'Mürekkep',
     'Midnight': 'Gece mavisi',

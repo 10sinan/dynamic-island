@@ -2,12 +2,15 @@
 // 5-hour session and when it resets. Estimated from the local session logs
 // (nothing is sent anywhere, no credentials are read). With a limit set in the
 // settings it shows how much is left.
+import Cairo from 'gi://cairo';
+import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Pango from 'gi://Pango';
+import St from 'gi://St';
 
 import {IslandModule} from './base.js';
-import {Meter} from '../lib/widgets.js';
-import {severity} from '../lib/proc.js';
+import {hexToRgb} from '../lib/color.js';
 import {_, _f} from '../lib/i18n.js';
 import {WINDOW_MS, addEntry, formatTokens, parseLine, splitDuration, windowStats} from '../lib/claudeUsage.js';
 
@@ -37,12 +40,117 @@ export default class ClaudeUsageModule extends IslandModule {
     }
 
     buildExpanded() {
-        this._tile = new Meter({accent: this.accent, title: 'CLAUDE'});
-        this._tile.actor.connect('destroy', () => {
-            this._tile = null;
+        const card = new St.BoxLayout({style_class: 'di-claude', x_expand: true});
+
+        // ring: how much of the session is left (or of the limit, when one is set)
+        this._ringFrac = 0;
+        this._ringColor = hexToRgb(this.accent);
+        this._ring = new St.DrawingArea({style_class: 'di-claude-ring', width: 54, height: 54,
+            y_align: Clutter.ActorAlign.CENTER});
+        this._ring.connect('repaint', () => this._paintRing());
+        this._ringText = new St.Label({style_class: 'di-claude-ring-text', text: '—',
+            x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
+        const ringBox = new St.Widget({layout_manager: new Clutter.BinLayout(), y_align: Clutter.ActorAlign.CENTER});
+        ringBox.add_child(this._ring);
+        ringBox.add_child(this._ringText);
+        card.add_child(ringBox);
+
+        const col = new St.BoxLayout({style_class: 'di-claude-col', orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true, y_align: Clutter.ActorAlign.CENTER});
+        const top = new St.BoxLayout();
+        top.add_child(new St.Label({style_class: 'di-claude-title', text: 'CLAUDE', x_expand: true}));
+        this._today = new St.Label({style_class: 'di-claude-today', text: ''});
+        top.add_child(this._today);
+        const mid = new St.BoxLayout({style_class: 'di-claude-mid'});
+        this._value = new St.Label({style_class: 'di-claude-value', text: '—', y_align: Clutter.ActorAlign.END});
+        this._unit = new St.Label({style_class: 'di-claude-unit', text: '', y_align: Clutter.ActorAlign.END});
+        mid.add_child(this._value);
+        mid.add_child(this._unit);
+
+        // 5-hour timeline: elapsed part of the session, reset time at the end
+        this._track = new St.Widget({style_class: 'di-claude-track', x_expand: true, height: 4,
+            y_align: Clutter.ActorAlign.CENTER});
+        this._fill = new St.Widget({style_class: 'di-claude-fill', height: 4, scale_x: 0});
+        this._fill.set_pivot_point(0, 0.5);
+        this._track.add_child(this._fill);
+        this._track.connect('notify::width', () => this._fill?.set_width(this._track.width));
+        const foot = new St.BoxLayout({style_class: 'di-claude-foot'});
+        this._sub = new St.Label({style_class: 'di-claude-sub', text: '', x_expand: true});
+        this._sub.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        foot.add_child(this._sub);
+
+        col.add_child(top);
+        col.add_child(mid);
+        col.add_child(this._track);
+        col.add_child(foot);
+        card.add_child(col);
+
+        card.connect('destroy', () => {
+            this._ringTl?.stop();
+            this._ringTl = null;
+            this._ring = this._ringText = this._value = this._unit = this._today = null;
+            this._track = this._fill = this._sub = null;
         });
+        this._card = card;
+        this._shown = null;
         this._render();
-        return this._tile.actor;
+        return card;
+    }
+
+    _paintRing() {
+        const cr = this._ring.get_context();
+        try {
+            const [w] = this._ring.get_surface_size();
+            const c = w / 2, r = w / 2 - 4;
+            const TAU = Math.PI * 2;
+            cr.setLineWidth(5);
+            cr.setLineCap(Cairo.LineCap.ROUND);
+            cr.setSourceRGBA(1, 1, 1, 0.10);
+            cr.arc(c, c, r, 0, TAU);
+            cr.stroke();
+            const f = Math.max(0, Math.min(1, this._ringFrac));
+            if (f > 0.004) {
+                const {r: cr_, g, b} = this._ringColor;
+                cr.setSourceRGBA(cr_ / 255, g / 255, b / 255, 1);
+                cr.arc(c, c, r, -Math.PI / 2, -Math.PI / 2 + TAU * f);
+                cr.stroke();
+            }
+        } finally {
+            cr.$dispose();
+        }
+    }
+
+    /** Glide the ring to a new fraction/colour (no jumpy redraws). */
+    _setRing(frac, color) {
+        const from = this._ringFrac, fromC = this._ringColor;
+        this._ringTl?.stop();
+        if (Math.abs(from - frac) < 0.002 && fromC.r === color.r && fromC.g === color.g && fromC.b === color.b)
+            return;
+        if (!this._ring?.mapped) {
+            this._ringFrac = frac;
+            this._ringColor = color;
+            this._ring?.queue_repaint();
+            return;
+        }
+        const tl = new Clutter.Timeline({actor: this._ring, duration: 600});
+        tl.set_progress_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+        tl.connect('new-frame', () => {
+            const p = tl.get_progress();
+            this._ringFrac = from + (frac - from) * p;
+            this._ringColor = {
+                r: Math.round(fromC.r + (color.r - fromC.r) * p),
+                g: Math.round(fromC.g + (color.g - fromC.g) * p),
+                b: Math.round(fromC.b + (color.b - fromC.b) * p),
+            };
+            this._ring?.queue_repaint();
+        });
+        tl.connect('completed', () => {
+            this._ringFrac = frac;
+            this._ringColor = color;
+            this._ring?.queue_repaint();
+        });
+        this._ringTl = tl;
+        tl.start();
     }
 
     onShown() {
@@ -169,32 +277,62 @@ export default class ClaudeUsageModule extends IslandModule {
     }
 
     _render() {
-        if (!this._tile)
+        if (!this._value)
             return;
         const {midnight} = this._since();
         const nowMs = Date.now();
         const w = windowStats([...this._entries.values()], nowMs, midnight);
         const limit = this.ctx?.config?.claudeLimit ?? 0;
+        const set = (label, text) => {
+            if (label && label.text !== text)
+                label.text = text;
+        };
+        const accent = hexToRgb(this.accent);
+        set(this._today, w.today ? _f('Today %s', formatTokens(w.today)) : '');
+
         if (!w.active) {
-            this._tile.update('—', 0, 'ok', w.today ? _f('Today %s', formatTokens(w.today)) : _('No active session'));
+            this._setRing(0, accent);
+            set(this._ringText, '—');
+            set(this._value, _('No active session'));
+            set(this._unit, '');
+            set(this._sub, _('A new session starts with your next message'));
+            this._fill?.set_scale(0, 1);
             return;
         }
-        const {h, m} = splitDuration(w.end - nowMs);
-        const reset = h ? _f('resets in %s h %s min', h, m) : _f('resets in %s min', m);
+
+        const left = w.end - nowMs;
+        const {h, m} = splitDuration(left);
+        const at = new Date(w.end);
+        const clock = `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+        const timeLeft = h ? _f('%s h %s min', h, m) : _f('%s min', m);
+        set(this._sub, _f('Resets %s · %s left', clock, timeLeft));
+        const elapsed = Math.min(1, (nowMs - w.start) / WINDOW_MS);
+        if (this._shown !== elapsed.toFixed(3)) {
+            this._shown = elapsed.toFixed(3);
+            this._fill?.ease({scale_x: elapsed, duration: 500, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        }
+
         if (limit > 0) {
-            const usedFrac = w.used / limit;
-            const left = Math.max(0, Math.round((1 - usedFrac) * 100));
-            this._tile.update(`${left}%`, Math.max(0, 1 - usedFrac), severity(usedFrac, 0.75, 0.9),
-                `${formatTokens(w.used)}/${formatTokens(limit)} · ${reset}`);
+            const used = w.used / limit;
+            const color = used > 0.9 ? {r: 255, g: 107, b: 94} : used > 0.75 ? {r: 245, g: 184, b: 65} : accent;
+            this._setRing(Math.max(0, 1 - used), color);
+            set(this._ringText, `${Math.max(0, Math.round((1 - used) * 100))}%`);
+            set(this._value, formatTokens(w.used));
+            set(this._unit, `/ ${formatTokens(limit)} ${_('tokens')}`);
         } else {
-            this._tile.update(formatTokens(w.used), Math.min(1, (nowMs - w.start) / WINDOW_MS), 'ok', reset);
+            this._setRing(Math.max(0, 1 - elapsed), accent);
+            set(this._ringText, `${h}:${String(m).padStart(2, '0')}`);
+            set(this._value, formatTokens(w.used));
+            set(this._unit, _('tokens used'));
         }
     }
 
     destroy() {
         this._entries?.clear();
         this._files?.clear();
-        this._tile = null;
+        this._ringTl?.stop();
+        this._ringTl = null;
+        this._value = null;
         super.destroy();
     }
 }

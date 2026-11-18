@@ -268,11 +268,14 @@ echo "   dark toggle click: color-scheme $BEFORE -> $(gsettings get org.gnome.de
 gsettings reset org.gnome.desktop.interface color-scheme
 ev "$TG._openPage('wifi'); true" >/dev/null; sleep 1.5
 echo "   wifi page: visible=$(ev "$TG._pageBox.visible") rows=$(ev "$TG._pageBox.get_child_at_index(1)?.get_n_children() ?? 0") panelH=$(ev "$Q._bg.height")"
+echo "   focus: other sections hidden on the page: $(ev "JSON.stringify($Q._modules.filter(m => $Q._expandedActors.has(m)).map(m => m.constructor.id + ':' + $Q._expandedActors.get(m).visible))")"
 shot qs-wifi 1300 0 620 520
 ev "$TG._closePage(); $TG._openPage('bt'); true" >/dev/null; sleep 0.8
-echo "   bluetooth page: $(ev "$TG._pageBox.get_child_at_index(1)?.get_children().map(c => c.text ?? c.get_child()?.get_children?.()[1]?.text).join(', ')")"
+echo "   bluetooth page: children=$(ev "$TG._pageBox.get_n_children()") title=$(ev "$TG._pageBox.get_child_at_index(0).get_child_at_index(1).text")"
 shot qs-bt 1300 0 620 480
-ev "$TG._closePage(); $SY._togglePowerRow(); true" >/dev/null; sleep 0.6
+ev "$TG._closePage(); true" >/dev/null; sleep 0.8
+echo "   back: sections restored: $(ev "JSON.stringify($Q._modules.filter(m => $Q._expandedActors.has(m)).map(m => m.constructor.id + ':' + $Q._expandedActors.get(m).visible))")"
+ev "$SY._togglePowerRow(); true" >/dev/null; sleep 0.6
 echo "   power row: $(ev "$SY._powerRow.visible") choices=$(ev "$SY._powerRow.get_children().filter(c => c.visible).map(c => c.label).join(', ')")"
 shot qs-power 1300 0 620 480
 ev "$SY._togglePowerRow(); $Q._hold(false); true" >/dev/null; sleep 0.9
@@ -305,11 +308,15 @@ echo "   pill outline takes the album colour: $(ev "$C._bg.get_style()")"
 echo "   body gradient while playing: $(ev "$C._bg.get_style().match(/background-gradient-start: ([^;]+)/)?.[1]") -> $(ev "$C._bg.get_style().match(/background-gradient-end: ([^;]+)/)?.[1]") (not the theme's black)"
 echo "   banner is between header and main row: $(ev "$C._expandedInner.get_children().map(c => c === $C._headerRow ? 'header' : c === $C._bannerRow ? 'banner' : c === $C._mainRow ? 'main' : 'tiles').join('>')")"
 shot music-card 300 0 1320 330
+E1=$(ev "JSON.stringify($MU._cardEq._bars.map(b => b.scale_y.toFixed(2)))"); sleep 0.45
+E2=$(ev "JSON.stringify($MU._cardEq._bars.map(b => b.scale_y.toFixed(2)))")
+echo "   card equalizer moves (started while the card was hidden): $E1 -> $E2 changed=$([ "$E1" != "$E2" ] && echo true || echo false)"
 CL="$C._modules.find(m => m.constructor.id === 'claude')"
 sleep 4
-echo "   claude tile (reads the real ~/.claude logs, local only): value=$(ev "$CL._tile?._value.text") sub=$(ev "$CL._tile?._sub.text") entries=$(ev "$CL._entries.size") files=$(ev "$CL._files.size")"
+echo "   claude tile (reads the real ~/.claude logs, local only): value=$(ev "$CL._value?.text") unit=$(ev "$CL._unit?.text") ring=$(ev "$CL._ringText?.text") sub=$(ev "$CL._sub?.text") entries=$(ev "$CL._entries.size") files=$(ev "$CL._files.size")"
 dset claude-token-limit 20000; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 4
-echo "   with a 20M limit: value=$(ev "$CL._tile?._value.text") sub=$(ev "$CL._tile?._sub.text")"
+echo "   with a 20M limit: value=$(ev "$CL._value?.text") unit=$(ev "$CL._unit?.text") ring=$(ev "$CL._ringText?.text") frac=$(ev "$CL._ringFrac.toFixed(2)")"
+shot claude-card 600 0 720 640
 dreset claude-token-limit; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 1
 echo "   play button colour: $(ev "$MU._playButton.get_style()")  progress fill: $(ev "$MU._fill.get_style()")"
 ev "$MU._next.emit('clicked', 1); true" >/dev/null; sleep 1.5
@@ -565,6 +572,22 @@ echo "   en -> date: $(ev "$CLK")  qs modules: $(ev "JSON.stringify($Q._modules.
 echo "   en toggles labels: $(ev "JSON.stringify(Object.values($Q._modules.find(m=>m.constructor.id==='toggles')._toggles).map(t=>t.title ?? t._title?.text ?? ''))")"
 dreset language; sleep 1.5
 echo "   tr again -> date: $(ev "$CLK")"
+echo
+
+echo "== search (Super+R)"
+SR="$C.moduleById('search')"
+echo "   keybinding registered: $(ev "$EXT._searchKey === true")"
+ev "$EXT._toggleSearch(); true" >/dev/null; sleep 1
+echo "   open: $(ev "$SR.isOpen") pinned=$(ev "$C.pinned") mode=$(ev "$C.mode") entry focused=$(ev "global.stage.get_key_focus() === $SR._entry.clutter_text") others hidden=$(ev "[...$C._expandedActors].filter(([m, a]) => m !== $SR && a.visible).length")"
+ev "$SR._entry.text = 'term'; true" >/dev/null; sleep 2
+echo "   'term' -> rows=$(ev "$SR._results.length") first=$(ev "$SR._results[0]?.meta.name") sections=$(ev "$SR._list.get_children().filter(c => c.style_class === 'di-search-section').map(c => c.text).join(', ')")"
+shot search 360 0 1200 520
+ev "$SR._entry.text = 'settings'; true" >/dev/null; sleep 2
+echo "   'settings' -> rows=$(ev "$SR._results.length") names=$(ev "$SR._results.slice(0, 4).map(r => r.meta.name).join(', ')")"
+ev "$SR._select(1); true" >/dev/null
+echo "   arrow selection moves: selected=$(ev "$SR._selected")"
+ev "$EXT._toggleSearch(); true" >/dev/null; sleep 1
+echo "   Super+R again -> closed=$(ev "!$SR.isOpen") pinned=$(ev "$C.pinned") modal released=$(ev "Main.modalCount === $MODAL0") mode=$(ev "$C.mode") sections back=$(ev "[...$C._expandedActors].filter(([m, a]) => m !== $SR && a.visible).length")"
 echo
 
 echo "== $CYCLES disable/enable cycles"

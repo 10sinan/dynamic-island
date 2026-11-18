@@ -91,20 +91,22 @@ export default class AudioOutputModule extends IslandModule {
 
     _row(dev) {
         const active = dev.get_id() === this._active;
-        const box = new St.BoxLayout({style_class: 'di-list-row-box', x_expand: true});
-        box.add_child(new St.Icon({icon_name: dev.icon_name || 'audio-speakers-symbolic', icon_size: 16,
-            y_align: Clutter.ActorAlign.CENTER}));
-        const name = new St.Label({style_class: 'di-list-name', text: dev.description ?? '', x_expand: true,
+        const box = new St.BoxLayout({style_class: 'di-page-row-box', x_expand: true});
+        const bubble = new St.Bin({style_class: 'di-page-bubble', y_align: Clutter.ActorAlign.CENTER,
+            child: new St.Icon({icon_name: dev.icon_name || 'audio-speakers-symbolic', icon_size: 15})});
+        if (active)
+            bubble.set_style(`background-color: ${this.accent}; color: #0b0b0b;`);
+        box.add_child(bubble);
+        const name = new St.Label({style_class: 'di-page-row-name', text: dev.description ?? '', x_expand: true,
             y_align: Clutter.ActorAlign.CENTER});
         name.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         box.add_child(name);
         if (active) {
-            box.add_child(new St.Icon({icon_name: 'object-select-symbolic', icon_size: 14,
-                y_align: Clutter.ActorAlign.CENTER}));
+            box.add_child(new St.Icon({style_class: 'di-page-row-trailing', icon_name: 'object-select-symbolic',
+                icon_size: 13, y_align: Clutter.ActorAlign.CENTER}));
         }
-        const row = new St.Button({style_class: 'di-list-row', child: box, x_expand: true, can_focus: false});
-        if (active)
-            row.set_style(`color: ${this.accent};`);
+        const row = new St.Button({style_class: active ? 'di-audio-row di-audio-row-active' : 'di-audio-row',
+            child: box, x_expand: true, can_focus: false});
         row.connect('clicked', () => {
             if (dev.get_id() !== this._active)
                 this._control?.change_output(dev);

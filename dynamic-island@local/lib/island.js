@@ -80,6 +80,7 @@ export class Island {
         this._activity = null;
         this._ticking = false;
         this._modules = [];
+        this._expandedActors = new Map();   // module -> its expanded actor (focus mode)
         this._compactModules = [];         // modules visible in the pill (ticked while compact)
         this._compactW = 0;
         this._radius = -1;
@@ -401,6 +402,11 @@ export class Island {
         this._holds = Math.max(0, this._holds + (on ? 1 : -1));
         if (this._holds === 0 && !this.actor.hover && this._mode === 'expanded')
             this._collapseTimer.schedule(Math.max(this._cfg.leaveDelay, 300), () => this._maybeCollapse());
+    }
+
+    /** A module of this island by id (e.g. 'search'), or null. */
+    moduleById(id) {
+        return this._modules.find(m => m.constructor.id === id) ?? null;
     }
 
     get pinned() {
@@ -992,6 +998,9 @@ export class Island {
             setBodyTint: t => this.setBodyTint(t),
             holdOpen: on => this._hold(on),
             collapse: () => this._collapseAll(),
+            // a module takes the whole expanded view (Wi-Fi / Bluetooth pages):
+            // every other module's expanded content is hidden until focus(null)
+            focus: m => this._focusModule(m),
         };
 
         // fixed modules + every configurable module referenced by the settings,
@@ -1051,8 +1060,11 @@ export class Island {
             }
             const tile = m.buildExpanded();
             if (tile) {
-                this._tilesRow.add_child(tile);
-                this._tilesRow.show();
+                const slot = m.constructor.slot;
+                const row = slot === 'banner' ? this._bannerRow : slot === 'main' ? this._mainRow : this._tilesRow;
+                this._expandedActors.set(m, tile);
+                row.add_child(tile);
+                row.show();
             }
         }
         // Then the configurable ones, each list in its own configured order.
@@ -1073,6 +1085,7 @@ export class Island {
             // the main row; small metric tiles in the tiles row below it.
             const slot = m.constructor.slot;
             const row = slot === 'banner' ? this._bannerRow : slot === 'main' ? this._mainRow : this._tilesRow;
+            this._expandedActors.set(m, actor);
             row.add_child(actor);
             row.show();   // an empty row has no size; modules hide their own actor
         }
@@ -1081,6 +1094,35 @@ export class Island {
         this._syncCompactWidth();
         this._settle();
         this._kickPoll();
+    }
+
+    _focusModule(module) {
+        if (this._destroyed)
+            return;
+        if (module) {
+            this._focusHidden ??= new Map();
+            for (const [m, actor] of this._expandedActors) {
+                if (m === module || this._focusHidden.has(actor))
+                    continue;
+                this._focusHidden.set(actor, actor.visible);
+                actor.hide();
+            }
+            // header (big clock) and tiles hide too, for a clean page
+            for (const row of [this._headerRow, this._tilesRow]) {
+                if (!this._focusHidden.has(row)) {
+                    this._focusHidden.set(row, row.visible);
+                    row.hide();
+                }
+            }
+        } else if (this._focusHidden) {
+            for (const [actor, was] of this._focusHidden) {
+                try {
+                    actor.visible = was;
+                } catch {}   // destroyed meanwhile
+            }
+            this._focusHidden = null;
+        }
+        this._requestExpandedRelayout();
     }
 
     /** Run a tick now unless one is already running. */
@@ -1143,6 +1185,8 @@ export class Island {
             }
         }
         this._modules = [];
+        this._expandedActors.clear();
+        this._focusHidden = null;
         this._compactModules = [];
         this._history.clear();
 

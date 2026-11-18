@@ -220,6 +220,14 @@ Arayüz dili cihazın diline göre **değil**, `language` ayarına göre belirle
 
 Orta island'da **CLAUDE** kartı: 5 saatlik oturumda kullanılan token ve oturumun ne zaman sıfırlanacağı. Veri, bu bilgisayardaki `~/.claude/projects/**/*.jsonl` kayıtlarından **tahmin edilir**; hiçbir şey internete gönderilmez, hesap bilgin/token'ın okunmaz. Anthropic planındaki kalan kotayı yerelde yayımlamadığı için "kalan" bir limite göredir: ayarlardan **Claude token limiti** (bin token) girersen kalan yüzde görünür (örn. `di-config set claude-token-limit 20000` = 20M). Hesap yalnızca girdi + çıktı + önbellek yazma tokenlarını sayar, önbellek okumayı saymaz; resmî `/usage` ekranıyla birebir aynı olmayabilir.
 
+### Arama (Super+R)
+
+**Super+R** orta island'da bir arama kutusu açar: uygulamalar, dosyalar (Dosyalar/Nautilus), ayarlar, hesap makinesi ve arama sağlayıcısı olan diğer uygulamalar — GNOME'un genel bakış aramasının kullandığı aynı sağlayıcılar. Yazdıkça sonuçlar gelir; ↑/↓ (ya da Tab) seçer, Enter açar, Esc ya da tekrar Super+R kapatır. Kısayol `shortcut-search` ayarıyla değiştirilebilir (örn. `di-config set shortcut-search "['<Super>space']"`).
+
+### Sağ island
+
+Düğmeler koyu cam kartlar; açık olanın simgesi vurgu renginde bir dairede. Wi-Fi ve Bluetooth ›  sayfası island'ın tamamını kaplar (ses, pano ve sistem bölümleri o sırada gizlenir), sağdan kayarak açılır: üstte geri düğmesi + aç/kapa anahtarı, "Bağlı ağ / Diğer ağlar" (Bluetooth: "Bağlı / Cihazlarım") bölümleri, kayıtlı/güvenli/açık ağ bilgisi, bağlanırken dönen gösterge, bağlı Bluetooth cihazında pil yüzdesi, en altta "Diğer ayarlar…" (GNOME Ayarlar'ın ilgili sayfası).
+
 ### Temalar
 
 `di-config` → Görünüm → **Renk teması**: Mürekkep (siyah, varsayılan), Gece mavisi, Gün batımı, Orman, Gül. Tema island'ın zeminini, kenarını (üstüne gelince parlar) ve varsayılan vurgu rengini birlikte değiştirir. **Vurgu rengini** ayrıca elle seçersen o, temanın rengini ezer; "tema rengi" seçeneği temanınkine döner. Müzik çalarken kenar albüm renginde yanmaya devam eder.

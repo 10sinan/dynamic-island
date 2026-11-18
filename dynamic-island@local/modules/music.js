@@ -143,11 +143,17 @@ class Equalizer {
             const bar = new St.Widget({style_class: 'di-eq-bar', width, height, y_align: Clutter.ActorAlign.END});
             bar.set_pivot_point(0.5, 1);
             bar.set_scale(1, EQ_FLAT);
+            // Clutter skips animations off screen: restart this bar when it shows again
+            bar.connect('notify::mapped', () => {
+                if (bar.mapped && this._playing && !this._dead && !bar.get_transition('scale-y'))
+                    this._kick(bar, this._gen);
+            });
             this.actor.add_child(bar);
             this._bars.push(bar);
         }
         this.actor.connect('destroy', () => {
             this._dead = true;
+            this._gen = (this._gen ?? 0) + 1;
         });
     }
 
@@ -164,24 +170,47 @@ class Equalizer {
         this.setColors(hex, hex);
     }
 
+    /**
+     * While playing, every bar keeps easing to a new random height at its own
+     * random speed (not tied to the real audio: reading the sound would cost
+     * far more). Clutter skips animations on actors that are not on screen, so
+     * the loop runs only while mapped and restarts when the bars show again.
+     */
     setPlaying(on) {
         if (this._dead || on === this._playing)
             return;
         this._playing = on;
-        this._bars.forEach((bar, i) => {
-            bar.remove_all_transitions();
-            if (on) {
-                // different tempo + height per bar -> looks organic, costs nothing
-                bar.ease({
-                    scale_y: 0.55 + ((i * 37) % 45) / 100,
-                    duration: 340 + i * 95 + (i % 2) * 60,
-                    mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
-                    repeatCount: -1,
-                    autoReverse: true,
-                });
-            } else {
-                bar.ease({scale_y: EQ_FLAT, duration: 260, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
-            }
+        this._gen = (this._gen ?? 0) + 1;
+        if (on) {
+            this._bars.forEach(bar => this._kick(bar, this._gen));
+        } else {
+            this._bars.forEach(bar => {
+                bar.remove_all_transitions();
+                if (bar.mapped)
+                    bar.ease({scale_y: EQ_FLAT, duration: 260, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+                else
+                    bar.scale_y = EQ_FLAT;
+            });
+        }
+    }
+
+    _kick(bar, gen) {
+        if (this._dead || !this._playing || gen !== this._gen)
+            return;
+        if (!bar.mapped)
+            return;   // picked up again by the bar's notify::mapped (constructor)
+        const cur = bar.scale_y;
+        // mostly mid-high, sometimes a dip; never the same height twice in a row
+        let target = 0.3 + Math.random() * 0.7;
+        if (Math.random() < 0.18)
+            target = 0.2 + Math.random() * 0.2;
+        if (Math.abs(target - cur) < 0.12)
+            target = cur > 0.6 ? target - 0.3 : target + 0.3;
+        bar.ease({
+            scale_y: Math.max(EQ_FLAT, Math.min(1, target)),
+            duration: 110 + Math.random() * 230,
+            mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
+            onComplete: () => this._kick(bar, gen),
         });
     }
 }
