@@ -48,6 +48,22 @@ def make_cover(path, body, border=(255, 255, 255), size=96, bw=10):
     pb.savev(path, "png", [], [])
 
 
+ROOT_XML = """
+<node>
+  <interface name="org.mpris.MediaPlayer2">
+    <method name="Raise"/><method name="Quit"/>
+    <property name="Identity" type="s" access="read"/>
+    <property name="DesktopEntry" type="s" access="read"/>
+    <property name="CanQuit" type="b" access="read"/>
+  </interface>
+</node>
+"""
+ROOT_PROPS = {
+    "Identity": GLib.Variant("s", os.environ.get("FAKE_IDENTITY", "Fake Player")),
+    "DesktopEntry": GLib.Variant("s", os.environ.get("FAKE_DESKTOP_ENTRY", "fakeplayer")),
+    "CanQuit": GLib.Variant("b", False),
+}
+
 COVERS = [os.path.join(ART_DIR, "red.png"), os.path.join(ART_DIR, "blue.png")]
 make_cover(COVERS[0], (225, 45, 35))
 make_cover(COVERS[1], (30, 90, 230))
@@ -121,6 +137,10 @@ def on_bus(conn, name):
     player = Player(conn)
     node = Gio.DBusNodeInfo.new_for_xml(XML)
     conn.register_object("/org/mpris/MediaPlayer2", node.interfaces[0], player.method, player.get, None)
+    root = Gio.DBusNodeInfo.new_for_xml(ROOT_XML)
+    conn.register_object("/org/mpris/MediaPlayer2", root.interfaces[0],
+                         lambda conn, sender, path, iface, name, params, inv: inv.return_value(None),
+                         lambda conn, sender, path, iface, prop: ROOT_PROPS[prop], None)
 
 
 Gio.bus_own_name(Gio.BusType.SESSION, "org.mpris.MediaPlayer2.fakeplayer", Gio.BusNameOwnerFlags.NONE,

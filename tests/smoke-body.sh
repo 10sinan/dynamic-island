@@ -37,7 +37,7 @@ dset center-compact-modules "['music', 'cpu', 'ram']"
 gsettings set org.gnome.shell disable-user-extensions false
 gsettings set org.gnome.shell enabled-extensions "['$HELPER', '$UUID']"
 
-gnome-shell --headless --wayland --no-x11 --virtual-monitor 1920x1080 > "$SANDBOX/shell.log" 2>&1 &
+gnome-shell --headless --wayland --wayland-display=di-wl-test --no-x11 --virtual-monitor 1920x1080 > "$SANDBOX/shell.log" 2>&1 &
 SHELL_PID=$!
 for i in $(seq 1 60); do
     gnome-extensions info "$UUID" 2>/dev/null | grep -q "State: ACTIVE\|State: ERROR" && break
@@ -280,7 +280,7 @@ MU="$C._modules.find(m => m.constructor.id === 'music')"
 PRE_W="$(ev "Math.round($C.actor.width)")"
 echo "   before any player: compact visible=$(ev "$MU._compact.visible") card visible=$(ev "$MU._card.visible") pill w=$PRE_W"
 mkdir -p "$SANDBOX/art"
-python3 "$HERE/tests/fake-player.py" "$SANDBOX/art" &
+FAKE_IDENTITY="Text Editor" FAKE_DESKTOP_ENTRY="org.gnome.TextEditor" python3 "$HERE/tests/fake-player.py" "$SANDBOX/art" &
 FAKE_PID=$!
 sleep 3
 echo "   player found: title=$(ev "$MU._info?.title") status=$(ev "$MU._info?.status") compact visible=$(ev "$MU._compact.visible")"
@@ -304,6 +304,22 @@ echo "   PlayPause clicked -> status=$(ev "$MU._info?.status") icon=$(ev "$MU._p
 ev "$MU._playButton.emit('clicked', 1); true" >/dev/null; sleep 1
 ev "$MU._call('SetPosition', new (imports.gi.GLib.Variant)('(ox)', ['/fake/track/1', 90000000])); true" >/dev/null; sleep 2.3
 echo "   SetPosition(90 s) -> elapsed=$(ev "$MU._elapsed.text") (expect ~1:3x)"
+echo "   video preview (a real window of the player's app, in the sandbox compositor):"
+echo "      before the app runs: Video button visible=$(ev "$MU._videoBtn.visible")"
+WAYLAND_DISPLAY=di-wl-test gnome-text-editor >/dev/null 2>&1 &
+EDITOR_PID=$!
+sleep 7
+echo "      window found: '$(ev "$MU._findWindow()?.get_title()")' app=$(ev "Shell.AppSystem.get_default().get_running().map(a => a.get_id()).join(',')" 2>/dev/null | head -c 120)"
+sleep 1.6
+echo "      button visible after a tick: $(ev "$MU._videoBtn.visible")"
+ev "$MU._videoBtn.emit('clicked', 1); true" >/dev/null; sleep 2
+echo "      video on: frame visible=$(ev "$MU._videoFrame.visible") cover hidden=$(ev "!$MU._coverWrap.visible") frame=$(ev "[Math.round($MU._videoFrame.width), Math.round($MU._videoFrame.height)].join('x')") scale=$(ev "$MU._vc?.container.scale_x.toFixed(2)") clone children=$(ev "$MU._vc?.container.get_n_children()")"
+shot music-video 300 0 1320 330
+ev "$MU._videoBtn.emit('clicked', 1); true" >/dev/null; sleep 1
+echo "      video off: cover back=$(ev "$MU._coverWrap.visible") frame hidden=$(ev "!$MU._videoFrame.visible") clone released=$(ev "$MU._vc === null")"
+ev "$MU._videoBtn.emit('clicked', 1); true" >/dev/null; sleep 1.2
+kill $EDITOR_PID 2>/dev/null; sleep 3
+echo "      app closed -> preview and button gone: button=$(ev "$MU._videoBtn.visible") on=$(ev "$MU._videoOn") frame hidden=$(ev "!$MU._videoFrame.visible")"
 echo "   hover-activity: collapse, then change track -> popup"
 ev "$C._hold(false); $C._setMode('compact'); true" >/dev/null; sleep 0.8
 ev "$MU._call('Next'); true" >/dev/null; sleep 1.8
@@ -471,6 +487,42 @@ dset accent-color "'#ff8800'"; sleep 1.2
 echo "   own accent overrides the theme's: $(ev "$C._cfg.accent")"
 dreset accent-color; dreset theme; sleep 1.2
 echo "   reset: theme body=$(ev "$C._bg.get_style().match(/background-color: (#[0-9a-f]+)/)[1]") accent=$(ev "$C._cfg.accent")"
+
+echo "== clipboard history (real St.Clipboard, memory only)"
+CL="$EXT._clip"
+cliptext() { ev "imports.gi.St.Clipboard.get_default().set_text(imports.gi.St.ClipboardType.CLIPBOARD, '$1'); true" >/dev/null; sleep 0.45; }
+echo "   store exists=$(ev "!!$CL") starts empty or with real content: $(ev "$CL.items.length") entries"
+ev "$CL.clear(); true" >/dev/null
+cliptext "birinci kopya"; cliptext "ikinci kopya"; cliptext "ucuncu kopya"
+echo "   3 copies -> newest first: $(ev "JSON.stringify($CL.items.map(i => i.preview))")"
+cliptext "birinci kopya"
+echo "   copying the first one again moves it up, no duplicate: $(ev "JSON.stringify($CL.items.map(i => i.preview))")"
+for i in $(seq 1 12); do cliptext "kayit $i"; done
+echo "   after 12 more distinct copies the list keeps 10: $(ev "$CL.items.length") (newest '$(ev "$CL.items[0].preview")', oldest '$(ev "$CL.items[9].preview")')"
+ev "const GLib = imports.gi.GLib, St = imports.gi.St; const [ok, data] = GLib.file_get_contents('$SANDBOX/shot.png'); St.Clipboard.get_default().set_content(St.ClipboardType.CLIPBOARD, 'image/png', new GLib.Bytes(data)); true" >/dev/null; sleep 1.2
+echo "   (clipboard formats after the PNG copy: $(ev "JSON.stringify(imports.gi.St.Clipboard.get_default().get_mimetypes(imports.gi.St.ClipboardType.CLIPBOARD))"))"
+echo "   a PNG image: kind=$(ev "$CL.items[0].kind") thumbnail=$(ev "!!$CL.items[0].thumb && ($CL.items[0].thumb.get_width() + 'x' + $CL.items[0].thumb.get_height())") still 10 entries: $(ev "$CL.items.length")"
+# (a literal \n would be turned into a real newline by gdbus before it reaches JS)
+ev "const nl = String.fromCharCode(10); imports.gi.St.Clipboard.get_default().set_text(imports.gi.St.ClipboardType.CLIPBOARD, 'uzun satir' + nl + nl + '   cok bosluk    ve satir sonlari'); true" >/dev/null; sleep 0.6
+echo "   whitespace collapsed in the list text: '$(ev "$CL.items[0].preview")'"
+CLM="$Q._modules.find(m => m.constructor.id === 'clipboard')"
+ev "$Q._hold(true); $Q._setMode('expanded'); true" >/dev/null; sleep 1.2
+echo "   right island shows $(ev "$CLM._list.get_n_children()") rows for $(ev "$CL.items.length") entries; Temizle visible=$(ev "$CLM._clear.visible")"
+shot qs-clipboard 1260 0 660 560
+WANT="$(ev "$CL.items[2].text")"   # a text entry (entry 1 is the image)
+ev "$CLM._list.get_child_at_index(2).emit('clicked', 1); true" >/dev/null; sleep 0.8
+ev "global._clipRead = null; imports.gi.St.Clipboard.get_default().get_text(imports.gi.St.ClipboardType.CLIPBOARD, (c, t) => { global._clipRead = t; }); true" >/dev/null; sleep 0.6
+echo "   clicking row 3 puts it back on the clipboard: '$(ev "global._clipRead")' (expect: '$WANT') and it moves to the top: '$(ev "$CL.items[0].preview")'"
+echo "   ... and closes the island: mode=$(ev "$Q.mode")"
+ev "$Q._hold(false); true" >/dev/null
+BEFORE_N="$(ev "$CL.items.length")"
+dset hover-expand-delay 250; sleep 1.4
+echo "   a settings change rebuilds the islands but keeps the history: $BEFORE_N -> $(ev "$EXT._clip.items.length") entries"
+dreset hover-expand-delay; sleep 1.2
+dset clipboard-history false; sleep 1.2
+echo "   clipboard-history=false -> store gone: $(ev "$EXT._clip === null") section hidden: $(ev "!$Q._modules.some(m => m.constructor.id === 'clipboard')")"
+dreset clipboard-history; sleep 1.2
+echo "   back on, fresh and empty (history is never kept when switched off): $(ev "!!$EXT._clip") entries=$(ev "$EXT._clip.items.length")"
 
 echo "== features off -> plain GNOME"
 dset osd-enabled false; dset notification-preview false; sleep 0.8

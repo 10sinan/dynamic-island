@@ -114,7 +114,7 @@
       <summary>Events that briefly open the centre island</summary>
     </key>
     <key name="qs-modules" type="as">
-      <default>['sliders', 'toggles', 'system']</default>
+      <default>['sliders', 'toggles', 'clipboard', 'system']</default>
       <summary>Sections of the Quick Settings island, top to bottom</summary>
     </key>
 
@@ -133,6 +133,14 @@
     <key name="accent-color" type="s">
       <default>''</default>
       <summary>Accent colour override (#rrggbb); empty = use the theme's accent</summary>
+    </key>
+    <key name="clipboard-history" type="b">
+      <default>true</default>
+      <summary>Keep the last 10 copies (in memory only) and show them in the right island</summary>
+    </key>
+    <key name="music-video" type="b">
+      <default>true</default>
+      <summary>Show a Video button on the music card that previews the player's window</summary>
     </key>
     <key name="meeting-mode" type="b">
       <default>true</default>

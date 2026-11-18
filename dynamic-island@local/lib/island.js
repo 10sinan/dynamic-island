@@ -53,6 +53,7 @@ export class Island {
      * @param {boolean} p.growOnly          compact width never shrinks (avoids jitter with digits)
      * @param {object} p.config             snapshot from lib/settings.js
      * @param {boolean} p.animateIn         play the appear animation
+     * @param {object} [p.services]         long-lived helpers owned by the extension (clipboard history)
      */
     constructor(p) {
         this._id = p.id;
@@ -64,6 +65,7 @@ export class Island {
         this._pinIds = [];
         this._growOnly = p.growOnly;
         this._cfg = p.config;
+        this._services = p.services ?? {};
 
         this._d = new Disposer();
         this._history = new History(120);
@@ -140,6 +142,15 @@ export class Island {
             track_hover: true,
             opacity: 0,
             pivot_point: new Graphene.Point({x: 0.5, y: 0.5}),
+        });
+        // The shell destroys all its actors when it shuts down, BEFORE it disables
+        // extensions. Timers that fire in between must not touch them.
+        this._actorGone = false;
+        this.actor.connect('destroy', () => {
+            this._actorGone = true;
+            for (const t of [this._hoverTimer, this._collapseTimer, this._autoTimer, this._pollTimer,
+                this._relayoutTimer, this._slotTimer, this._activityTimer])
+                t?.clear();
         });
         this._root = new St.Widget({x_expand: true, y_expand: true});
         this.actor.add_child(this._root);
@@ -508,12 +519,12 @@ export class Island {
 
     /** Coalesce slot/panel changes into one placement per frame (T7). */
     _onSlotChanged() {
-        if (!this._destroyed)
+        if (!this._destroyed && !this._actorGone)
             this._slotTimer.schedule(0, () => this._place());
     }
 
     _place() {
-        if (this._destroyed)
+        if (this._destroyed || this._actorGone)
             return;
         // Don't fight a running morph; its onComplete settles with fresh geometry.
         if (this._bg.get_transition('width') || this._bg.get_transition('height') ||
@@ -859,6 +870,7 @@ export class Island {
             endActivity: key => this.endActivity(key),
             // panel content changed size (lists, sub-pages): re-measure + morph
             requestExpandedRelayout: () => this._requestExpandedRelayout(),
+            services: this._services,
             isExpanded: () => this._mode === 'expanded',
             history: this._history,
             setAccentBorder: c => this.setAccentBorder(c),
@@ -963,7 +975,7 @@ export class Island {
     }
 
     async _tick() {
-        if (this._destroyed || this._ticking)
+        if (this._destroyed || this._actorGone || this._ticking)
             return;
         this._ticking = true;
         try {

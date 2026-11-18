@@ -10,9 +10,11 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Pango from 'gi://Pango';
+import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
+import {findPlayerWindow} from '../lib/windows.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
 
 const MPRIS = 'org.mpris.MediaPlayer2.';
@@ -21,6 +23,8 @@ const PLAYER_IFACE = 'org.mpris.MediaPlayer2.Player';
 const COVER_PX = 176;            // decoded cover size (88 logical px at 2x)
 const ART_CACHE = 8;
 const POPUP_MS = 4000;
+const VIDEO_MAX_W = 232;   // the live window preview fits into this box
+const VIDEO_MAX_H = 130;
 const EQ_FLAT = 0.22;
 
 Gio._promisify(Gio.DBusConnection.prototype, 'call', 'call_finish');
@@ -214,7 +218,18 @@ export default class MusicModule extends IslandModule {
         if (this._dead || !this._players.has(name)) {
             return;
         }
-        const player = {name, proxy, ids: [], activeAt: 0};
+        const player = {name, proxy, ids: [], activeAt: 0, root: {}};
+        try {   // who is this player? (used to find its window)
+            const res = await this._bus.call(name, PATH, 'org.freedesktop.DBus.Properties', 'GetAll',
+                new GLib.Variant('(s)', ['org.mpris.MediaPlayer2']), new GLib.VariantType('(a{sv})'),
+                Gio.DBusCallFlags.NONE, 1000, this.cancellable);
+            const props = res.get_child_value(0).recursiveUnpack();
+            player.root = {identity: props.Identity, desktopEntry: props.DesktopEntry};
+        } catch {
+            // no root interface information: the bus name is still used
+        }
+        if (this._dead || !this._players.has(name))
+            return;
         player.ids.push(proxy.connect('g-properties-changed', () => this._onPlayerChanged(player)));
         if (this._status(player) === 'Playing')
             player.activeAt = GLib.get_monotonic_time();
@@ -649,7 +664,14 @@ export default class MusicModule extends IslandModule {
         this._glow.set_pivot_point(0.5, 0.5);
         coverWrap.add_child(this._glow);
         coverWrap.add_child(this._cardCover.actor);
-        row.add_child(coverWrap);
+        this._coverWrap = coverWrap;
+        // the Video button swaps the cover for a live preview of the player's window
+        this._videoFrame = new St.Widget({style_class: 'di-music-video', clip_to_allocation: true,
+            y_align: Clutter.ActorAlign.CENTER, visible: false});
+        const media = new St.Widget({layout_manager: new Clutter.BinLayout(), y_align: Clutter.ActorAlign.CENTER});
+        media.add_child(coverWrap);
+        media.add_child(this._videoFrame);
+        row.add_child(media);
 
         const col = new St.BoxLayout({style_class: 'di-music-col', orientation: Clutter.Orientation.VERTICAL,
             x_expand: true, y_align: Clutter.ActorAlign.CENTER});
@@ -700,6 +722,8 @@ export default class MusicModule extends IslandModule {
         [this._playButton, this._playIcon] = button('media-playback-start-symbolic', 'di-music-btn di-music-play',
             () => this._call('PlayPause'));
         [this._next] = button('media-skip-forward-symbolic', 'di-music-btn', () => this._call('Next'));
+        [this._videoBtn] = button('camera-video-symbolic', 'di-music-btn', () => this._toggleVideo());
+        this._videoBtn.visible = false;
         col.add_child(controls);
 
         row.add_child(col);
@@ -711,6 +735,8 @@ export default class MusicModule extends IslandModule {
             this._title = this._artist = this._album = this._fill = this._track = null;
             this._progressBox = this._elapsed = this._remaining = null;
             this._prev = this._next = this._playButton = this._playIcon = null;
+            this._hideVideoPreview();
+            this._videoBtn = this._videoFrame = this._coverWrap = null;
         });
 
         this._renderText();
@@ -768,16 +794,121 @@ export default class MusicModule extends IslandModule {
     onShown() {
         this._fetchPosition();
         this._cardMotion(this._info?.status === 'Playing');
+        this._updateVideo();
     }
 
     onHidden() {
         this._cardMotion(false);   // nothing animates while the card is closed
+        this._hideVideoPreview();  // ... and no window clone is kept alive
     }
 
     async tick() {
         if (!this._info || !this.ctx?.isExpanded?.())
             return;   // position is only needed while the card is open
+        this._updateVideo();       // the player's window may have opened / closed
         await this._fetchPosition();
+    }
+
+    // ------------------------------------------------------------ video: live window preview
+
+    _findWindow() {
+        const p = this._player;
+        if (!p || !this.ctx?.config?.musicVideo)
+            return null;
+        try {
+            return findPlayerWindow({...p.root, busName: p.name}, this._info?.title);
+        } catch (e) {
+            console.debug(`[dynamic-island] window lookup failed: ${e.message}`);
+            return null;
+        }
+    }
+
+    /** Show the Video button when the player has a window; keep the preview in step. */
+    _updateVideo() {
+        if (!this._videoBtn)
+            return;
+        const win = this._findWindow();
+        const changed = win !== this._win;
+        this._win = win;
+        if (this._videoBtn.visible !== !!win) {
+            this._videoBtn.visible = !!win;
+            this.ctx?.requestExpandedRelayout?.();
+        }
+        if (!win && this._videoOn)
+            this._videoOn = false;
+        this._styleVideoButton();
+        if (this._videoOn && (changed || !this._vc))
+            this._showVideoPreview();
+        else if (!this._videoOn && this._vc)
+            this._hideVideoPreview();
+    }
+
+    _toggleVideo() {
+        if (!this._win)
+            return;
+        this._videoOn = !this._videoOn;
+        this._styleVideoButton();
+        if (this._videoOn)
+            this._showVideoPreview();
+        else
+            this._hideVideoPreview();
+    }
+
+    _styleVideoButton() {
+        this._videoBtn?.set_style(this._videoOn ? `background-color: ${this._accentNow ?? this.accent}; color: #000000;` : null);
+    }
+
+    _showVideoPreview() {
+        this._hideVideoPreview();
+        const win = this._win;
+        if (!win || !this._videoFrame)
+            return;
+        const container = new Clutter.Actor();
+        // GNOME's own window previews do it in this order (gjs cannot set a
+        // layout manager that tracks its container while the actor is created)
+        container.layout_manager = new Shell.WindowPreviewLayout();
+        const layout = container.layout_manager;
+        layout.add_window(win);
+        container.set_pivot_point(0, 0);
+        this._videoFrame.add_child(container);
+
+        const fit = () => {
+            const bb = layout.bounding_box;
+            const bw = bb.get_width(), bh = bb.get_height();
+            if (!(bw > 0 && bh > 0) || !this._videoFrame)
+                return;
+            const k = Math.min(VIDEO_MAX_W / bw, VIDEO_MAX_H / bh);
+            container.set_scale(k, k);
+            this._videoFrame.set_size(Math.max(60, Math.round(bw * k)), Math.max(40, Math.round(bh * k)));
+            this.ctx?.requestExpandedRelayout?.();
+        };
+        const ids = [[layout, layout.connect('notify::bounding-box', fit)],
+            [win, win.connect('unmanaged', () => this._updateVideo())]];
+        this._vc = {container, layout, win, ids};
+        this._coverWrap.visible = false;
+        this._videoFrame.visible = true;
+        fit();
+    }
+
+    _hideVideoPreview() {
+        const vc = this._vc;
+        this._vc = null;
+        if (vc) {
+            for (const [obj, id] of vc.ids) {
+                try {
+                    obj.disconnect(id);
+                } catch {}
+            }
+            try {
+                vc.layout.remove_window(vc.win);
+            } catch {}
+            vc.container.destroy();
+        }
+        if (this._coverWrap)
+            this._coverWrap.visible = true;
+        if (this._videoFrame)
+            this._videoFrame.visible = false;
+        this.ctx?.requestExpandedRelayout?.();
     }
 
     destroy() {
@@ -794,6 +925,8 @@ export default class MusicModule extends IslandModule {
             for (const id of p.ids)
                 p.proxy.disconnect(id);
         }
+        this._hideVideoPreview();
+        this._win = null;
         this._players?.clear();
         this._artCache?.clear();
         this._soup?.abort();

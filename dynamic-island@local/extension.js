@@ -11,6 +11,7 @@ import {Island} from './lib/island.js';
 import {OsdRouter} from './lib/osd.js';
 import {NotificationPreview} from './lib/notifications.js';
 import {EventHub} from './lib/events.js';
+import {ClipboardStore} from './lib/clipboardStore.js';
 import {MeetingMode} from './lib/meeting.js';
 import {AutoPowerSaver} from './lib/powerPolicy.js';
 import {readConfig} from './lib/settings.js';
@@ -18,7 +19,7 @@ import {LOG_PREFIX, REBUILD_DEBOUNCE_MS} from './lib/constants.js';
 import {CENTER_FIXED, CENTER_MODULES, QS_FIXED, QS_MODULES, STATS_FIXED, STATS_MODULES} from './modules/index.js';
 
 const STAT_IDS = ['cpu', 'ram', 'temp', 'net', 'battery'];
-const LAYOUT_VERSION = 3;
+const LAYOUT_VERSION = 4;
 // Written by the extension itself; changing them must not rebuild the islands.
 const INTERNAL_KEYS = new Set(['meeting-dnd-active', 'layout-version']);
 
@@ -32,6 +33,7 @@ export default class DynamicIslandExtension extends Extension {
             if (!INTERNAL_KEYS.has(key))
                 this._scheduleRebuild();
         });
+        this._clip = null;
         this._build(true);
         this._takeOverQuickSettingsShortcut();
     }
@@ -44,6 +46,8 @@ export default class DynamicIslandExtension extends Extension {
         this._settings?.disconnect(this._settingsId);
         this._restoreQuickSettingsShortcut();
         this._teardown();
+        this._clip?.destroy();   // the clipboard history ends with the extension
+        this._clip = null;
         this._settings = null;
     }
 
@@ -124,6 +128,15 @@ export default class DynamicIslandExtension extends Extension {
             add('stats-compact-modules', ['disk']);
             add('events', ['lockkey', 'layout', 'meeting', 'powersaver']);
         }
+
+        if (from < 4) {
+            // v4: clipboard history section in the right island
+            const cur = userList('qs-modules');
+            if (cur && !cur.includes('clipboard')) {
+                const at = cur.indexOf('system');   // keep the system row last
+                s.set_strv('qs-modules', at >= 0 ? [...cur.slice(0, at), 'clipboard', ...cur.slice(at)] : [...cur, 'clipboard']);
+            }
+        }
         s.set_int('layout-version', LAYOUT_VERSION);
     }
 
@@ -150,6 +163,15 @@ export default class DynamicIslandExtension extends Extension {
 
     _build(animateIn) {
         const cfg = readConfig(this._settings);
+        // The clipboard store outlives island rebuilds (a setting change must not
+        // wipe the history); it exists only while the setting is on.
+        if (cfg.clipboardHistory && !this._clip)
+            this._clip = new ClipboardStore(10);
+        else if (!cfg.clipboardHistory && this._clip) {
+            this._clip.destroy();
+            this._clip = null;
+        }
+        const services = {clipboard: this._clip};
         cfg.centerModules = this._modules('center-modules', CENTER_MODULES);
         cfg.centerCompactModules = this._modules('center-compact-modules', CENTER_MODULES);
         cfg.qsModules = this._modules('qs-modules', QS_MODULES);
@@ -170,6 +192,7 @@ export default class DynamicIslandExtension extends Extension {
                     growOnly: true,
                     config: cfg,
                     animateIn,
+                    services,
                 });
                 this._islands.push(center);
             }
@@ -202,6 +225,7 @@ export default class DynamicIslandExtension extends Extension {
                     growOnly: false,
                     config: cfg,
                     animateIn,
+                    services,
                 });
                 this._islands.push(qs);
             }

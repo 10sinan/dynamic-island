@@ -38,6 +38,8 @@ export function readConfig(settings) {
         accent: HEX.test(accent) ? accent : theme.accent,
         showSeconds: settings.get_boolean('show-seconds'),
 
+        clipboardHistory: settings.get_boolean('clipboard-history'),
+        musicVideo: settings.get_boolean('music-video'),
         meetingMode: settings.get_boolean('meeting-mode'),
         autoPowerSaver: settings.get_boolean('auto-power-saver'),
         autoPowerSaverLevel: settings.get_int('auto-power-saver-level'),

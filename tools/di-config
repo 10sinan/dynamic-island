@@ -50,7 +50,7 @@ def open_settings():
 
 CENTER_ALL = ["music", "calendar", "notifications"]
 STATS_ALL = ["cpu", "ram", "temp", "net", "battery", "gpu", "disk", "graph", "procs"]
-QS_ALL = ["sliders", "toggles", "system"]
+QS_ALL = ["sliders", "toggles", "clipboard", "system"]
 EVENTS_ALL = ["power", "battery-low", "wifi", "bluetooth", "privacy", "thermal", "memory", "disk",
               "lockkey", "layout", "meeting", "powersaver"]
 # modules that have a view in the panel pill (the "panelde" column)
@@ -77,6 +77,7 @@ MODULE_NAMES = {
     "calendar": "Takvim",
     "notifications": "Bildirim listesi",
     "sliders": "Ses + parlaklık kaydırıcıları",
+    "clipboard": "Pano geçmişi (son 10)",
     "toggles": "Düğmeler (Wi-Fi, Bluetooth, ...)",
     "system": "Pil + sistem düğmeleri",
     "cpu": "CPU kullanımı",
@@ -103,6 +104,10 @@ TABS = [
              help="Paneldeki saatin yerine geçen island. Kapatınca orijinal saat geri gelir."),
         dict(key="stats-enabled", kind="bool", label="Sol island (istatistik, Activities yerine)",
              help="Üst sol köşede CPU, RAM, ağ... Kapatınca GNOME'un Activities düğmesi geri gelir."),
+        dict(key="clipboard-history", kind="bool", label="Pano geçmişi (son 10 kopya, yalnızca bellekte)",
+             help="Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır."),
+        dict(key="music-video", kind="bool", label="Müzik kartında video önizleme düğmesi",
+             help="Oynatıcının penceresi bulunursa karttaki Video düğmesi kapak yerine pencerenin canlı görüntüsünü gösterir."),
         dict(key="meeting-mode", kind="bool", label="Toplantı modu (mikrofon/kamera → Rahatsız Etme)",
              help="Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner."),
         dict(key="auto-power-saver", kind="bool", label="Pil azalınca otomatik Güç Tasarrufu",

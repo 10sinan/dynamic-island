@@ -21,6 +21,7 @@ import DiskModule from './stats/disk.js';
 import GraphModule from './stats/graph.js';
 import ProcsModule from './stats/procs.js';
 import TogglesModule from './qs/toggles.js';
+import ClipboardModule from './qs/clipboard.js';
 import SystemModule from './qs/system.js';
 
 /** Always present, before the configurable ones. */
@@ -51,5 +52,6 @@ export const STATS_MODULES = {
 export const QS_MODULES = {
     sliders: SlidersModule,
     toggles: TogglesModule,
+    clipboard: ClipboardModule,
     system: SystemModule,
 };

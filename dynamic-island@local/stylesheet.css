@@ -724,6 +724,56 @@
     color: #ffffff;
 }
 
+/* ---------- clipboard history ---------- */
+
+.di-clip {
+    spacing: 6px;
+}
+
+.di-clip-head {
+    spacing: 8px;
+}
+
+.di-clip-scroll {
+    max-height: 190px;
+}
+
+.di-clip-list {
+    spacing: 2px;
+}
+
+.di-clip-row {
+    border-radius: 12px;
+    padding: 6px 10px;
+}
+
+.di-clip-row:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.di-clip-row-box {
+    spacing: 10px;
+}
+
+.di-clip-kind {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.di-clip-thumb {
+    border-radius: 4px;
+}
+
+.di-clip-text {
+    font-size: 9.5pt;
+    color: #f2f2f2;
+    max-width: 280px;
+}
+
+.di-clip-time {
+    font-size: 8pt;
+    color: rgba(255, 255, 255, 0.40);
+}
+
 /* ---------- screenshot preview ---------- */
 
 .di-shot {

@@ -10,7 +10,7 @@
 |---|---|---|
 | **Sol** (Activities'in yerine) | `CPU 8%  RAM 62%` (seçilebilir) | CPU, RAM, sıcaklık, ağ, pil, **GPU**, **disk** karoları · son 60 sn'nin **canlı CPU / RAM / ağ grafiği** · **en çok CPU ve bellek kullanan 3 uygulama** |
 | **Orta** (saatin yerine) | saat, bildirim noktası, **müzik (kapak + equalizer)** | en üstte **büyük saat + tarih** · **müzik kartı** · **takvim** (ay görünümü, ‹ › ile ay değiştir, başlığa tıkla = bugün) · **bildirim listesi** (tıkla = aç, × = kapat, Temizle) |
-| **Sağ** (Quick Settings) | Wi-Fi sinyali, ses, Bluetooth (bağlıyken), Rahatsız Etme (açıkken), pil + yüzde | **ses + parlaklık kaydırıcıları** · **düğmeler**: Wi-Fi ›, Bluetooth ›, Karanlık, Gece ışığı, Rahatsız etme, Uçak modu, Güç modu · **pil + ekran görüntüsü, ayarlar, kilit, güç** (Uyku / Yeniden başlat / Kapat / Oturumu kapat) |
+| **Sağ** (Quick Settings) | Wi-Fi sinyali, ses, Bluetooth (bağlıyken), Rahatsız Etme (açıkken), pil + yüzde | **ses + parlaklık kaydırıcıları** · **düğmeler**: Wi-Fi ›, Bluetooth ›, Karanlık, Gece ışığı, Rahatsız etme, Uçak modu, Güç modu · **pano geçmişi** (son 10 kopya) · **pil + ekran görüntüsü, ayarlar, kilit, güç** (Uyku / Yeniden başlat / Kapat / Oturumu kapat) |
 
 - **Super+A:** GNOME'un Quick Settings kısayolu (varsayılan `Super+A`, GNOME Ayarlar → Klavye'den değiştirdiysen o tuş) GNOME menüsü yerine **sağ island'ı** açar. Fare olmadan da açık kalır. Kapatmak için tekrar `Super+A`, `Esc` ya da island dışına tıklama yeter; dışarı tıklama yalnızca island'ı kapatır, alttaki pencereye geçmez. `shortcut-qs=false` ile GNOME'un menüsü geri gelir. Sağ island kapalıyken ya da tam ekranda kısayol yine GNOME'un menüsünü açar.
 - **Sol island ve Activities:** Island, GNOME'un Activities düğmesinin yerini alır. Genel bakış yine **Super** tuşuyla (ve varsa hot corner ile) açılır. Düğmeyi geri istersen `di-config`'ten sol island'ı kapat: `stats-enabled=false`.
@@ -32,6 +32,25 @@ Spotify, tarayıcılar (YouTube Music dahil), VLC, Rhythmbox gibi **MPRIS** dest
 - Birden çok oynatıcı varsa çalan, yoksa en son çalan gösterilir.
 - Kapaklar `file://` ya da `https://` adresinden alınır. `https` için yalnızca oynatıcının bildirdiği kapak adresi istenir, başka bir şey gönderilmez.
 - `dynamic-music-pill` eklentisi dock'ta çalışmaya devam eder; ikisi birbirini etkilemez.
+
+### Video önizleme
+
+Müzik kartında, çalan oynatıcının **penceresi bulunursa** bir 📹 **Video** düğmesi çıkar. Basınca kapak yerine o pencerenin **canlı küçük görüntüsü** gösterilir (mpv, VLC, Totem, tarayıcıdaki YouTube...), tekrar basınca kapağa döner. Nasıl çalışır ve sınırları:
+
+- Oynatıcılar video karelerini dışarıya vermez; eklenti GNOME'un kendi genel bakış küçük resimlerinin kullandığı yolla pencerenin kendisini klonlar (`Shell.WindowPreviewLayout`). Bu yüzden tarayıcıda **tüm pencere** görünür, yalnızca video kısmı değil.
+- Pencere, oynatıcının kimliğinden (MPRIS `Identity` / `DesktopEntry` / veri yolu adı) bulunur. Birden çok pencere varsa başlığı şarkı/video başlığını içeren seçilir (Türkçe `ı`/`i` ve aksan farkı yok sayılır).
+- Kart kapanınca klon bırakılır; pencere kapanırsa düğme ve önizleme kendiliğinden gider.
+- Pencere başka çalışma alanında ya da simge durumundaysa uygulama kare üretmeyebilir; görüntü donabilir.
+- `music-video=false` ile düğme tamamen kaldırılır.
+
+### Pano geçmişi
+
+Sağ island'da **son 10 kopya** listelenir (metin ve resim; resimler küçük resimle). Bir kayda tıklayınca **panoya geri konur**, sen istediğin yere kendin yapıştırırsın (otomatik yapıştırma yok: terminalde ve bazı uygulamalarda yanlış çalışır). Liste 5-6 satırdan uzunsa tekerlekle kayar, **Temizle** hepsini siler.
+
+- **Yalnızca bellekte tutulur**, diske hiçbir şey yazılmaz; oturumu ya da eklentiyi kapatınca silinir. Ayar değiştirince (island'lar yeniden kurulurken) silinmez.
+- Parola yöneticilerinin "bu gizli" işaretiyle (`x-kde-passwordManagerHint` vb.) kopyaladığı içerik hiç okunmaz.
+- Aynı şeyi tekrar kopyalarsan yeni satır eklenmez, üste taşınır. Çok uzun metinler 20 000 karakterde, 8 MB'tan büyük resimler hiç kaydedilmez.
+- `clipboard-history=false` ile izleme tamamen durur ve bölüm kaybolur. Kurulu `gnome-clipboard` gibi bir pano eklentisiyle birlikte çalışır, ikisi birbirini etkilemez.
 
 ### Olay göstergeleri
 
@@ -125,12 +144,14 @@ di-config reset                                       # hepsini varsayılana dö
 | `events` | power, battery-low, wifi, bluetooth, privacy, thermal, memory, disk, lockkey, layout, meeting, powersaver | island'ı kısa süre açan olaylar |
 | `theme` | ink | `ink`, `midnight`, `sunset`, `forest`, `rose` |
 | `accent-color` | boş | vurgu rengi (#rrggbb); boş = temanın rengi |
+| `clipboard-history` | açık | son 10 kopyayı bellekte tut, sağ island'da göster |
+| `music-video` | açık | müzik kartında Video (pencere önizleme) düğmesi |
 | `meeting-mode` | açık | mikrofon/kamera kullanılırken Rahatsız Etme |
 | `auto-power-saver` / `auto-power-saver-level` | açık / 20 | düşük pilde Güç Tasarrufu / pil yüzdesi eşiği |
 | `shortcut-qs` | açık | Super+A (GNOME'un Quick Settings kısayolu) sağ island'ı açar |
 | `screenshot-preview` | açık | ekran görüntüsü küçük resmi (bildirim önizlemeye bağlı) |
 | `layout-version` | 2 | iç kullanım: eski kayıtlı listelerin otomatik taşınması |
-| `qs-modules` | sliders, toggles, system | sağ island bölümleri (yukarıdan aşağı) |
+| `qs-modules` | sliders, toggles, clipboard, system | sağ island bölümleri (yukarıdan aşağı) |
 | `show-seconds` | kapalı | island saatinde saniye |
 | `osd-enabled` | açık | ses/parlaklık göstergesi island'da |
 | `music-popup` | açık | şarkı değişince kısa önizleme |
@@ -210,6 +231,8 @@ dynamic-island@local/
 │   ├── notifications.js   # bildirim önizleme (GNOME balonu ekran dışına alınır)
 │   ├── events.js          # olay göstergeleri (şarj, pil, Wi-Fi, Bluetooth, mikrofon/kamera)
 │   ├── history.js graph.js# canlı grafikler için örnek tamponu + Cairo çizimi
+│   ├── clipboardStore.js  # pano geçmişi (bellekte), clipList.js: liste mantığı
+│   ├── windows.js         # oynatıcının penceresini bulur (windowMatch.js: eşleştirme kuralları)
 │   ├── glyphs.js          # sağ ikon satırının Cairo ile çizilmiş ikonları (glyphLogic.js: seviye/renk kararları)
 │   ├── color.js           # albüm kapağından renk çıkarma (saf fonksiyonlar)
 │   ├── panelSlot.js       # panel düğmesini gizler, yerini ayırır, menüsüne erişim
@@ -230,6 +253,8 @@ tests/
 ├── history.test.js        # grafik örnek tamponu testleri (gjs)
 ├── diskio.test.js         # disk hızı ölçer testleri (gjs)
 ├── glyphs.test.js         # ikon seviye/renk kararları testleri (gjs)
+├── cliplist.test.js       # pano geçmişi listesi testleri (gjs)
+├── windowmatch.test.js    # oynatıcı penceresi eşleştirme testleri (gjs)
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
 ├── headless-smoke.sh      # izole headless shell başlatır
@@ -283,6 +308,8 @@ gjs -m tests/color.test.js
 gjs -m tests/history.test.js
 gjs -m tests/diskio.test.js
 gjs -m tests/glyphs.test.js
+gjs -m tests/cliplist.test.js
+gjs -m tests/windowmatch.test.js
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots
 ```
