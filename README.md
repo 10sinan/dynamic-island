@@ -371,3 +371,7 @@ Satırlar `[dynamic-island] [center]` ya da `[dynamic-island] [qs]` önekiyle ge
   eklenti `Unrecognized parameter` hatasıyla ERROR durumuna düşer.
 - `St.BoxLayout` için `vertical` yerine `orientation: Clutter.Orientation.VERTICAL` kullanılır.
 - `--nested` yerine `--devkit` var (Fedora: `sudo dnf install mutter-devkit`).
+
+## Lisans
+
+GPL-3.0 — ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
