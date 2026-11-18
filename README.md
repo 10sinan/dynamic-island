@@ -1,5 +1,18 @@
 # Dynamic Island — GNOME Shell 50 eklentisi
 
+![Orta island: müzik kartı, takvim, bildirimler](docs/img/music-card.png)
+
+| Sol island (istatistik) | Sağ island (Quick Settings) |
+|---|---|
+| ![](docs/img/stats-expanded.png) | ![](docs/img/qs-panel.png) |
+
+| Kapalı hâlleri | Tema | Olay |
+|---|---|---|
+| ![](docs/img/center-compact.png) ![](docs/img/stats-compact.png) ![](docs/img/qs-compact.png) | ![](docs/img/theme-midnight.png) | ![](docs/img/event-power.png) |
+
+*Ekran görüntüleri test ortamından (sahte oynatıcı, örnek veriler) alınmıştır.*
+
+
 Üst panelde **üç siyah hap**. **Tıklama yok**: her şey üstüne gelince açılır, imleç çekilince kapanır.
 
 ```
@@ -97,6 +110,10 @@ gnome-extensions enable dynamic-island@local
 
 Sonraki **ayar** değişiklikleri için tekrar giriş gerekmez. Yalnızca **kod** değişince
 tekrar giriş gerekir; GJS modülleri önbellekte tuttuğu için `disable`/`enable` yetmez.
+
+## Ayarlar penceresi
+
+GNOME **Uzantılar** uygulaması → Dynamic Island → ⚙ (ya da `gnome-extensions prefs dynamic-island@local`): island'lar, dil, tema, vurgu rengi, özellikler, zamanlama ve modüllerin açılıp kapanması / sırası / panelde gösterimi. (Eklentinin ayar penceresinin görünmesi için eklenti dosyası ilk kez eklendiyse oturumu bir kez kapatıp açmak gerekir.) Aynı ayarlar terminalden de yapılabilir:
 
 ## Özelleştirme: `di-config`
 
@@ -227,6 +244,7 @@ install.sh                 # kurulum
 tools/di-config            # terminal arayüzü + CLI (Python, curses; ek bağımlılık yok)
 dynamic-island@local/
 ├── metadata.json
+├── prefs.js               # GNOME Uzantılar uygulamasındaki ayar penceresi (Adwaita)
 ├── extension.js           # ayarları okur, island'ları kurar, değişince yeniden kurar
 ├── stylesheet.css
 ├── schemas/               # GSettings şeması (install.sh derler)

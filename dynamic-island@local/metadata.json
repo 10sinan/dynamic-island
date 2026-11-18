@@ -1,7 +1,7 @@
 {
   "uuid": "dynamic-island@local",
   "name": "Dynamic Island",
-  "description": "Black pills in the top panel. Centre: replaces the clock (time, CPU, RAM; hover for temperature, network, battery). Right: wraps the Quick Settings icons (hover for volume, brightness, Wi-Fi, Bluetooth, battery, power profile). Configure with the di-config terminal UI.",
+  "description": "Black pills in the top panel. Centre: replaces the clock (time, CPU, RAM; hover for temperature, network, battery). Right: wraps the Quick Settings icons (hover for volume, brightness, Wi-Fi, Bluetooth, battery, power profile). Configure from the Extensions app or the di-config terminal UI.",
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.dynamic-island",
   "url": "",

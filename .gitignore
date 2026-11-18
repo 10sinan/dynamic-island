@@ -3,3 +3,4 @@ gschemas.compiled
 # python
 __pycache__/
 *.pyc
+docs/shots/
