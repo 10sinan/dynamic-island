@@ -46,10 +46,6 @@ Spotify, tarayıcılar (YouTube Music dahil), VLC, Rhythmbox gibi **MPRIS** dest
 - Kapaklar `file://` ya da `https://` adresinden alınır. `https` için yalnızca oynatıcının bildirdiği kapak adresi istenir, başka bir şey gönderilmez.
 - `dynamic-music-pill` eklentisi dock'ta çalışmaya devam eder; ikisi birbirini etkilemez.
 
-### Plak animasyonu
-
-Müzik çalarken kart açıksa, kapağın arkasından bir **plak** kayarak çıkar ve döner; etiketi albüm renginde. Duraklayınca durduğu yerde kalıp kapağın arkasına geri kayar. (Daha önceki "video önizleme" kaldırıldı: oynatıcılar videonun kendisini vermiyor, eklenti yalnızca tüm pencereyi gösterebiliyordu.)
-
 ### Pano geçmişi
 
 Sağ island'da **son 10 kopya** listelenir (metin ve resim; resimler küçük resimle). Bir kayda tıklayınca **panoya geri konur**, sen istediğin yere kendin yapıştırırsın (otomatik yapıştırma yok: terminalde ve bazı uygulamalarda yanlış çalışır). Liste 5-6 satırdan uzunsa tekerlekle kayar, **Temizle** hepsini siler.

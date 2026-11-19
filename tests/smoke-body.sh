@@ -332,9 +332,6 @@ echo "   PlayPause clicked -> status=$(ev "$MU._info?.status") icon=$(ev "$MU._p
 ev "$MU._playButton.emit('clicked', 1); true" >/dev/null; sleep 1
 ev "$MU._call('SetPosition', new (imports.gi.GLib.Variant)('(ox)', ['/fake/track/1', 90000000])); true" >/dev/null; sleep 2.3
 echo "   SetPosition(90 s) -> elapsed=$(ev "$MU._elapsed.text") (expect ~1:3x)"
-VI="$MU._vinyl"
-echo "   vinyl: out=$(ev "$VI.translation_x") spinning=$(ev "$VI.get_transition('rotation-angle-z') !== null")"
-shot music-vinyl 300 0 1320 330
 echo "   hover-activity: collapse, then change track -> popup"
 ev "$C._hold(false); $C._setMode('compact'); true" >/dev/null; sleep 0.8
 ev "$MU._call('Next'); true" >/dev/null; sleep 1.8
