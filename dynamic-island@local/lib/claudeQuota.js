@@ -80,3 +80,35 @@ export function readToken(text, now) {
     const exp = Number(c.expiresAt);
     return {token: String(c.accessToken), expired: Number.isFinite(exp) && now >= exp - 60e3};
 }
+
+/** Warning levels, percent used. */
+export const ALERT_LEVELS = [80, 95];
+
+/**
+ * Which warnings are new? `state` remembers, per window, the reset time it
+ * belongs to and the highest level already announced; it is updated in place.
+ * The very first reading (`first`) only records the levels: opening the shell
+ * with a window already at 85 % must not pop a warning.
+ * @returns {Array<{row, level}>}  rows that just crossed a level (highest level per row)
+ */
+export function crossedThresholds(rows, state, first = false) {
+    const out = [];
+    for (const row of rows) {
+        if (row.kind === 'weekly-model')
+            continue;   // only the headline windows warn
+        const key = row.kind;
+        const reset = row.resetsAt ?? 0;
+        const prev = state.get(key);
+        // a new window (reset time moved on) starts again from zero
+        const announced = prev && prev.reset === reset ? prev.level : 0;
+        let level = 0;
+        for (const l of ALERT_LEVELS) {
+            if (row.percent >= l)
+                level = l;
+        }
+        state.set(key, {reset, level: Math.max(announced, level)});
+        if (!first && level > announced)
+            out.push({row, level});
+    }
+    return out;
+}

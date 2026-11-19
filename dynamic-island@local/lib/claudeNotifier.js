@@ -19,11 +19,14 @@ const ORANGE = [217, 119, 87];
 const LIGHT = [255, 186, 150];
 
 export class ClaudeNotifier {
-    constructor(island) {
+    constructor(island, config = {}) {
         this._island = island;
+        this._config = config;
         this._notif = new Gio.Settings({schema_id: 'org.gnome.desktop.notifications'});
         this._working = new Map();   // session -> {project, since}
-        this._bridge = new ClaudeBridge(ev => this._onEvent(ev));
+        this._perm = [];   // queued permission requests [{req, reply, win}]
+        this._permShown = null;
+        this._bridge = new ClaudeBridge(ev => this._onEvent(ev), (req, reply) => this._onPermission(req, reply));
     }
 
     _onEvent(ev) {
@@ -36,6 +39,110 @@ export class ClaudeNotifier {
         this._working.delete(key);
         this._syncWorking();
         this._show(ev);
+    }
+
+    // ------------------------------------------------------------ permission buttons
+
+    /**
+     * Claude Code asks for permission (PermissionRequest hook, waiting on D-Bus).
+     * Shown only when the setting is on, you are not already looking at
+     * Claude's window and Do Not Disturb is off; otherwise the answer is
+     * 'ask' and Claude Code shows its own dialog. Allow / Deny need a mouse
+     * click; nothing is ever approved automatically.
+     */
+    _onPermission(req, reply) {
+        if (!this._island || !this._config?.claudePermissionButtons || !this._notif.get_boolean('show-banners')) {
+            reply('ask');
+            return;
+        }
+        const win = this._windowFor({pids: req.pids, project: req.project});
+        if (win && win === global.display.focus_window &&
+            win.located_on_workspace(global.workspace_manager.get_active_workspace())) {
+            reply('ask');
+            return;
+        }
+        this._perm.push({req, reply, win});
+        this._nextPermission();
+    }
+
+    _nextPermission() {
+        if (this._permShown || !this._perm.length || !this._island)
+            return;
+        const item = this._perm.shift();
+        this._permShown = item;
+        let answered = false;
+        const answer = decision => {
+            if (answered)
+                return;
+            answered = true;
+            item.reply(decision);
+            this._permShown = null;
+            this._island?.endActivity('claude-permission');
+            // the next waiting request, after the island has settled
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 450, () => {
+                this._nextPermission();
+                return GLib.SOURCE_REMOVE;
+            });
+        };
+        item.answer = answer;
+        const shown = this._island.showActivity('claude-permission', {
+            priority: 3,
+            duration: 45000,
+            leaveMs: 20000,     // moving the pointer away must not cancel it quickly
+            build: () => this._buildPermission(item),
+            update: () => {},
+            onEnd: () => {
+                this._island?.setOutlineEffect(null);
+                // closed / timed out / replaced without a click: Claude Code's own dialog decides
+                if (!answered)
+                    answer('ask');
+            },
+        }, item);
+        if (!shown) {
+            answered = true;
+            this._permShown = null;
+            item.reply('ask');
+            this._nextPermission();
+            return;
+        }
+        this._island.setOutlineEffect({color: ORANGE, color2: LIGHT, amp: 2.4, speed: 1.4, wavelength: 28});
+    }
+
+    _buildPermission({req, answer}) {
+        const box = new St.BoxLayout({style_class: 'di-claude-perm', orientation: Clutter.Orientation.VERTICAL});
+        const head = new St.BoxLayout({style_class: 'di-event di-claude-event', y_align: Clutter.ActorAlign.CENTER});
+        const badge = new St.Bin({style_class: 'di-claude-badge', y_align: Clutter.ActorAlign.CENTER,
+            child: new St.Icon({icon_size: 18, icon_name: 'dialog-password-symbolic'})});
+        const col = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER});
+        col.add_child(new St.Label({style_class: 'di-event-title',
+            text: _f('Claude wants to use %s', req.tool || _('a tool'))}));
+        const sub = new St.Label({style_class: 'di-event-sub', text: req.project});
+        sub.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        col.add_child(sub);
+        head.add_child(badge);
+        head.add_child(col);
+        box.add_child(head);
+
+        if (req.summary) {
+            const cmd = new St.Label({style_class: 'di-claude-cmd', text: req.summary});
+            cmd.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+            cmd.clutter_text.set_single_line_mode(true);
+            box.add_child(cmd);
+        }
+        const row = new St.BoxLayout({style_class: 'di-claude-btnrow'});
+        const deny = new St.Button({style_class: 'di-claude-btn di-claude-deny', label: _('Deny'),
+            can_focus: false, x_expand: true});
+        const allow = new St.Button({style_class: 'di-claude-btn di-claude-allow', label: _('Allow'),
+            can_focus: false, x_expand: true});
+        deny.connect('clicked', () => answer('deny'));
+        allow.connect('clicked', () => answer('allow'));
+        row.add_child(deny);
+        row.add_child(allow);
+        box.add_child(row);
+        box.add_child(new St.Label({style_class: 'di-claude-perm-hint',
+            text: _('No answer: Claude Code asks as usual')}));
+        return box;
     }
 
     // ------------------------------------------------------------ "Claude is working" in the pill
@@ -226,6 +333,11 @@ export class ClaudeNotifier {
     }
 
     destroy() {
+        for (const {reply} of this._perm ?? [])
+            reply('ask');
+        this._perm = [];
+        this._permShown?.answer?.('ask');
+        this._permShown = null;
         if (this._staleTimer) {
             GLib.source_remove(this._staleTimer);
             this._staleTimer = 0;

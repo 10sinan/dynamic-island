@@ -492,7 +492,7 @@ export class Island {
             if (this._pinned && !this._grab)
                 this.unpin();   // no grab (another modal owned the input): hover rules apply
             if (this._mode === 'activity') {
-                this._activityTimer.schedule(C.ACTIVITY_LEAVE_MS, () => this.endActivity());
+                this._activityTimer.schedule(this._activity?.leaveMs ?? C.ACTIVITY_LEAVE_MS, () => this.endActivity());
             } else if (this._mode === 'expanded') {
                 if (this._cfg.leaveDelay <= 0)
                     this._maybeCollapse();
@@ -1046,7 +1046,7 @@ export class Island {
      * Same key while showing -> update in place, no new animation.
      * @returns {boolean} false if not shown (hidden island, menu open, lower priority)
      */
-    showActivity(key, {build, update, duration, priority = 0, onClick, onEnd}, data) {
+    showActivity(key, {build, update, duration, priority = 0, onClick, onEnd, leaveMs}, data) {
         if (this._destroyed || !this.actor.visible || this._slot.menuOpen)
             return false;
         const cur = this._activity;
@@ -1069,7 +1069,7 @@ export class Island {
         this._activityInner.get_child()?.destroy();
         this._activityInner.set_child(build());
 
-        this._activity = {key, priority, update, onClick, onEnd};
+        this._activity = {key, priority, update, onClick, onEnd, leaveMs};
         update?.(data);
         this._setMode('activity');
         this._armActivityTimer(duration);

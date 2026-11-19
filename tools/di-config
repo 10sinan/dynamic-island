@@ -111,6 +111,12 @@ EN = {
     "Kendiliğinden kapanma": "Auto close", "asla": "never", "yok": "none",
     "Claude token limiti (5 saatte)": "Claude token limit (per 5 h)",
     "Claude Code bildirimleri": "Claude Code notifications",
+    "Claude: izni island'dan ver / reddet": "Claude: allow / deny permissions from the island",
+    "Claude izin isterken island'da İzin ver / Reddet düğmeleri çıkar (yalnızca fare tıklamasıyla; hiçbir şey kendiliğinden onaylanmaz). Cevap vermezsen normal izin penceresi gelir. Kurulum: di-config claude-hooks install":
+        "When Claude asks for permission the island shows Allow / Deny buttons (mouse click only; nothing is ever approved automatically). If you don't answer, the normal permission dialog appears. Setup: di-config claude-hooks install",
+    "Claude: kotanın %80 ve %95'inde uyar": "Claude: warn at 80% and 95% of the quota",
+    "5 saatlik ya da haftalık kullanım %80 ve %95'i geçince island bir kez uyarır. Gerçek kota ayarı açık olmalı.":
+        "Warns once when the 5-hour or weekly usage passes 80% and 95%. Needs the real quota setting.",
     "Claude: Anthropic'ten gerçek kota": "Claude: real quota from Anthropic",
     "Claude kartı /usage ile aynı rakamları gösterir (5 saat + haftalık). Claude Code giriş anahtarını okur, yalnızca api.anthropic.com'a gönderir.":
         "The Claude card shows the same numbers as /usage (5-hour + weekly). Reads Claude Code's login token and sends it only to api.anthropic.com.",
@@ -253,6 +259,10 @@ TABS = [
              help="Claude bitince ya da seni beklerken orta island turuncu dalgalı çizgiyle açılır. Bir kez: di-config claude-hooks install"),
         dict(key="claude-real-usage", kind="bool", label="Claude: Anthropic'ten gerçek kota",
              help="Claude kartı /usage ile aynı rakamları gösterir (5 saat + haftalık). Claude Code giriş anahtarını okur, yalnızca api.anthropic.com'a gönderir."),
+        dict(key="claude-quota-alerts", kind="bool", label="Claude: kotanın %80 ve %95'inde uyar",
+             help="5 saatlik ya da haftalık kullanım %80 ve %95'i geçince island bir kez uyarır. Gerçek kota ayarı açık olmalı."),
+        dict(key="claude-permission-buttons", kind="bool", label="Claude: izni island'dan ver / reddet",
+             help="Claude izin isterken island'da İzin ver / Reddet düğmeleri çıkar (yalnızca fare tıklamasıyla; hiçbir şey kendiliğinden onaylanmaz). Cevap vermezsen normal izin penceresi gelir. Kurulum: di-config claude-hooks install"),
         dict(key="claude-token-limit", kind="int", step=1000, unit="K", label="Claude token limiti (5 saatte)",
              zero="yok", help="Orta island'daki Claude kartı için 5 saatlik oturum limitin (bin token). 0 = yalnızca kullanılanı göster; yazarsan kalan yüzdeyi görürsün. Kullanım yerel kayıtlardan tahmin edilir."),
         dict(key="auto-power-saver", kind="bool", label="Pil azalınca otomatik Güç Tasarrufu",
@@ -696,7 +706,7 @@ class App:
 # ----------------------------------------------------------------- Claude Code hooks
 
 CLAUDE_SETTINGS = os.path.expanduser("~/.claude/settings.json")
-HOOK_EVENTS = ("UserPromptSubmit", "Stop", "Notification")
+HOOK_EVENTS = ("UserPromptSubmit", "Stop", "Notification", "PermissionRequest")
 
 
 def hook_command():
@@ -727,7 +737,10 @@ def claude_hooks(action):
         cmd = hook_command()
         for ev in HOOK_EVENTS:
             if not present[ev]:
-                hooks.setdefault(ev, []).append({"hooks": [{"type": "command", "command": cmd}]})
+                hook = {"type": "command", "command": cmd}
+                if ev == "PermissionRequest":
+                    hook["timeout"] = 55   # seconds: the island waits for your click up to 50 s
+                hooks.setdefault(ev, []).append({"hooks": [hook]})
         msg = f"Claude Code hook'ları kuruldu: {cmd}"
     elif action == "remove":
         for ev in HOOK_EVENTS:

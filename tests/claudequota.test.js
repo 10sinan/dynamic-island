@@ -1,5 +1,5 @@
 // gjs -m tests/claudequota.test.js
-import {parseQuota, untilReset, readToken} from '../dynamic-island@local/lib/claudeQuota.js';
+import {parseQuota, untilReset, readToken, crossedThresholds} from '../dynamic-island@local/lib/claudeQuota.js';
 
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; print(`FAIL ${m}`); } };
@@ -38,6 +38,24 @@ ok(untilReset(now + 30 * 60e3, now).unit === 'min', 'minutes');
 ok(readToken('{"claudeAiOauth":{"accessToken":"t","expiresAt":9999999999999}}', now)?.expired === false, 'valid token');
 ok(readToken('{"claudeAiOauth":{"accessToken":"t","expiresAt":1}}', now)?.expired === true, 'expired token');
 ok(readToken('nope', now) === null && readToken('{}', now) === null, 'no token');
+
+// thresholds
+const T = new Map();
+const R = (kind, percent, resetsAt = 1000) => ({kind, percent, resetsAt});
+ok(crossedThresholds([R('session', 85)], T, true).length === 0, 'first reading only records (no pop-up at startup)');
+ok(crossedThresholds([R('session', 86)], T).length === 0, 'already announced level is not repeated');
+let c = crossedThresholds([R('session', 96)], T);
+ok(c.length === 1 && c[0].level === 95, '95 % is a new level');
+ok(crossedThresholds([R('session', 99)], T).length === 0, 'and only once');
+c = crossedThresholds([R('session', 81, 2000)], T);
+ok(c.length === 1 && c[0].level === 80, 'a new window (reset moved on) warns again');
+c = crossedThresholds([R('session', 10, 3000), R('weekly', 81, 9)], T);
+ok(c.length === 1 && c[0].row.kind === 'weekly', 'windows are tracked separately');
+ok(crossedThresholds([{kind: 'weekly-model', model: 'Opus', percent: 99, resetsAt: 1}], new Map()).length === 0, 'model rows never warn');
+const T2 = new Map();
+crossedThresholds([R('session', 70)], T2, true);
+c = crossedThresholds([R('session', 97)], T2);
+ok(c.length === 1 && c[0].level === 95, 'jumping past 80 straight to 97 announces 95 once');
 
 print(fails ? `${fails} FAILED` : 'claudequota ok');
 imports.system.exit(fails ? 1 : 0);

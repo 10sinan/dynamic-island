@@ -1249,3 +1249,64 @@
     font-feature-settings: "tnum";
     color: rgba(240, 190, 170, 0.80);
 }
+
+/* ---- Claude: permission buttons + quota badge */
+.di-claude-perm {
+    spacing: 8px;
+    min-width: 380px;
+    padding-bottom: 4px;
+}
+
+.di-claude-cmd {
+    font-family: monospace;
+    font-size: 9pt;
+    color: rgba(255, 255, 255, 0.85);
+    background-color: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(217, 119, 87, 0.30);
+    border-radius: 10px;
+    padding: 6px 10px;
+    margin: 0 14px;
+}
+
+.di-claude-btnrow {
+    spacing: 10px;
+    margin: 0 14px;
+}
+
+.di-claude-btn {
+    border-radius: 14px;
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 10pt;
+    transition-duration: 150ms;
+}
+
+.di-claude-deny {
+    background-color: rgba(255, 255, 255, 0.10);
+    color: #f2f2f2;
+}
+
+.di-claude-deny:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.di-claude-allow {
+    background-color: #d97757;
+    color: #1a0f0b;
+}
+
+.di-claude-allow:hover {
+    background-color: #e68b6c;
+}
+
+.di-claude-perm-hint {
+    font-size: 8pt;
+    color: rgba(255, 255, 255, 0.40);
+    margin: 0 14px;
+}
+
+.di-claude-badge-text {
+    font-size: 13pt;
+    font-weight: 800;
+    color: #1a0f0b;
+}

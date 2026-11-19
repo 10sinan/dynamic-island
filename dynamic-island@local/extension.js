@@ -18,6 +18,7 @@ import {Caffeine} from './lib/caffeine.js';
 import {MeetingMode} from './lib/meeting.js';
 import {AutoPowerSaver} from './lib/powerPolicy.js';
 import {ClaudeNotifier} from './lib/claudeNotifier.js';
+import {ClaudeQuotaWatch} from './lib/claudeQuotaWatch.js';
 import {readConfig} from './lib/settings.js';
 import {setLanguage} from './lib/i18n.js';
 import {LOG_PREFIX, REBUILD_DEBOUNCE_MS} from './lib/constants.js';
@@ -303,10 +304,13 @@ export default class DynamicIslandExtension extends Extension {
                 this._features.push(new OsdRouter(center, cfg));
             if (center && cfg.notificationPreview)
                 this._features.push(new NotificationPreview(center, cfg));
+            // 80 % / 95 % warnings for the Claude plan quota (real data only)
+            if (center && cfg.claudeRealUsage && cfg.claudeQuotaAlerts)
+                this._features.push(new ClaudeQuotaWatch(center));
             // Claude Code hook -> D-Bus -> wavy orange notification
             if (center && cfg.claudeNotify) {
                 try {
-                    this._features.push(new ClaudeNotifier(center));
+                    this._features.push(new ClaudeNotifier(center, cfg));
                 } catch (e) {
                     console.warn(`${LOG_PREFIX} Claude notifications unavailable: ${e.message}`);
                 }

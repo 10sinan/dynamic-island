@@ -240,6 +240,23 @@ di-config claude-hooks install    # kaldırmak: di-config claude-hooks remove ·
 
 Akış: Claude Code → `tools/di-claude-hook` → yerel D-Bus (`/org/gnome/Shell/Extensions/DynamicIsland`) → island. İnternete hiçbir şey gitmez; betik her koşulda anında çıkar, Claude'u bekletmez. Kapatmak için ayar: `claude-notify`.
 
+### Claude kota uyarısı
+
+`claude-real-usage` açıkken arka planda 5 dakikada bir kota okunur; 5 saatlik ya da haftalık kullanım **%80** ve **%95**'i geçince island bir kez uyarır (`Claude · 5 saatlik limit %83 · 4,7 sa sonra sıfırlanır · Haftalık %44`), pencere sıfırlanana kadar aynı eşik tekrarlanmaz. Kabuk açılırken zaten geçilmiş bir eşik için uyarı çıkmaz. Rahatsız Etme açıkken gösterilmez. Ayar: `claude-quota-alerts`.
+
+### Claude izin düğmeleri (İzin ver / Reddet)
+
+Claude Code bir araç için izin isterken (örn. `Bash: git push origin main`) island'da komut özetiyle birlikte **Reddet / İzin ver** düğmeleri çıkar. Claude Code'un `PermissionRequest` hook'unu kullanır.
+
+Güvenlik tasarımı:
+- Ayar **varsayılan kapalı** (`claude-permission-buttons`); `di-config claude-hooks install` ek olarak bu hook'u da kurar.
+- **Hiçbir şey kendiliğinden onaylanmaz.** İzin yalnızca düğmeye fare tıklamasıyla verilir (Enter/klavye yok). Cevap vermezsen, island kapanırsa, zaman aşımına uğrarsa, eklenti kapalıysa ya da hata olursa hook hiçbir şey yazmaz ve Claude Code **normal izin penceresini** gösterir (test: `tests/claudepermission.test.py`).
+- Claude'un penceresine zaten bakıyorsan ya da Rahatsız Etme açıksa düğmeler çıkmaz; normal pencere gelir.
+- Komut özeti kırpılırsa `…` ile belirtilir, gizlenmez. Birden çok istek sırayla gösterilir.
+- Başka bir yerel süreç D-Bus'a sahte istek gönderebilir ama **izin veremez**: onay yalnızca bekleyen hook çağrısına, tıklamayla döner.
+
+Kurulum: `di-config claude-hooks install` ve `di-config set claude-permission-buttons true`.
+
 ### Uygulama başına ses
 
 Sağ island'da ses çalan her uygulama (tarayıcı, Spotify, Discord...) için ayrı kaydırıcı; simgeye tıklayınca o uygulama sessize alınır. Hiçbir uygulama ses çalmıyorsa bölüm gizlenir.
@@ -321,6 +338,7 @@ tests/
 ├── claudequota.test.js    # Anthropic kota yanıtı ayrıştırma testleri (gjs)
 ├── wave.test.js           # dalgalı çizgi geometrisi testleri (gjs)
 ├── claudehook.test.py     # Claude Code hook betiği testleri
+├── claudepermission.test.py  # izin hook'u: allow/deny/ask yolları
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
 ├── headless-smoke.sh      # izole headless shell başlatır
@@ -381,6 +399,7 @@ gjs -m tests/claudeusage.test.js
 gjs -m tests/claudequota.test.js
 gjs -m tests/wave.test.js
 python3 tests/claudehook.test.py
+python3 tests/claudepermission.test.py
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots
 ```

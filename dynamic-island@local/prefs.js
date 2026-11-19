@@ -136,6 +136,10 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
             _('When Claude finishes or waits for you (run: di-config claude-hooks install)'));
         this._switch(s, feat, 'claude-real-usage', _('Claude: real quota from Anthropic'),
             _('Same numbers as /usage. Reads Claude Code\'s login token and sends it only to api.anthropic.com'));
+        this._switch(s, feat, 'claude-quota-alerts', _('Claude: warn at 80% and 95% of the quota'),
+            _('Needs the real quota setting above'));
+        this._switch(s, feat, 'claude-permission-buttons', _('Claude: allow / deny permissions from the island'),
+            _('Mouse click only. If you do not answer, Claude Code asks as usual'));
         this._spin(s, feat, 'claude-token-limit', _('Claude token limit (K per 5 h)'),
             _('0 = just show the tokens used; set your own limit to see how much is left'), 1000);
         // calibration: type the session % that Claude Code's /usage shows

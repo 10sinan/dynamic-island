@@ -12,7 +12,8 @@ import St from 'gi://St';
 import {IslandModule} from './base.js';
 import {_, _f, weekdayName} from '../lib/i18n.js';
 import {WINDOW_MS, addEntry, formatTokens, parseLine, splitDuration, windowStats} from '../lib/claudeUsage.js';
-import {QUOTA_BETA, QUOTA_URL, parseQuota, readToken, untilReset} from '../lib/claudeQuota.js';
+import {untilReset} from '../lib/claudeQuota.js';
+import {fetchQuota} from '../lib/claudeFetch.js';
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
@@ -192,48 +193,21 @@ export default class ClaudeUsageModule extends IslandModule {
         this._render();
     }
 
-    /** Real quota from Anthropic, with the token Claude Code keeps (read only, never refreshed here). */
+    /** Real quota from Anthropic (shared request code: lib/claudeFetch.js). */
     async _fetchQuota() {
         this._fetching = true;
         const nowS = GLib.get_monotonic_time() / 1e6;
         try {
-            const file = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_home_dir(), '.claude', '.credentials.json']));
-            const [bytes] = await file.load_contents_async(this.cancellable);
-            const tok = readToken(new TextDecoder().decode(bytes), Date.now());
-            if (!tok) {
-                this._quotaErr = _('No Claude Code login found');
+            this._soupHolder ??= {soup: null};
+            const r = await fetchQuota(this._soupHolder, this.cancellable);
+            if (r.cancelled)
                 return;
-            }
-            if (tok.expired) {
-                this._quotaErr = _('Login expired · opening Claude Code renews it');
-                return;
-            }
-            const Soup = (await import('gi://Soup?version=3.0')).default;
-            Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_finish');
-            this._soup ??= new Soup.Session({timeout: 10, user_agent: 'dynamic-island'});
-            const msg = Soup.Message.new('GET', QUOTA_URL);
-            msg.request_headers.append('Authorization', `Bearer ${tok.token}`);
-            msg.request_headers.append('anthropic-beta', QUOTA_BETA);
-            msg.request_headers.append('Content-Type', 'application/json');
-            const body = await this._soup.send_and_read_async(msg, GLib.PRIORITY_LOW, this.cancellable);
-            if (msg.status_code === 401) {
-                this._quotaErr = _('Login expired · opening Claude Code renews it');
-                return;
-            }
-            if (msg.status_code !== 200) {
-                this._quotaErr = _f('Anthropic answered %s', msg.status_code);
-                return;
-            }
-            const rows = parseQuota(JSON.parse(new TextDecoder().decode(body.toArray())));
-            if (rows.length) {
-                this._quota = {rows, at: Date.now()};
+            if (r.rows) {
+                this._quota = {rows: r.rows, at: Date.now()};
                 this._quotaErr = null;
+            } else {
+                this._quotaErr = r.status ? _f('Anthropic answered %s', r.status) : _(r.error);
             }
-        } catch (e) {
-            if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                return;
-            this._quotaErr = _('Anthropic not reachable');
-            console.debug(`[dynamic-island] claude quota: ${e.message}`);
         } finally {
             this._quotaAt = nowS;
             this._fetching = false;
@@ -467,8 +441,8 @@ export default class ClaudeUsageModule extends IslandModule {
     }
 
     destroy() {
-        this._soup?.abort();
-        this._soup = null;
+        this._soupHolder?.soup?.abort();
+        this._soupHolder = null;
         this._entries?.clear();
         this._files?.clear();
         this._ringTl?.stop();

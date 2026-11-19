@@ -627,6 +627,78 @@ echo '{"hook_event_name":"Stop","cwd":"/x"}' | python3 "$HERE/tools/di-claude-ho
 echo "   claude-notify=false: shown=$(ev "$C.activityKey === 'claude'") D-Bus object gone=$(gdbus introspect --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/DynamicIsland 2>/dev/null | grep -c ClaudeEvent)"
 dreset claude-notify; sleep 1.2
 
+echo "== Claude permission buttons + quota warnings"
+PERM="gdbus call --session --timeout 20 --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/DynamicIsland --method org.gnome.Shell.Extensions.DynamicIsland.ClaudePermission"
+NF="$EXT._features.find(f => f._perm)"
+$PERM app Bash "rm -rf build" "" s1 > "$SANDBOX/perm0.txt" 2>&1 &
+PP0=$!; sleep 1
+echo "   setting off (default): immediate answer=$(cat "$SANDBOX/perm0.txt") shown=$(ev "$C.activityKey === 'claude-permission'")"
+dset claude-permission-buttons true; sleep 1.5
+NF="$EXT._features.find(f => f._perm)"
+$PERM dynamic-island Bash "git push origin main" "" s1 > "$SANDBOX/perm1.txt" 2>&1 &
+PP1=$!; sleep 1
+echo "   on: activity=$(ev "$C.activityKey") mode=$(ev "$C.mode") waiting=$([ -s "$SANDBOX/perm1.txt" ] && echo answered-too-early || echo waiting)"
+echo "   texts: $(ev "JSON.stringify($C._activityInner.get_child().get_children().map(c => c.text ?? c.get_children?.().map(x => x.text ?? x.get_children?.().map(y => y.text).join('/')).join('|')))")"
+shot claude-permission 360 0 1200 260
+BTNS="$C._activityInner.get_child().get_child_at_index(2).get_children()"
+ev "$BTNS[1].emit('clicked', 1); true" >/dev/null; sleep 0.8
+wait $PP1; echo "   Allow clicked -> hook got: $(cat "$SANDBOX/perm1.txt") activity after=$(ev "String($C.activityKey)")"
+$PERM dynamic-island Edit "/x/y.py" "" s1 > "$SANDBOX/perm2.txt" 2>&1 &
+PP2=$!; sleep 1.2
+ev "$BTNS[0].emit('clicked', 1); true" >/dev/null 2>&1
+BTNS="$C._activityInner.get_child().get_child_at_index(2).get_children()"
+ev "$C._activityInner.get_child().get_child_at_index(2).get_children()[0].emit('clicked', 1); true" >/dev/null; sleep 0.8
+wait $PP2; echo "   Deny clicked -> hook got: $(cat "$SANDBOX/perm2.txt")"
+# queue: two at once, answered one after the other
+$PERM p Bash "one" "" a > "$SANDBOX/q1.txt" 2>&1 &
+Q1=$!; sleep 0.5
+$PERM p Bash "two" "" b > "$SANDBOX/q2.txt" 2>&1 &
+Q2=$!; sleep 0.8
+echo "   two waiting: queued=$(ev "$NF._perm.length") showing=$(ev "$NF._permShown?.req.summary")"
+ev "$C._activityInner.get_child().get_child_at_index(2).get_children()[1].emit('clicked', 1); true" >/dev/null; sleep 1.5
+echo "   first answered=$(cat "$SANDBOX/q1.txt") next showing=$(ev "$NF._permShown?.req.summary")"
+ev "$C._activityInner.get_child().get_child_at_index(2).get_children()[0].emit('clicked', 1); true" >/dev/null; sleep 1
+wait $Q1 $Q2; echo "   second answered=$(cat "$SANDBOX/q2.txt")"
+# closing the island without a click -> 'ask' (Claude Code's own dialog)
+$PERM p Bash "three" "" c > "$SANDBOX/q3.txt" 2>&1 &
+Q3=$!; sleep 1
+ev "$C.endActivity('claude-permission'); true" >/dev/null; sleep 0.8
+wait $Q3; echo "   closed without a click -> hook got: $(cat "$SANDBOX/q3.txt")"
+# disabling the extension while a request waits -> 'ask', never 'allow'
+$PERM p Bash "four" "" d > "$SANDBOX/q4.txt" 2>&1 &
+Q4=$!; sleep 1
+dset claude-permission-buttons false; sleep 2
+wait $Q4; echo "   setting turned off while waiting -> hook got: $(cat "$SANDBOX/q4.txt")"
+# Claude's window focused -> ask immediately
+dset claude-permission-buttons true; sleep 1.5
+WAYLAND_DISPLAY=di-wl-test gnome-text-editor >/dev/null 2>&1 &
+ED2=$!
+sleep 7
+EDW="global.display.list_all_windows().find(w => w.get_wm_class()?.toLowerCase().includes('texteditor'))"
+ev "Main.activateWindow($EDW); true" >/dev/null; sleep 1
+WPID=$(ev "$EDW?.get_pid()")
+echo "   window focused: answer=$($PERM p Bash "five" "$WPID" e) shown=$(ev "$C.activityKey === 'claude-permission'")"
+kill $ED2 2>/dev/null; sleep 1
+dreset claude-permission-buttons; sleep 1.5
+echo
+
+echo "   quota warnings (fake readings):"
+QW="$EXT._features.find(f => f.show && f._state)"
+echo "   watcher present only with claude-real-usage: $(ev "!!$QW")"
+dset claude-real-usage true; sleep 1.5
+QW="$EXT._features.find(f => f.show && f._state)"
+echo "   with claude-real-usage: watcher=$(ev "!!$QW")"
+ev "$QW.show({kind: 'session', percent: 83, resetsAt: Date.now() + 4.7 * 3600e3}, 80, [{kind: 'weekly', percent: 44}]); true" >/dev/null; sleep 0.9
+echo "   80%: activity=$(ev "$C.activityKey") title=$(ev "$C._activityInner.get_child().get_child_at_index(1).get_child_at_index(0).text") sub=$(ev "$C._activityInner.get_child().get_child_at_index(1).get_child_at_index(1).text")"
+shot claude-quota-warn 460 0 1000 120
+ev "$C.endActivity('claude-quota'); true" >/dev/null; sleep 0.8
+ev "$QW.show({kind: 'weekly', percent: 96, resetsAt: Date.now() + 2 * 86400e3}, 95, [{kind: 'session', percent: 12}]); true" >/dev/null; sleep 0.9
+echo "   95%: title=$(ev "$C._activityInner.get_child().get_child_at_index(1).get_child_at_index(0).text") sub=$(ev "$C._activityInner.get_child().get_child_at_index(1).get_child_at_index(1).text")"
+shot claude-quota-crit 460 0 1000 120
+ev "$C.endActivity('claude-quota'); true" >/dev/null; sleep 0.5
+dreset claude-real-usage; sleep 1.5
+echo
+
 echo "== per-app volume (silent sound in the sandbox)"
 python3 -c "import wave; w=wave.open('$SANDBOX/silence.wav','wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000); w.writeframes(bytes(8000*2*6)); w.close()"
 MX="$Q.moduleById('mixer')"

@@ -117,6 +117,14 @@
       <default>false</default>
       <summary>Claude card shows the real plan quota from Anthropic (same as /usage): reads Claude Code's login token from ~/.claude/.credentials.json and sends it only to api.anthropic.com</summary>
     </key>
+    <key name="claude-quota-alerts" type="b">
+      <default>true</default>
+      <summary>Warn once at 80 % and 95 % of the Claude 5-hour / weekly quota (needs claude-real-usage)</summary>
+    </key>
+    <key name="claude-permission-buttons" type="b">
+      <default>false</default>
+      <summary>Answer Claude Code permission requests with Allow / Deny buttons in the centre island (mouse click only; needs the PermissionRequest hook: di-config claude-hooks install)</summary>
+    </key>
     <key name="claude-token-limit" type="i">
       <range min="0" max="100000000"/>
       <default>0</default>
