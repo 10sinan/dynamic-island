@@ -35,6 +35,12 @@ import {SpringGroup} from './spring.js';
 import {perimeterPoints, perimeterLength, waveOffset} from './wave.js';
 import Cairo from 'gi://cairo';
 
+/** Single place for the island's diagnostics (errors only; nothing is logged in normal operation). */
+const logIsland = {
+    warn: (...a) => console.warn(...a),
+    error: (...a) => console.error(...a),
+};
+
 function isCancelled(e) {
     return e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED) ?? false;
 }
@@ -117,7 +123,7 @@ export class Island {
 
         this._initModules(p).catch(e => {
             if (!isCancelled(e))
-                console.error(`${C.LOG_PREFIX} [${this._id}] module init failed`, e);
+                logIsland.error(`${C.LOG_PREFIX} [${this._id}] module init failed`, e);
         });
     }
 
@@ -568,7 +574,7 @@ export class Island {
         try {
             this._grab = Main.pushModal(this.actor, {actionMode: Shell.ActionMode.POPUP});
         } catch (e) {
-            console.warn(`${C.LOG_PREFIX} [${this._id}] modal grab failed`, e);
+            logIsland.warn(`${C.LOG_PREFIX} [${this._id}] modal grab failed`, e);
             this._grab = null;
         }
         if (this._grab) {
@@ -612,7 +618,7 @@ export class Island {
             try {
                 Main.popModal(this._grab);
             } catch (e) {
-                console.warn(`${C.LOG_PREFIX} [${this._id}] modal release failed`, e);
+                logIsland.warn(`${C.LOG_PREFIX} [${this._id}] modal release failed`, e);
             }
             this._grab = null;
         }
@@ -880,7 +886,7 @@ export class Island {
                 try {
                     m.onHidden?.();
                 } catch (e) {
-                    console.warn(`${C.LOG_PREFIX} [${this._id}] onHidden failed`, e);
+                    logIsland.warn(`${C.LOG_PREFIX} [${this._id}] onHidden failed`, e);
                 }
             }
         }
@@ -889,7 +895,7 @@ export class Island {
                 try {
                     m.onShown?.();
                 } catch (e) {
-                    console.warn(`${C.LOG_PREFIX} [${this._id}] onShown failed`, e);
+                    logIsland.warn(`${C.LOG_PREFIX} [${this._id}] onShown failed`, e);
                 }
             }
         }
@@ -1107,7 +1113,7 @@ export class Island {
         try {
             a?.onEnd?.();
         } catch (e) {
-            console.warn(`${C.LOG_PREFIX} [${this._id}] activity onEnd failed`, e);
+            logIsland.warn(`${C.LOG_PREFIX} [${this._id}] activity onEnd failed`, e);
         }
     }
 
@@ -1141,7 +1147,7 @@ export class Island {
         const ids = [...new Set([...p.expandedIds, ...p.compactIds])].filter(id => {
             if (p.registry[id])
                 return true;
-            console.warn(`${C.LOG_PREFIX} [${this._id}] unknown module "${id}" in settings`);
+            logIsland.warn(`${C.LOG_PREFIX} [${this._id}] unknown module "${id}" in settings`);
             return false;
         });
         const entries = [
@@ -1160,17 +1166,15 @@ export class Island {
             const {m} = all[i];
             if (r.status === 'rejected') {
                 if (!isCancelled(r.reason))
-                    console.warn(`${C.LOG_PREFIX} [${this._id}] module ${m.constructor.id} disabled: ${r.reason}`);
+                    logIsland.warn(`${C.LOG_PREFIX} [${this._id}] module ${m.constructor.id} disabled: ${r.reason}`);
                 m.destroy();
             } else if (!m.available) {
-                console.log(`${C.LOG_PREFIX} [${this._id}] module ${m.constructor.id} not available on this system`);
                 m.destroy();
             } else {
                 usable.push(all[i]);
             }
         });
         this._modules = usable.map(e => e.m);
-        console.log(`${C.LOG_PREFIX} [${this._id}] modules ready: ${this._modules.map(m => m.constructor.id).join(', ')}`);
 
         this._placeholder.destroy();
         this._placeholder = null;
@@ -1281,7 +1285,7 @@ export class Island {
                     const id = targets[i]?.constructor.id;
                     if (r.status === 'rejected' && !isCancelled(r.reason) && !this._failed.has(id)) {
                         this._failed.add(id);   // report once, keep trying silently
-                        console.warn(`${C.LOG_PREFIX} [${this._id}] module ${id} tick failed: ${r.reason}`);
+                        logIsland.warn(`${C.LOG_PREFIX} [${this._id}] module ${id} tick failed: ${r.reason}`);
                     }
                 });
                 // Content got wider/narrower: resize pill + panel slot.
@@ -1314,7 +1318,7 @@ export class Island {
             try {
                 m.destroy();
             } catch (e) {
-                console.warn(`${C.LOG_PREFIX} [${this._id}] module destroy failed`, e);
+                logIsland.warn(`${C.LOG_PREFIX} [${this._id}] module destroy failed`, e);
             }
         }
         this._modules = [];

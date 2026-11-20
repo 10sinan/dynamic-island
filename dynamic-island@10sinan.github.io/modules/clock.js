@@ -117,7 +117,6 @@ export default class ClockModule extends IslandModule {
         this._dead = true;
         if (this._wall) {
             this._wall.disconnect(this._wallId);
-            this._wall.run_dispose();   // stops its internal timeout now
             this._wall = null;
         }
         if (this._secondsId) {
