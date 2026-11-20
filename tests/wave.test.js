@@ -1,5 +1,5 @@
 // gjs -m tests/wave.test.js
-import {perimeterPoints, waveOffset, perimeterLength} from '../dynamic-island@local/lib/wave.js';
+import {perimeterPoints, waveOffset, perimeterLength} from '../dynamic-island@10sinan.github.io/lib/wave.js';
 
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; print(`FAIL ${m}`); } };

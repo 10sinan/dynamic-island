@@ -1,5 +1,5 @@
 // Run: gjs -m tests/color.test.js
-import {accentFrom, dominantColor, hexToRgb, hslToRgb, mix, palette, rgbToHsl, roundedRgba, tintFrom, toHex} from '../dynamic-island@local/lib/color.js';
+import {accentFrom, dominantColor, hexToRgb, hslToRgb, mix, palette, rgbToHsl, roundedRgba, tintFrom, toHex} from '../dynamic-island@10sinan.github.io/lib/color.js';
 
 let failures = 0;
 const check = (name, cond, detail = '') => {

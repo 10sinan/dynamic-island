@@ -95,7 +95,7 @@ Orta island ayrıca kısa süreli **etkinlikler** gösterir:
 cd ~/projects/dynmıc_island
 ./install.sh                                  # şemayı derler, eklentiyi ve di-config'i bağlar
 # → oturumu BİR KEZ kapatıp tekrar aç (Wayland'da shell yeniden başlatılamaz)
-gnome-extensions enable dynamic-island@local
+gnome-extensions enable dynamic-island@10sinan.github.io
 ```
 
 Sonraki **ayar** değişiklikleri için tekrar giriş gerekmez. Yalnızca **kod** değişince
@@ -103,7 +103,7 @@ tekrar giriş gerekir; GJS modülleri önbellekte tuttuğu için `disable`/`enab
 
 ## Ayarlar penceresi
 
-GNOME **Uzantılar** uygulaması → Dynamic Island → ⚙ (ya da `gnome-extensions prefs dynamic-island@local`): island'lar, dil, tema, vurgu rengi, özellikler, zamanlama ve modüllerin açılıp kapanması / sırası / panelde gösterimi. (Eklentinin ayar penceresinin görünmesi için eklenti dosyası ilk kez eklendiyse oturumu bir kez kapatıp açmak gerekir.) Aynı ayarlar terminalden de yapılabilir:
+GNOME **Uzantılar** uygulaması → Dynamic Island → ⚙ (ya da `gnome-extensions prefs dynamic-island@10sinan.github.io`): island'lar, dil, tema, vurgu rengi, özellikler, zamanlama ve modüllerin açılıp kapanması / sırası / panelde gösterimi. (Eklentinin ayar penceresinin görünmesi için eklenti dosyası ilk kez eklendiyse oturumu bir kez kapatıp açmak gerekir.) Aynı ayarlar terminalden de yapılabilir:
 
 ## Özelleştirme: `di-config`
 
@@ -298,7 +298,7 @@ Eklenti GSettings'i dinler. Bir ayar değişince 150 ms bekler, island'ları sı
 ```
 install.sh                 # kurulum
 tools/di-config            # terminal arayüzü + CLI (Python, curses; ek bağımlılık yok)
-dynamic-island@local/
+dynamic-island@10sinan.github.io/
 ├── metadata.json
 ├── prefs.js               # GNOME Uzantılar uygulamasındaki ayar penceresi (Adwaita)
 ├── extension.js           # ayarları okur, island'ları kurar, değişince yeniden kurar
@@ -433,7 +433,7 @@ Test, Wi-Fi, Bluetooth, güç modu ve ses gibi **gerçek sistem servislerini yal
 
 ```bash
 journalctl -b -o cat /usr/bin/gnome-shell | grep -E "dynamic-island|JS ERROR"
-gnome-extensions info dynamic-island@local
+gnome-extensions info dynamic-island@10sinan.github.io
 ```
 
 Satırlar `[dynamic-island] [center]` ya da `[dynamic-island] [qs]` önekiyle gelir.

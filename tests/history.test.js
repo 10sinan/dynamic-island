@@ -1,5 +1,5 @@
 // Run: gjs -m tests/history.test.js
-import {History} from '../dynamic-island@local/lib/history.js';
+import {History} from '../dynamic-island@10sinan.github.io/lib/history.js';
 
 let failures = 0;
 const check = (name, cond, detail = '') => {

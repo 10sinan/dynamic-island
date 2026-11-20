@@ -1,5 +1,5 @@
 // gjs -m tests/claudequota.test.js
-import {parseQuota, untilReset, readToken, crossedThresholds} from '../dynamic-island@local/lib/claudeQuota.js';
+import {parseQuota, untilReset, readToken, crossedThresholds} from '../dynamic-island@10sinan.github.io/lib/claudeQuota.js';
 
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; print(`FAIL ${m}`); } };

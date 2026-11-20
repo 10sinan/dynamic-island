@@ -4,7 +4,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-UUID="dynamic-island@local"
+UUID="dynamic-island@10sinan.github.io"
 EXT_SRC="$HERE/$UUID"
 EXT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions"
 BIN_DIR="$HOME/.local/bin"

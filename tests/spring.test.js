@@ -1,5 +1,5 @@
 // gjs -m tests/spring.test.js
-import {Spring, SpringGroup} from '../dynamic-island@local/lib/spring.js';
+import {Spring, SpringGroup} from '../dynamic-island@10sinan.github.io/lib/spring.js';
 
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; print(`FAIL ${m}`); } };

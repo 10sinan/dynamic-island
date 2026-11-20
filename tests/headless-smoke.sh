@@ -11,7 +11,7 @@ set -u
 export CYCLES="${1:-10}"
 export SHOTS="${2:-}"
 export HERE="$(cd "$(dirname "$0")/.." && pwd)"
-export UUID="dynamic-island@local"
+export UUID="dynamic-island@10sinan.github.io"
 export HELPER="di-test-helper@local"
 export SCHEMA="org.gnome.shell.extensions.dynamic-island"
 export SANDBOX="$(mktemp -d -t di-smoke-XXXXXX)"

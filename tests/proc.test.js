@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import {
     parseCpuStat, cpuUsage, parseMeminfo, parseNetDev, formatRate, severity, parseProcStat, topProcesses,
     readText, tryReadText, listDir, exists,
-} from '../dynamic-island@local/lib/proc.js';
+} from '../dynamic-island@10sinan.github.io/lib/proc.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {

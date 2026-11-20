@@ -1,0 +1,11 @@
+{
+  "uuid": "dynamic-island@10sinan.github.io",
+  "name": "Dynamic Island",
+  "description": "Three black pills in the top panel, no clicks needed: stats (left), clock + music + calendar + notifications (centre), Quick Settings (right). Everything opens on hover. Optional Claude Code usage card.",
+  "shell-version": [
+    "50"
+  ],
+  "settings-schema": "org.gnome.shell.extensions.dynamic-island",
+  "url": "https://github.com/10sinan/dynamic-island",
+  "version": 1
+}

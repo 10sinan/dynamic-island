@@ -1,5 +1,5 @@
 // Run: gjs -m tests/glyphs.test.js   (decision functions only; drawing is checked in the shell)
-import {batteryColor, volumeLevel, wifiLevel} from '../dynamic-island@local/lib/glyphLogic.js';
+import {batteryColor, volumeLevel, wifiLevel} from '../dynamic-island@10sinan.github.io/lib/glyphLogic.js';
 
 let failures = 0;
 const check = (name, cond, detail = '') => {

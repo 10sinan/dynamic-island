@@ -1,6 +1,6 @@
 // gjs -m tests/i18n.test.js
 import GLib from 'gi://GLib';
-import {_, _f, pct, setLanguage, shortDate, monthTitle, weekdayName, weekStart, getLanguage} from '../dynamic-island@local/lib/i18n.js';
+import {_, _f, pct, setLanguage, shortDate, monthTitle, weekdayName, weekStart, getLanguage} from '../dynamic-island@10sinan.github.io/lib/i18n.js';
 
 let fails = 0;
 const eq = (a, b, m) => { if (a !== b) { fails++; print(`FAIL ${m}: ${a} !== ${b}`); } };

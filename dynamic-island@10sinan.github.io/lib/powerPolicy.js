@@ -19,7 +19,7 @@ const DISPLAY_DEVICE = '/org/freedesktop/UPower/devices/DisplayDevice';
 const DEVICE_IFACE = 'org.freedesktop.UPower.Device';
 const PPD = 'org.freedesktop.UPower.PowerProfiles';
 const PPD_PATH = '/org/freedesktop/UPower/PowerProfiles';
-const APP_ID = 'dynamic-island@local';
+const APP_ID = 'dynamic-island@10sinan.github.io';
 // UPower Device.State
 const CHARGING = 1, DISCHARGING = 2, FULL = 4, PENDING_CHARGE = 5, PENDING_DISCHARGE = 6;
 

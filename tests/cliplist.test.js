@@ -1,5 +1,5 @@
 // Run: gjs -m tests/cliplist.test.js
-import {ClipList, isSecret, oneLine, pickKind} from '../dynamic-island@local/lib/clipList.js';
+import {ClipList, isSecret, oneLine, pickKind} from '../dynamic-island@10sinan.github.io/lib/clipList.js';
 
 let failures = 0;
 const check = (name, cond, detail = '') => {

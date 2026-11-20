@@ -1,6 +1,6 @@
 // gjs -m tests/claudeusage.test.js
 import {parseLine, addEntry, windowStats, formatTokens, splitDuration, billable, WINDOW_MS, calibratedLimit}
-    from '../dynamic-island@local/lib/claudeUsage.js';
+    from '../dynamic-island@10sinan.github.io/lib/claudeUsage.js';
 
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; print(`FAIL ${m}`); } };

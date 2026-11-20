@@ -1,5 +1,5 @@
 // Run: gjs -m tests/diskio.test.js
-import {IoMeter, formatBytes, parseDiskstats} from '../dynamic-island@local/lib/diskio.js';
+import {IoMeter, formatBytes, parseDiskstats} from '../dynamic-island@10sinan.github.io/lib/diskio.js';
 
 let failures = 0;
 const check = (name, cond, detail = '') => {
