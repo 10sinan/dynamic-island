@@ -854,8 +854,12 @@ export class Island {
             if (!animate) {
                 box.opacity = show ? 255 : 0;
                 box.visible = show;
+                if (m === 'expanded')
+                    this._resetRows();
             } else if (show) {
                 box.show();
+                if (m === 'expanded' && prev !== mode)
+                    this._staggerRows();
                 box.ease({
                     opacity: 255,
                     delay: prev === mode ? 0 : C.FADE_IN_DELAY_MS,
@@ -868,8 +872,11 @@ export class Island {
                     duration: C.FADE_OUT_MS,
                     mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                     onComplete: () => {
-                        if (!this._destroyed && this._mode !== m)
+                        if (!this._destroyed && this._mode !== m) {
                             box.hide();
+                            if (m === 'expanded')
+                                this._resetRows();
+                        }
                     },
                 });
             }
@@ -903,6 +910,38 @@ export class Island {
             this._autoTimer.clear();
             if (mode === 'compact')
                 this._collapseTimer.clear();
+        }
+    }
+
+    /**
+     * Content of the expanded island glides in row by row (header, banner,
+     * main, tiles) instead of appearing all at once.
+     */
+    _staggerRows() {
+        let i = 0;
+        for (const row of [this._headerRow, this._bannerRow, this._mainRow, this._tilesRow]) {
+            if (!row?.visible)
+                continue;
+            row.remove_all_transitions();
+            row.set({opacity: 0, translation_y: C.STAGGER_RISE});
+            row.ease({
+                opacity: 255,
+                translation_y: 0,
+                delay: C.FADE_IN_DELAY_MS + i * C.STAGGER_STEP_MS,
+                duration: C.STAGGER_MS,
+                mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+            });
+            i++;
+        }
+    }
+
+    /** Undo the stagger state so rows are fully shown whenever the box is. */
+    _resetRows() {
+        for (const row of [this._headerRow, this._bannerRow, this._mainRow, this._tilesRow]) {
+            if (!row)
+                continue;
+            row.remove_all_transitions();
+            row.set({opacity: 255, translation_y: 0});
         }
     }
 

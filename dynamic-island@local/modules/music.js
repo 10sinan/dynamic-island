@@ -15,6 +15,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
+import {pressFeedback} from '../lib/widgets.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
 
 const MPRIS = 'org.mpris.MediaPlayer2.';
@@ -849,6 +850,7 @@ export default class MusicModule extends IslandModule {
             const icon = new St.Icon({icon_name: iconName, icon_size: 16});
             const b = new St.Button({style_class: style, child: icon, can_focus: false});
             b.connect('clicked', onClick);
+            pressFeedback(b);
             controls.add_child(b);
             return [b, icon];
         };
