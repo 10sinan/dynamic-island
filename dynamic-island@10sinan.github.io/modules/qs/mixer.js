@@ -1,5 +1,6 @@
 // Per-app volume: one slider for every app that is playing sound right now
-// (browser, Spotify, Discord...). Hidden when no app plays anything.
+// (browser, Spotify, Discord...). A section of the volume drawer
+// (modules/qs/sliders.js); it has no content when no app plays anything.
 import Clutter from 'gi://Clutter';
 import Gvc from 'gi://Gvc';
 import Pango from 'gi://Pango';
@@ -9,15 +10,26 @@ import St from 'gi://St';
 import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 
-import {IslandModule} from '../base.js';
 import {_} from '../../lib/i18n.js';
 import * as C from '../../lib/constants.js';
 
 const MAX_ROWS = 5;
 
-export default class MixerModule extends IslandModule {
-    static id = 'mixer';
-    static slot = 'main';
+export default class MixerSection {
+    /** @param {object} ctx module context; @param {function} onChange called when content or size changed */
+    constructor(ctx, onChange) {
+        this.ctx = ctx;
+        this._onChange = onChange;
+    }
+
+    get accent() {
+        return this.ctx?.config?.accent ?? '#5ee6b5';
+    }
+
+    /** true while at least one app plays sound. */
+    get hasContent() {
+        return !!this._box && this._box.visible;
+    }
 
     async init() {
         this._control = Volume.getMixerControl();
@@ -33,8 +45,8 @@ export default class MixerModule extends IslandModule {
             stream.get_application_id?.() !== 'org.gnome.Shell';
     }
 
-    buildExpanded() {
-        const box = new St.BoxLayout({style_class: 'di-audio di-mixer', orientation: Clutter.Orientation.VERTICAL,
+    build() {
+        const box = new St.BoxLayout({style_class: 'di-drawer-section di-mixer', orientation: Clutter.Orientation.VERTICAL,
             visible: false});
         box.add_child(new St.Label({style_class: 'di-section-title', text: _('APP VOLUME')}));
         this._list = new St.BoxLayout({style_class: 'di-audio-list', orientation: Clutter.Orientation.VERTICAL});
@@ -140,7 +152,7 @@ export default class MixerModule extends IslandModule {
         if (!this._box)
             return;
         this._box.visible = this._rows.size > 0;
-        this.ctx?.requestExpandedRelayout?.();
+        this._onChange?.();
     }
 
     destroy() {
@@ -150,6 +162,6 @@ export default class MixerModule extends IslandModule {
             this._control?.disconnect(id);
         this._ids = [];
         this._control = this._box = this._list = null;
-        super.destroy();
+        this.ctx = this._onChange = null;
     }
 }

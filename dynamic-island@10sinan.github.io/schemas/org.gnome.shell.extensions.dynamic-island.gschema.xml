@@ -160,7 +160,7 @@
       <summary>Events that briefly open the centre island</summary>
     </key>
     <key name="qs-modules" type="as">
-      <default>['sliders', 'audio', 'mixer', 'toggles', 'clipboard', 'system']</default>
+      <default>['sliders', 'toggles', 'clipboard', 'system']</default>
       <summary>Sections of the Quick Settings island, top to bottom</summary>
     </key>
 

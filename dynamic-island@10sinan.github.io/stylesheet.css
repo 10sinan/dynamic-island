@@ -986,15 +986,19 @@
     padding: 2px 8px;
 }
 
-.di-audio {
-    spacing: 4px;
-    padding: 8px;
-    border-radius: 18px;
-    background-color: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+/* volume drawer: sound output + app volume, inside the sliders card */
+.di-drawer {
+    spacing: 6px;
+    margin: 2px 0 4px 0;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.di-audio .di-section-title {
+.di-drawer-section {
+    spacing: 4px;
+}
+
+.di-drawer-section .di-section-title {
     padding: 0 6px 2px 6px;
 }
 

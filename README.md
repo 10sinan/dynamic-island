@@ -268,7 +268,7 @@ Arayüz dili cihazın diline göre **değil**, `language` ayarına göre belirle
 ### Çalışma alanları, ses çıkışı, uyanık tut
 
 - **Çalışma alanları (sol island):** Her çalışma alanı bir kart; içindeki pencereler listelenir. Pencereye tıkla → o pencereye geçer, başlığa tıkla → o çalışma alanına geçer (Activities düğmesinin yerini tutar).
-- **Ses çıkışı (sağ island):** Birden fazla çıkış varsa (hoparlör, kulaklık, Bluetooth, HDMI) listelenir; tıklayınca varsayılan çıkış olur.
+- **Ses çıkışı (sağ island):** Ses kaydırıcısının yanındaki **›** ile açılan menüde, birden fazla çıkış varsa (hoparlör, kulaklık, Bluetooth, HDMI) listelenir; tıklayınca varsayılan çıkış olur.
 - **Uyanık tut (sağ island, düğmeler):** Ekranın kararmasını ve uykuya geçmeyi engeller. Her tıkta: 30 dk → 1 sa → 3 sa → kapatana kadar → kapalı. Açıkken panelde küçük bir güneş simgesi görünür.
 - **Disk bildirimi:** "Büyük dosya işlemi" artık yalnızca yaklaşık 10 sn boyunca sürekli ~150 MB/s üstü disk kullanımında çıkar, 2 dakikada en fazla bir kez; biten işlem için de en az 2 GB taşınmış olmalıdır.
 
@@ -342,7 +342,7 @@ Kurulum: `di-config claude-hooks install` ve `di-config set claude-permission-bu
 
 ### Uygulama başına ses
 
-Sağ island'da ses çalan her uygulama (tarayıcı, Spotify, Discord...) için ayrı kaydırıcı; simgeye tıklayınca o uygulama sessize alınır. Hiçbir uygulama ses çalmıyorsa bölüm gizlenir.
+Ses kaydırıcısının yanındaki **›** ile açılan menüde, ses çalan her uygulama (tarayıcı, Spotify, Discord...) için ayrı kaydırıcı; simgeye tıklayınca o uygulama sessize alınır. Menü island kapanınca kendiliğinden kapanır. Ne çıkış seçeneği ne de ses çalan uygulama varsa **›** görünmez.
 
 ### Pil simgesi
 

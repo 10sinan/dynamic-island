@@ -1,19 +1,31 @@
 // Sound output chooser: speakers / headphones / Bluetooth / HDMI, one click.
-// Shown only when there is more than one output to choose from.
+// A section of the volume drawer (modules/qs/sliders.js); it has content only
+// when there is more than one output to choose from.
 import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 
-import {IslandModule} from '../base.js';
 import {_} from '../../lib/i18n.js';
 
 const MAX_ROWS = 5;
 
-export default class AudioOutputModule extends IslandModule {
-    static id = 'audio';
-    static slot = 'main';
+export default class AudioSection {
+    /** @param {object} ctx module context; @param {function} onChange called when content or size changed */
+    constructor(ctx, onChange) {
+        this.ctx = ctx;
+        this._onChange = onChange;
+    }
+
+    get accent() {
+        return this.ctx?.config?.accent ?? '#5ee6b5';
+    }
+
+    /** true while there is something to choose (more than one output). */
+    get hasContent() {
+        return !!this._box && this._box.visible;
+    }
 
     async init() {
         this._control = Volume.getMixerControl();
@@ -56,12 +68,14 @@ export default class AudioOutputModule extends IslandModule {
             this._active = dev.get_id();
     }
 
-    buildExpanded() {
-        const box = new St.BoxLayout({style_class: 'di-audio', orientation: Clutter.Orientation.VERTICAL});
+    build() {
+        const box = new St.BoxLayout({style_class: 'di-drawer-section', orientation: Clutter.Orientation.VERTICAL,
+            visible: false});
         box.add_child(new St.Label({style_class: 'di-section-title', text: _('SOUND OUTPUT')}));
         this._list = new St.BoxLayout({style_class: 'di-audio-list', orientation: Clutter.Orientation.VERTICAL});
         box.add_child(this._list);
         this._box = box;
+        this._sig = null;   // a fresh box must be filled even if the devices did not change
         box.connect('destroy', () => {
             this._box = this._list = null;
         });
@@ -86,7 +100,7 @@ export default class AudioOutputModule extends IslandModule {
         this._box.visible = devs.length > 1;
         for (const dev of devs.slice(0, MAX_ROWS))
             this._list.add_child(this._row(dev));
-        this.ctx?.requestExpandedRelayout?.();
+        this._onChange?.();
     }
 
     _row(dev) {
@@ -126,6 +140,6 @@ export default class AudioOutputModule extends IslandModule {
         this._ids = [];
         this._devices?.clear();
         this._control = this._box = this._list = null;
-        super.destroy();
+        this.ctx = this._onChange = null;
     }
 }

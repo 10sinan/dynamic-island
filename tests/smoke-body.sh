@@ -735,7 +735,8 @@ echo
 
 echo "== per-app volume (silent sound in the sandbox)"
 python3 -c "import wave; w=wave.open('$SANDBOX/silence.wav','wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000); w.writeframes(bytes(8000*2*6)); w.close()"
-MX="$Q.moduleById('mixer')"
+SL="$Q.moduleById('sliders')"
+MX="$SL._mixer"
 paplay --client-name=di-test "$SANDBOX/silence.wav" >/dev/null 2>&1 &
 PA=$!
 sleep 2
@@ -743,7 +744,13 @@ ev "$Q._hold(true); $Q._setMode('expanded'); true" >/dev/null; sleep 1
 echo "   playing: rows=$(ev "$MX._rows.size") visible=$(ev "$MX._box?.visible") name=$(ev "[...$MX._rows.values()][0]?.row.get_child_at_index(1).get_child_at_index(0).text")"
 ev "[...$MX._rows.values()][0]?.slider && ([...$MX._rows.values()][0].slider.value = 0.4); true" >/dev/null; sleep 0.5
 echo "   slider 40% -> stream volume: $(ev "(() => { const e = [...$MX._rows.values()][0]; return e ? Math.round(e.stream.volume / imports.gi.Gvc.MixerControl.prototype.get_vol_max_norm.call($MX._control) * 100) : 'n/a'; })()")% pct=$(ev "[...$MX._rows.values()][0]?.pct.text")"
-shot qs-mixer 1300 0 620 520
+echo "   chevron visible=$(ev "$SL._chev?.visible") drawer closed by default: $(ev "!$SL._open && !$SL._drawer?.visible")"
+shot qs-volume-closed 1300 0 620 520
+ev "$SL._toggleDrawer(); true" >/dev/null; sleep 1
+echo "   drawer opened: open=$(ev "$SL._open") visible=$(ev "$SL._drawer?.visible") opacity=$(ev "$SL._drawer?.opacity")"
+shot qs-mixer 1300 0 620 620
+ev "$SL._toggleDrawer(); true" >/dev/null; sleep 0.6
+echo "   drawer closed again: visible=$(ev "$SL._drawer?.visible")"
 wait $PA 2>/dev/null; sleep 1.5
 echo "   finished: rows=$(ev "$MX._rows.size") hidden=$(ev "!$MX._box?.visible")"
 ev "$Q._hold(false); $Q._collapseAll(false); true" >/dev/null; sleep 0.5

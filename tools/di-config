@@ -199,7 +199,7 @@ def T(s):
 
 CENTER_ALL = ["music", "calendar", "notifications", "claude"]
 STATS_ALL = ["workspaces", "cpu", "ram", "temp", "net", "battery", "gpu", "disk", "graph", "procs"]
-QS_ALL = ["sliders", "audio", "mixer", "toggles", "clipboard", "system"]
+QS_ALL = ["sliders", "toggles", "clipboard", "system"]
 EVENTS_ALL = ["power", "battery-low", "wifi", "bluetooth", "privacy", "thermal", "memory", "disk",
               "lockkey", "layout", "meeting", "powersaver"]
 # modules that have a view in the panel pill (the "panelde" column)
@@ -208,8 +208,6 @@ COMPACT_CAPABLE = {"music", "cpu", "ram", "temp", "net", "battery", "disk"}
 MODULE_NAMES = {
     "claude": "Claude Code kullanımı (5 saatlik oturum)",
     "workspaces": "Çalışma alanları ve pencereler",
-    "audio": "Ses çıkışı seçici",
-    "mixer": "Uygulama başına ses",
     "gpu": "GPU kullanımı",
     "disk": "Disk doluluğu",
     "graph": "Canlı grafikler (60 sn)",

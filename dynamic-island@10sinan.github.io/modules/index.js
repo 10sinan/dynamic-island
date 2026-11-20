@@ -23,8 +23,6 @@ import GraphModule from './stats/graph.js';
 import ProcsModule from './stats/procs.js';
 import ClaudeUsageModule from './claude.js';
 import WorkspacesModule from './stats/workspaces.js';
-import AudioOutputModule from './qs/audio.js';
-import MixerModule from './qs/mixer.js';
 import TogglesModule from './qs/toggles.js';
 import ClipboardModule from './qs/clipboard.js';
 import SystemModule from './qs/system.js';
@@ -58,8 +56,6 @@ export const STATS_MODULES = {
 
 export const QS_MODULES = {
     sliders: SlidersModule,
-    audio: AudioOutputModule,
-    mixer: MixerModule,
     toggles: TogglesModule,
     clipboard: ClipboardModule,
     system: SystemModule,
