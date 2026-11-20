@@ -9,6 +9,7 @@ import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.j
 
 import {IslandModule} from '../base.js';
 import {_} from '../../lib/i18n.js';
+import {pressFeedback} from '../../lib/widgets.js';
 import {listDir, tryReadText} from '../../lib/proc.js';
 
 const PS = '/sys/class/power_supply';
@@ -40,6 +41,7 @@ export default class SystemModule extends IslandModule {
             accessible_name: tooltip,
             child: new St.Icon({icon_name: iconName, icon_size: 16})});
         b.connect('clicked', onClick);
+        pressFeedback(b);
         return b;
     }
 

@@ -8,6 +8,26 @@ import {BAR_W_COMPACT, BAR_W_TILE, EASE_SLIDE, GLIDE_MS} from './constants.js';
 const DEFAULT_ACCENT = '#5ee6b5';
 
 /**
+ * Press feedback for a St.Button: it shrinks slightly while held and
+ * springs back on release. Uses a transform only (no relayout); the
+ * handler dies with the actor, so nothing needs disconnecting.
+ */
+export function pressFeedback(button, pressedScale = 0.92) {
+    button.set_pivot_point(0.5, 0.5);
+    button.connect('notify::pressed', () => {
+        button.remove_all_transitions();
+        const down = button.pressed;
+        button.ease({
+            scale_x: down ? pressedScale : 1,
+            scale_y: down ? pressedScale : 1,
+            duration: down ? 80 : 200,
+            mode: down ? Clutter.AnimationMode.EASE_OUT_QUAD : Clutter.AnimationMode.EASE_OUT_BACK,
+        });
+    });
+    return button;
+}
+
+/**
  * Thin horizontal level bar: a track with a coloured fill.
  * The fill always has the full width and is scaled horizontally
  * (scale_x, pivot at the left edge): animating a transform never

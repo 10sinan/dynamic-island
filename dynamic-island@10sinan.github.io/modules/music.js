@@ -16,6 +16,7 @@ import St from 'gi://St';
 
 import {IslandModule} from './base.js';
 import {MAX_ART_BYTES, artSocketGuard, assertPublicHost, checkArtUrl, readCapped} from '../lib/artFetch.js';
+import {pressFeedback} from '../lib/widgets.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
 import * as C from '../lib/constants.js';
 
@@ -912,6 +913,7 @@ export default class MusicModule extends IslandModule {
             const icon = new St.Icon({icon_name: iconName, icon_size: 16});
             const b = new St.Button({style_class: style, child: icon, can_focus: false});
             b.connect('clicked', onClick);
+            pressFeedback(b);
             controls.add_child(b);
             return [b, icon];
         };

@@ -82,6 +82,10 @@ export const COVER_FADE_MS = 460;
 export const AMBIENT_SLOW_MS = 4800;
 export const AMBIENT_PULSE_MS = 1700;
 export const AMBIENT_ICON_MS = 700;
+// Expanded island: rows glide in one after the other (a slide-in per row)
+export const STAGGER_MS = SLIDE_IN_MS;
+export const STAGGER_STEP_MS = 45;     // delay between rows
+export const STAGGER_RISE = 10;        // px each row rises from
 
 export const EASE_FADE = Clutter.AnimationMode.EASE_OUT_QUAD;
 export const EASE_SLIDE = Clutter.AnimationMode.EASE_OUT_CUBIC;
