@@ -13,6 +13,7 @@ import {IslandModule} from './base.js';
 import {_, _f, weekdayName} from '../lib/i18n.js';
 import {WINDOW_MS, addEntry, formatTokens, parseLine, splitDuration, windowStats} from '../lib/claudeUsage.js';
 import {untilReset} from '../lib/claudeQuota.js';
+import {IDLE_MAX_MS, listAgents, parseActivity, pruneAgents, rowBudget, updateAgent} from '../lib/claudeAgents.js';
 import {fetchQuota} from '../lib/claudeFetch.js';
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
@@ -30,6 +31,7 @@ const QBAR_W = 96;
 const RED = {r: 255, g: 99, b: 84};
 const MAX_DEPTH = 4;
 const CHUNK = 1 << 20;
+const AGENTS_HOVER_MS = 220;   // pointer must rest this long on the card before the agents panel opens
 
 export default class ClaudeUsageModule extends IslandModule {
     static id = 'claude';
@@ -42,12 +44,18 @@ export default class ClaudeUsageModule extends IslandModule {
         }
         this._entries = new Map();     // message id -> counters
         this._files = new Map();       // path -> bytes already read (up to the last full line)
+        this._agents = new Map();      // session id -> what it is doing (lib/claudeAgents.js)
         this._lastScan = 0;
         this._scanning = false;
     }
 
     buildExpanded() {
-        const card = new St.BoxLayout({style_class: 'di-claude', x_expand: true});
+        // card = [ring + numbers] row, and below it the open-agents panel that
+        // grows in while the pointer is over the card
+        const card = new St.BoxLayout({style_class: 'di-claude', orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true, reactive: true, track_hover: true});
+        const row = new St.BoxLayout({style_class: 'di-claude-row', x_expand: true});
+        card.add_child(row);
 
         // ring: how much of the session is left (or of the limit, when one is set)
         this._ringFrac = 0;
@@ -60,12 +68,18 @@ export default class ClaudeUsageModule extends IslandModule {
         const ringBox = new St.Widget({layout_manager: new Clutter.BinLayout(), y_align: Clutter.ActorAlign.CENTER});
         ringBox.add_child(this._ring);
         ringBox.add_child(this._ringText);
-        card.add_child(ringBox);
+        row.add_child(ringBox);
 
         const col = new St.BoxLayout({style_class: 'di-claude-col', orientation: Clutter.Orientation.VERTICAL,
             x_expand: true, y_align: Clutter.ActorAlign.CENTER});
         const top = new St.BoxLayout();
         top.add_child(new St.Label({style_class: 'di-claude-title', text: 'CLAUDE', x_expand: true}));
+        // how many agents are open (hover the card for the list); hidden when the panel is off or none
+        if (this.ctx?.config?.claudeAgentsPanel) {
+            this._agentBadge = new St.Label({style_class: 'di-claude-agents-badge', visible: false,
+                y_align: Clutter.ActorAlign.CENTER});
+            top.add_child(this._agentBadge);
+        }
         this._today = new St.Label({style_class: 'di-claude-today', text: ''});
         top.add_child(this._today);
         const mid = new St.BoxLayout({style_class: 'di-claude-mid'});
@@ -95,9 +109,19 @@ export default class ClaudeUsageModule extends IslandModule {
         col.add_child(this._track);
         col.add_child(foot);
         col.add_child(this._table);
-        card.add_child(col);
+        row.add_child(col);
+
+        if (this.ctx?.config?.claudeAgentsPanel) {
+            this._agentsBox = new St.BoxLayout({style_class: 'di-agents', orientation: Clutter.Orientation.VERTICAL,
+                x_expand: true, visible: false, opacity: 0});
+            card.add_child(this._agentsBox);
+            card.connect('notify::hover', () => this._setAgentsOpen(card.hover));
+        }
 
         card.connect('destroy', () => {
+            this._agentsBox = this._agentBadge = null;
+            this._agentsKey = null;
+            this._agentsOpen = false;
             this._ringTl?.stop();
             this._ringTl = null;
             this._ring = this._ringText = this._value = this._unit = this._today = null;
@@ -109,6 +133,136 @@ export default class ClaudeUsageModule extends IslandModule {
         this._shown = null;
         this._render();
         return card;
+    }
+
+    // ------------------------------------------------------------ open agents (hover panel)
+
+    /** Pointer over the card: open the panel after a short pause (so just passing by does not move the layout), close at once on leave. */
+    _setAgentsOpen(over) {
+        if (!this._agentsBox)
+            return;
+        if (over) {
+            this._agentsTimer ??= GLib.timeout_add(GLib.PRIORITY_DEFAULT, AGENTS_HOVER_MS, () => {
+                this._agentsTimer = 0;
+                if (this._agentsBox && this._card?.hover)
+                    this._showAgents();
+                return GLib.SOURCE_REMOVE;
+            });
+            return;
+        }
+        if (this._agentsTimer) {
+            GLib.source_remove(this._agentsTimer);
+            this._agentsTimer = 0;
+        }
+        this._hideAgents();
+    }
+
+    _showAgents() {
+        const box = this._agentsBox;
+        if (!box || box.visible && box.opacity === 255)
+            return;
+        this._renderAgents(true);
+        box.remove_all_transitions();
+        box.show();
+        box.ease({opacity: 255, duration: 160, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        this.ctx?.requestExpandedRelayout?.();
+    }
+
+    _hideAgents() {
+        const box = this._agentsBox;
+        if (!box || !box.visible)
+            return;
+        box.remove_all_transitions();
+        box.ease({opacity: 0, duration: 110, mode: Clutter.AnimationMode.EASE_OUT_QUAD, onComplete: () => {
+            if (this._agentsBox !== box)
+                return;
+            box.hide();
+            this.ctx?.requestExpandedRelayout?.();
+        }});
+    }
+
+    _agoText(a) {
+        const min = Math.floor(a.agoMs / 60000);
+        if (a.state === 'working')
+            return _('working');
+        return min < 1 ? _('idle') : _f('%s ago', _f('%s min', min));
+    }
+
+    /** What the agent is doing right now, in one line. */
+    _activityText(a) {
+        const tool = a.tool ? (a.target ? `${a.tool} · ${a.target}` : a.tool) : '';
+        if (a.state === 'working')
+            return a.text || tool || _('Thinking…');
+        return a.text || tool;
+    }
+
+    /** Badge with the number of agents; the list itself is rebuilt only while the panel is open and something changed. */
+    _renderAgents(force = false) {
+        if (!this._agentsBox || !this._agentBadge)
+            return;
+        const all = listAgents(this._agents, Date.now());
+        this._agentBadge.visible = all.length > 0;
+        this._agentBadge.text = all.length === 1 ? _('1 agent') : _f('%s agents', all.length);
+        if (!force && !this._agentsBox.visible)
+            return;
+        const list = all.slice(0, this._agentRows());
+        const hidden = all.length - list.length;
+        const key = hidden + '\u0003' + list.map(a => [a.session, a.state, a.tool, a.target, a.text, a.prompt, a.sub,
+            this._agoText(a)].join('\u0001')).join('\u0002');
+        if (key === this._agentsKey)
+            return;
+        this._agentsKey = key;
+        this._agentsBox.destroy_all_children();
+        if (!list.length) {
+            this._agentsBox.add_child(new St.Label({style_class: 'di-agent-empty',
+                text: _('No Claude session in the last 30 min')}));
+        }
+        for (const a of list)
+            this._agentsBox.add_child(this._agentRow(a));
+        if (hidden > 0)
+            this._agentsBox.add_child(new St.Label({style_class: 'di-agent-empty', text: _f('+%s more', hidden)}));
+        this.ctx?.requestExpandedRelayout?.();
+    }
+
+    /** The island has no height limit of its own: only as many rows as fit under the card on this screen. */
+    _agentRows() {
+        try {
+            const mon = global.display.get_monitor_geometry(global.display.get_primary_monitor());
+            const [, top] = this._card.get_transformed_position();
+            // the card without the panel (the panel may already be open), the island's bottom padding and a margin
+            const base = this._agentsBox.visible ? this._card.height - this._agentsBox.height - 18 : this._card.height;
+            return rowBudget(mon.y + mon.height - (top + base) - 48);
+        } catch {
+            return rowBudget(1e9);
+        }
+    }
+
+    _agentRow(a) {
+        const row = new St.BoxLayout({style_class: 'di-agent', orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true});
+        const head = new St.BoxLayout({style_class: 'di-agent-head'});
+        head.add_child(new St.Widget({style_class: `di-agent-dot di-agent-dot-${a.state}`, width: 8, height: 8,
+            y_align: Clutter.ActorAlign.CENTER}));
+        const name = new St.Label({style_class: 'di-agent-name', text: a.project, x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER});
+        name.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        head.add_child(name);
+        head.add_child(new St.Label({style_class: 'di-agent-ago', text: this._agoText(a),
+            y_align: Clutter.ActorAlign.CENTER}));
+        row.add_child(head);
+        const line = (cls, text) => {
+            if (!text)
+                return;
+            const l = new St.Label({style_class: cls, text, x_expand: true});
+            l.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+            l.clutter_text.set_single_line_mode(true);
+            row.add_child(l);
+        };
+        line('di-agent-act', this._activityText(a));
+        if (a.sub)
+            line('di-agent-sub', `↳ ${_('Sub-agent running')}`);
+        line('di-agent-prompt', a.prompt);
+        return row;
     }
 
     _paintRing() {
@@ -235,6 +389,7 @@ export default class ClaudeUsageModule extends IslandModule {
             if (e.t < since)
                 this._entries.delete(id);
         }
+        pruneAgents(this._agents, Date.now());
     }
 
     async _walk(dir, depth, sinceSec, seen) {
@@ -262,7 +417,8 @@ export default class ClaudeUsageModule extends IslandModule {
                            info.get_attribute_uint64('time::modified') >= sinceSec) {
                     const path = child.get_path();
                     seen.add(path);
-                    await this._readNew(child, path, Number(info.get_size()));
+                    const fresh = info.get_attribute_uint64('time::modified') * 1000 >= Date.now() - IDLE_MAX_MS;
+                    await this._readNew(child, path, Number(info.get_size()), fresh);
                 }
             }
         }
@@ -274,7 +430,7 @@ export default class ClaudeUsageModule extends IslandModule {
     }
 
     /** Parse only what was appended since the last scan. */
-    async _readNew(file, path, size) {
+    async _readNew(file, path, size, fresh = false) {
         let offset = this._files.get(path) ?? 0;
         if (size < offset)
             offset = 0;   // file was rewritten
@@ -285,6 +441,7 @@ export default class ClaudeUsageModule extends IslandModule {
             if (offset)
                 stream.seek(offset, GLib.SeekType.SET, null);
             const dec = new TextDecoder();
+            const agents = fresh && this.ctx?.config?.claudeAgentsPanel ? this._agents : null;
             let carry = new Uint8Array(0), consumed = offset;
             for (;;) {
                 const bytes = await stream.read_bytes_async(CHUNK, GLib.PRIORITY_LOW, this.cancellable);
@@ -305,6 +462,12 @@ export default class ClaudeUsageModule extends IslandModule {
                     const e = parseLine(line);
                     if (e)
                         addEntry(this._entries, e);
+                    // open agents: only files touched recently, and only when the panel is on
+                    if (agents) {
+                        const act = parseActivity(line);
+                        if (act)
+                            updateAgent(agents, act);
+                    }
                 }
                 consumed += end + 1;
                 carry = buf.slice(end + 1);
@@ -319,6 +482,7 @@ export default class ClaudeUsageModule extends IslandModule {
     _render() {
         if (!this._value)
             return;
+        this._renderAgents();
         const real = this.ctx?.config?.claudeRealUsage && this._quota?.rows.length;
         this._table.visible = !!real;
         for (const a of this._localParts)
@@ -443,6 +607,11 @@ export default class ClaudeUsageModule extends IslandModule {
     destroy() {
         this._soupHolder?.soup?.abort();
         this._soupHolder = null;
+        if (this._agentsTimer) {
+            GLib.source_remove(this._agentsTimer);
+            this._agentsTimer = 0;
+        }
+        this._agents?.clear();
         this._entries?.clear();
         this._files?.clear();
         this._ringTl?.stop();

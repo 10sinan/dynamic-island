@@ -1025,8 +1025,84 @@
     border: 1px solid rgba(217, 119, 87, 0.38);
     border-radius: 18px;
     padding: 10px 16px 10px 12px;
-    spacing: 14px;
     margin-top: 2px;
+}
+
+.di-claude-row {
+    spacing: 14px;
+}
+
+/* open agents: list that grows in under the card while hovering it */
+.di-claude-agents-badge {
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #f0b49e;
+    background-color: rgba(217, 119, 87, 0.22);
+    border-radius: 8px;
+    padding: 0 7px;
+    margin-right: 8px;
+}
+
+.di-agents {
+    spacing: 6px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(217, 119, 87, 0.28);
+}
+
+.di-agent {
+    spacing: 1px;
+}
+
+.di-agent-head {
+    spacing: 7px;
+}
+
+.di-agent-dot {
+    border-radius: 4px;
+}
+
+.di-agent-dot-working {
+    background-color: #d97757;
+}
+
+.di-agent-dot-idle {
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+.di-agent-name {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.di-agent-ago {
+    font-size: 8.5pt;
+    color: rgba(240, 190, 170, 0.80);
+}
+
+.di-agent-act {
+    font-family: monospace;
+    font-size: 8.5pt;
+    color: rgba(255, 255, 255, 0.88);
+    margin-left: 15px;
+}
+
+.di-agent-sub {
+    font-size: 8.5pt;
+    color: #f0b49e;
+    margin-left: 15px;
+}
+
+.di-agent-prompt {
+    font-size: 8.5pt;
+    color: rgba(255, 255, 255, 0.50);
+    margin-left: 15px;
+}
+
+.di-agent-empty {
+    font-size: 9pt;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .di-claude-ring-text {
