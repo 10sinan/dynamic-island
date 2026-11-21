@@ -294,7 +294,14 @@ export default class SearchModule extends IslandModule {
         if (!r)
             return;
         try {
-            r.p.activateResult(r.meta.id, r.terms, global.get_current_time());
+            // overview entries may wrap the real provider (GNOME 50: `.provider`)
+            const prov = [r.p, r.p.provider].find(x => typeof x?.activateResult === 'function');
+            if (prov)
+                prov.activateResult(r.meta.id, r.terms, global.get_current_time());
+            else if (r.p.id === 'applications')
+                Shell.AppSystem.get_default().lookup_app(r.meta.id)?.activate();
+            else
+                throw new Error('provider cannot activate results');
         } catch (e) {
             console.warn(`[dynamic-island] search: could not open ${r.meta.name}: ${e.message}`);
         }
