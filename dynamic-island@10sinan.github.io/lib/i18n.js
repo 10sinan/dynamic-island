@@ -175,6 +175,12 @@ const TR = {
     'Allow': 'İzin ver', 'Deny': 'Reddet', 'No answer: Claude Code asks as usual': 'Yanıt vermezsen Claude Code her zamanki gibi sorar',
     'Claude: allow / deny permissions from the island': 'Claude: izni island\'dan ver / reddet',
     'Mouse click only. If you do not answer, Claude Code asks as usual': 'Yalnızca fare tıklamasıyla. Yanıt vermezsen Claude Code her zamanki gibi sorar',
+    // claude agents panel
+    'Claude: show open agents on hover': 'Claude: açık ajanları üstüne gelince göster',
+    'Hover the Claude card to see which sessions are active and what they do (commands and file names appear on screen)':
+        'Claude kartının üstüne gelince hangi oturumların açık olduğunu ve ne yaptıklarını gör (komut ve dosya adları ekranda görünür)',
+    '1 agent': '1 ajan', '%s agents': '%s ajan', 'No Claude session in the last 30 min': 'Son 30 dakikada Claude oturumu yok',
+    '+%s more': '+%s daha', 'Thinking…': 'Düşünüyor…', 'Sub-agent running': 'Alt ajan çalışıyor', '%s ago': '%s önce', 'working': 'çalışıyor', 'idle': 'boşta',
     // claude usage
     'Claude Code usage': 'Claude Code kullanımı', 'Claude token limit (K per 5 h)': 'Claude token limiti (5 saatte, bin)',
     '0 = just show the tokens used; set your own limit to see how much is left': '0 = yalnızca kullanılan token; kendi limitini yazarsan kalanı görürsün',

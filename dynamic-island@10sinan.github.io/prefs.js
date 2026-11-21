@@ -140,6 +140,8 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
             _('Needs the real quota setting above'));
         this._switch(s, feat, 'claude-permission-buttons', _('Claude: allow / deny permissions from the island'),
             _('Mouse click only. If you do not answer, Claude Code asks as usual'));
+        this._switch(s, feat, 'claude-agents-panel', _('Claude: show open agents on hover'),
+            _('Hover the Claude card to see which sessions are active and what they do (commands and file names appear on screen)'));
         this._spin(s, feat, 'claude-token-limit', _('Claude token limit (K per 5 h)'),
             _('0 = just show the tokens used; set your own limit to see how much is left'), 1000);
         // calibration: type the session % that Claude Code's /usage shows

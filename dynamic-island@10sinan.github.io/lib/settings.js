@@ -25,6 +25,7 @@ export function readConfig(settings) {
         claudeQuotaAlerts: settings.get_boolean('claude-quota-alerts'),
         claudePermissionButtons: settings.get_boolean('claude-permission-buttons'),
         claudeNotify: settings.get_boolean('claude-notify'),
+        claudeAgentsPanel: settings.get_boolean('claude-agents-panel'),
         claudeLimit: settings.get_int('claude-token-limit') * 1000,
         spring: settings.get_boolean('spring'),
         morphBlur: settings.get_boolean('morph-blur'),

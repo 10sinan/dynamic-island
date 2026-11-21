@@ -211,6 +211,14 @@ Orta island'da **CLAUDE** kartı: 5 saatlik oturumda kullanılan token ve oturum
 
 **Gerçek kota (önerilen):** `claude-real-usage` açıksa kart, Claude Code'un `/usage` ekranındaki rakamların aynısını gösterir: **5 saat** ve **haftalık** (varsa model bazlı haftalık) satırları; her satırda turuncu çubuk, yüzde ve sıfırlanma (`4,7 sa (Per 01:30)`). Bunun için Claude Code'un `~/.claude/.credentials.json` dosyasındaki giriş anahtarı **yalnızca okunur** ve yalnızca `api.anthropic.com`'a gönderilir (yenilenmez/değiştirilmez); island açıkken 3 dakikada bir güncellenir. Bu adres resmî olarak belgelenmemiştir; çalışmazsa kart yerel tahmine döner. Açmak: `di-config set claude-real-usage true` ya da Ayarlar → Özellikler.
 
+**Açık ajanlar (üstüne gelince):** Claude kartının üstünde imleci kısa süre (~0,2 sn) tutunca kartın altında bir panel açılır; imleç çekilince kapanır. Kartın başlığında ayrıca `2 ajan` rozeti görünür. Panelde son 30 dakikada hareket eden her Claude Code oturumu (en fazla 6) için:
+- **proje adı** (çalışma klasörünün adı), durum noktası (turuncu = çalışıyor, gri = boşta) ve `çalışıyor` / `12 dk önce`,
+- **şu an ne yaptığı**: çalışan araç ve hedefi (`Bash · npm test`, `Edit · lib/x.js`), ya da Claude'un son yazdığı cümle; araç yanıt beklerken "çalışıyor" kalır,
+- Task aracıyla başlatılmış bir **alt ajan** çalışıyorsa `↳ Alt ajan çalışıyor`,
+- oturumda en son yazdığın istek (soluk).
+
+Her şey yerel oturum kayıtlarından (`~/.claude/projects`, kota için zaten okunan dosyalar) okunur; hiçbir şey dışarı gönderilmez. **Bu bir tahmindir:** Claude Code hangi terminallerin hâlâ açık olduğunu bildirmez; kapatılmış bir oturum son hareketinden 30 dakika sonrasına kadar "boşta" görünür. Komut ve dosya adları ekranda göründüğü için ekran paylaşırken kapatmak istersen: `di-config set claude-agents-panel false` ya da Ayarlar → Özellikler. Dosya içerikleri ve araç çıktıları hiçbir zaman gösterilmez.
+
 **Kalibrasyon (yerel tahmin için):** Claude Code'da `/usage`'ın gösterdiği oturum yüzdesini bir kez gir; limit, yerelde sayılan tokenlarla o yüzde eşleşecek şekilde ayarlanır:
 
 ```bash
@@ -337,6 +345,7 @@ tests/
 ├── i18n.test.js           # dil katmanı testleri (gjs)
 ├── spring.test.js         # yay fiziği testleri (gjs)
 ├── claudeusage.test.js    # Claude kullanım hesabı testleri (gjs)
+├── claudeagents.test.js   # açık ajanlar: kayıt satırı ayrıştırma, durum, sıralama (gjs)
 ├── claudequota.test.js    # Anthropic kota yanıtı ayrıştırma testleri (gjs)
 ├── wave.test.js           # dalgalı çizgi geometrisi testleri (gjs)
 ├── artfetch.test.js       # kapak adresi kontrolleri + boyut sınırı (gjs)
@@ -400,6 +409,7 @@ gjs -m tests/cliplist.test.js
 gjs -m tests/i18n.test.js
 gjs -m tests/spring.test.js
 gjs -m tests/claudeusage.test.js
+gjs -m tests/claudeagents.test.js
 gjs -m tests/claudequota.test.js
 gjs -m tests/wave.test.js
 gjs -m tests/artfetch.test.js

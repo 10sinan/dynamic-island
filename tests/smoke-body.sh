@@ -317,6 +317,28 @@ echo "   claude tile (reads the real ~/.claude logs, local only): value=$(ev "$C
 dset claude-token-limit 20000; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 4
 echo "   with a 20M limit: value=$(ev "$CL._value?.text") unit=$(ev "$CL._unit?.text") ring=$(ev "$CL._ringText?.text") frac=$(ev "$CL._ringFrac.toFixed(2)")"
 shot claude-card 600 0 720 640
+echo "   open agents panel (fake sessions; the hover itself cannot be simulated, the panel is opened directly):"
+echo "     closed at first: visible=$(ev "$CL._agentsBox.visible") badge=$(ev "$CL._agentBadge.visible")"
+ev "$CL._agents.clear(); const n = Date.now(); \
+$CL._agents.set('a', {session: 'a', cwd: '/h/demo-app', t: n - 3000, subT: n - 2000, tool: {id: 't1', name: 'Bash', target: 'npm test'}, text: '', prompt: 'add a login page', pending: 't1'}); \
+$CL._agents.set('b', {session: 'b', cwd: '/h/notes', t: n - 7 * 60000, subT: 0, tool: {id: 't2', name: 'Edit', target: 'lib/x.js'}, text: 'Done: tests pass', prompt: 'fix the bug', pending: null}); \
+$CL._renderAgents(); true" >/dev/null
+echo "     badge: '$(ev "$CL._agentBadge.text")' visible=$(ev "$CL._agentBadge.visible")"
+ev "$CL._showAgents(); true" >/dev/null; sleep 0.6
+echo "     open: visible=$(ev "$CL._agentsBox.visible") opacity=$(ev "$CL._agentsBox.opacity") rows=$(ev "$CL._agentsBox.get_n_children()")"
+echo "     rows: $(ev "JSON.stringify($CL._agentsBox.get_children().map(r => r.get_children().map(c => c.text ?? c.get_children().map(x => x.text).filter(Boolean).join('/'))))")"
+echo "     card width stays in the island: $(ev "$CL._card.width <= $C._expandedInner.width")"
+shot claude-agents 600 0 720 760
+# many sessions on this 1080 px screen: capped by the free height, the rest is counted
+ev "$CL._agents.clear(); const n = Date.now(); for (let i = 0; i < 9; i++) $CL._agents.set('m' + i, {session: 'm' + i, cwd: '/h/p' + i, t: n - i * 1000, subT: 0, tool: null, text: 'x', prompt: 'y', pending: null}); $CL._renderAgents(true); true" >/dev/null; sleep 0.3
+echo "     9 sessions: rows allowed=$(ev "$CL._agentRows()") listed=$(ev "$CL._agentsBox.get_children().filter(c => c.has_style_class_name('di-agent')).length") last line='$(ev "$CL._agentsBox.get_child_at_index($CL._agentsBox.get_n_children() - 1).text")' island fits the screen=$(ev "$C.actor.y + $C.actor.height <= global.display.get_monitor_geometry(0).height")"
+ev "$CL._agents.clear(); $CL._renderAgents(true); true" >/dev/null
+echo "     no sessions: '$(ev "$CL._agentsBox.get_child_at_index(0).text")' badge hidden=$(ev "!$CL._agentBadge.visible")"
+ev "$CL._hideAgents(); true" >/dev/null; sleep 0.5
+echo "     closed again: visible=$(ev "$CL._agentsBox.visible")"
+dset claude-agents-panel false; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 1
+echo "     setting off: no panel=$(ev "!$CL._agentsBox") no badge=$(ev "!$CL._agentBadge") card still there=$(ev "!!$CL._value")"
+dreset claude-agents-panel; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 1
 dreset claude-token-limit; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 1
 dset claude-real-usage true; sleep 2; ev "$C._hold(true); $C._setMode('expanded'); true" >/dev/null; sleep 6
 CL="$C._modules.find(m => m.constructor.id === 'claude')"
