@@ -125,6 +125,7 @@ const TR = {
     'Open delay': 'Açılma bekleme', 'instant': 'anında', 'Close delay': 'Kapanma bekleme', 'Auto close': 'Kendiliğinden kapanma',
     'never': 'asla', 'Open animation': 'Açılma animasyonu', 'Notification preview time': 'Bildirim önizleme süresi',
     'Refresh (collapsed)': 'Yenileme (kapalıyken)', 'Refresh (expanded)': 'Yenileme (açıkken)', 'Spring effect': 'Yaylanma efekti',
+    'Liquid glass strength': 'Liquid glass gücü', 'solid': 'düz siyah',
     'Shown under the clock': 'Saatin altında açılanlar', 'Statistics (top-left corner)': 'İstatistikler (üst sol köşe)',
     'Panel sections (top to bottom)': 'Panel bölümleri (yukarıdan aşağı)',
     'Events that open the island briefly': 'Island\'ı kısa süre açan olaylar', 'Also show in the panel': 'Panelde de göster',
