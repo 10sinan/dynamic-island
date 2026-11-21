@@ -17,6 +17,7 @@ import {_, _f} from './i18n.js';
 
 const ORANGE = [217, 119, 87];
 const LIGHT = [255, 186, 150];
+export const MAX_QUEUED_PERMISSIONS = 8;   // waiting behind the one on screen
 
 export class ClaudeNotifier {
     constructor(island, config = {}) {
@@ -60,6 +61,13 @@ export class ClaudeNotifier {
         const win = this._windowFor({pids: req.pids, project: req.project});
         if (win && win === global.display.focus_window &&
             win.located_on_workspace(global.workspace_manager.get_active_workspace())) {
+            reply('ask');
+            return;
+        }
+        // Any process of this user can call the D-Bus method: a flood of
+        // requests must not pile up without end. Real Claude sessions rarely
+        // wait on more than one or two at once; the rest get Claude Code's dialog.
+        if (this._perm.length >= MAX_QUEUED_PERMISSIONS) {
             reply('ask');
             return;
         }
