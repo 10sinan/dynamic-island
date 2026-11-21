@@ -83,6 +83,11 @@
       <default>true</default>
       <summary>Blur the content while an island opens or closes (iOS-like)</summary>
     </key>
+    <key name="glass-strength" type="i">
+      <range min="0" max="100"/>
+      <default>60</default>
+      <summary>Liquid glass strength (0 = solid body, 100 = most transparent and blurred)</summary>
+    </key>
     <key name="spring" type="b">
       <default>true</default>
       <summary>Springy overshoot when expanding</summary>

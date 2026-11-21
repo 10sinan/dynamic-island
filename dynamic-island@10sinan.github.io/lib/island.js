@@ -421,14 +421,49 @@ export class Island {
         if (!this._bg)
             return;
         const t = this._cfg.theme;
+        // 0..1; 0 keeps the solid body, 1 is the most see-through
+        const g = Math.max(0, Math.min(100, this._cfg.glassStrength ?? 0)) / 100;
         // the album colour (while music plays) wins over the theme's outline
-        const edge = this._borderColor ?? (this.actor?.hover ? t.edgeHover : t.edge);
-        const rgb = c => `rgb(${c.r}, ${c.g}, ${c.b})`;
+        let edge = this._borderColor ?? (this.actor?.hover ? t.edgeHover : t.edge);
+        const alpha = 1 - 0.62 * g;
+        const rgba = (c, a) => `rgba(${c.r}, ${c.g}, ${c.b}, ${a.toFixed(3)})`;
         const bt = this._bodyTint;
-        const body = bt
-            ? `background-color: ${rgb(bt.a)}; background-gradient-direction: horizontal; background-gradient-start: ${rgb(bt.a)}; background-gradient-end: ${rgb(bt.b)};`
-            : `background-color: ${t.bg};`;
+        const base = bt ? bt.a : hexToRgb(t.bg);
+        let body;
+        if (g === 0) {
+            body = bt
+                ? `background-color: ${rgba(bt.a, 1)}; background-gradient-direction: horizontal; background-gradient-start: ${rgba(bt.a, 1)}; background-gradient-end: ${rgba(bt.b, 1)};`
+                : `background-color: ${t.bg};`;
+        } else if (bt) {
+            body = `background-color: ${rgba(bt.a, alpha)}; background-gradient-direction: horizontal; background-gradient-start: ${rgba(bt.a, alpha)}; background-gradient-end: ${rgba(bt.b, alpha)};`;
+        } else {
+            // glass: a bright sheen at the top fading into the tinted body
+            const top = mix(base, {r: 255, g: 255, b: 255}, 0.16 * g);
+            body = `background-color: ${rgba(base, alpha)}; background-gradient-direction: vertical; background-gradient-start: ${rgba(top, Math.min(1, alpha + 0.10 * g))}; background-gradient-end: ${rgba(base, alpha)};`;
+        }
+        // lit rim: a white edge that gets brighter with the strength
+        if (g > 0 && !this._borderColor)
+            edge = `rgba(255, 255, 255, ${((this.actor?.hover ? 0.30 : 0.20) * (0.4 + 0.6 * g)).toFixed(3)})`;
         this._bg.set_style(`border-radius: ${Math.max(0, this._radius)}px; ${body} border-color: ${edge};`);
+        this._syncGlassBlur(g);
+    }
+
+    // Blurs whatever is behind the pill (the wallpaper / windows under the panel).
+    _syncGlassBlur(g) {
+        let fx = this._bg.get_effect('di-glass');
+        if (g === 0) {
+            if (fx)
+                this._bg.remove_effect_by_name('di-glass');
+            return;
+        }
+        if (!fx) {
+            fx = new Shell.BlurEffect({mode: Shell.BlurMode.BACKGROUND, brightness: 1, radius: 0});
+            this._bg.add_effect_with_name('di-glass', fx);
+        }
+        const radius = Math.round(6 + 34 * g);
+        if (fx.radius !== radius)
+            fx.radius = radius;
+        fx.brightness = 0.85 + 0.15 * (1 - g);
     }
 
     /**

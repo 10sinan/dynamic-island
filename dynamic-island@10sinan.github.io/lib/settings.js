@@ -27,6 +27,7 @@ export function readConfig(settings) {
         claudeNotify: settings.get_boolean('claude-notify'),
         claudeAgentsPanel: settings.get_boolean('claude-agents-panel'),
         claudeLimit: settings.get_int('claude-token-limit') * 1000,
+        glassStrength: settings.get_int('glass-strength'),
         spring: settings.get_boolean('spring'),
         morphBlur: settings.get_boolean('morph-blur'),
 

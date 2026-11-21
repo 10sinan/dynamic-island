@@ -121,6 +121,7 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         });
         accent.add_suffix(pick);
         look.add(accent);
+        this._spin(s, look, 'glass-strength', _('Liquid glass strength'), '0 = ' + _('solid'), 5);
         this._switch(s, look, 'show-seconds', _('Show seconds on the clock'));
         page.add(look);
 
