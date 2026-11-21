@@ -759,12 +759,31 @@ def claude_hooks(action):
     os.makedirs(os.path.dirname(CLAUDE_SETTINGS), exist_ok=True)
     if os.path.exists(CLAUDE_SETTINGS):
         shutil.copy2(CLAUDE_SETTINGS, CLAUDE_SETTINGS + ".bak")
-    tmp = CLAUDE_SETTINGS + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-        f.write("\n")
-    os.replace(tmp, CLAUDE_SETTINGS)
+    write_json_keep_mode(CLAUDE_SETTINGS, data)
     print(msg)
+
+
+def write_json_keep_mode(path, data):
+    """Atomically replace `path` with `data` as JSON, keeping the file's
+    permissions (a new file is private, 0600). settings.json can hold API
+    keys in its "env" block: a rewrite must never make it readable by others."""
+    import json
+    try:
+        mode = os.stat(path).st_mode & 0o777
+    except FileNotFoundError:
+        mode = 0o600
+    tmp = path + ".tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    try:
+        os.fchmod(fd, mode)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            fd = None
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+    finally:
+        if fd is not None:
+            os.close(fd)
+    os.replace(tmp, path)
 
 
 def claude_window():
