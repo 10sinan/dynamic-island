@@ -664,11 +664,21 @@ $PERM p Bash "three" "" c > "$SANDBOX/q3.txt" 2>&1 &
 Q3=$!; sleep 1
 ev "$C.endActivity('claude-permission'); true" >/dev/null; sleep 0.8
 wait $Q3; echo "   closed without a click -> hook got: $(cat "$SANDBOX/q3.txt")"
+# nothing to show -> nothing to approve: immediate 'ask'
+echo "   empty summary: answer=$($PERM p mcp__x "" "" e0) shown=$(ev "$C.activityKey === 'claude-permission'")"
 # disabling the extension while a request waits -> 'ask', never 'allow'
 $PERM p Bash "four" "" d > "$SANDBOX/q4.txt" 2>&1 &
 Q4=$!; sleep 1
+# flood: 1 on screen + 8 queued, the 3 extra are sent back at once
+FLOOD=""
+for i in $(seq 1 11); do
+    $PERM p Bash "flood $i" "" "f$i" > "$SANDBOX/fl$i.txt" 2>&1 &
+    FLOOD="$FLOOD $!"
+done
+sleep 1.5
+echo "   flood of 11 more: queued=$(ev "$NF._perm.length") answered at once=$(cat "$SANDBOX"/fl*.txt | grep -c ask) (want 8 and 3)"
 dset claude-permission-buttons false; sleep 2
-wait $Q4; echo "   setting turned off while waiting -> hook got: $(cat "$SANDBOX/q4.txt")"
+wait $Q4 $FLOOD; echo "   setting turned off while waiting -> hook got: $(cat "$SANDBOX/q4.txt") flood answers: $(cat "$SANDBOX"/fl*.txt | sort | uniq -c | tr -s ' ' | tr '\n' ' ')"
 # Claude's window focused -> ask immediately
 dset claude-permission-buttons true; sleep 1.5
 WAYLAND_DISPLAY=di-wl-test gnome-text-editor >/dev/null 2>&1 &

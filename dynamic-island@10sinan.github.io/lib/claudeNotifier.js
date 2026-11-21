@@ -17,6 +17,7 @@ import {_, _f} from './i18n.js';
 
 const ORANGE = [217, 119, 87];
 const LIGHT = [255, 186, 150];
+export const MAX_QUEUED_PERMISSIONS = 8;   // waiting behind the one on screen
 
 export class ClaudeNotifier {
     constructor(island, config = {}) {
@@ -51,13 +52,22 @@ export class ClaudeNotifier {
      * click; nothing is ever approved automatically.
      */
     _onPermission(req, reply) {
-        if (!this._island || !this._config?.claudePermissionButtons || !this._notif.get_boolean('show-banners')) {
+        // nothing to show = nothing to approve: no blind Allow (the hook already skips these)
+        if (!this._island || !this._config?.claudePermissionButtons || !this._notif.get_boolean('show-banners') ||
+            !req.summary) {
             reply('ask');
             return;
         }
         const win = this._windowFor({pids: req.pids, project: req.project});
         if (win && win === global.display.focus_window &&
             win.located_on_workspace(global.workspace_manager.get_active_workspace())) {
+            reply('ask');
+            return;
+        }
+        // Any process of this user can call the D-Bus method: a flood of
+        // requests must not pile up without end. Real Claude sessions rarely
+        // wait on more than one or two at once; the rest get Claude Code's dialog.
+        if (this._perm.length >= MAX_QUEUED_PERMISSIONS) {
             reply('ask');
             return;
         }
@@ -125,9 +135,12 @@ export class ClaudeNotifier {
         box.add_child(head);
 
         if (req.summary) {
+            // wrapped, never ellipsized: what you allow must be fully visible
+            // (the hook sends at most 120 characters, so this stays a few lines)
             const cmd = new St.Label({style_class: 'di-claude-cmd', text: req.summary});
-            cmd.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-            cmd.clutter_text.set_single_line_mode(true);
+            cmd.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+            cmd.clutter_text.line_wrap = true;
+            cmd.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
             box.add_child(cmd);
         }
         const row = new St.BoxLayout({style_class: 'di-claude-btnrow'});

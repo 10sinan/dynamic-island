@@ -23,6 +23,9 @@ export async function fetchQuota(holder, cancellable) {
         Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_finish');
         holder.soup ??= new Soup.Session({timeout: 10, user_agent: 'dynamic-island'});
         const msg = Soup.Message.new('GET', QUOTA_URL);
+        // the token goes to api.anthropic.com and nowhere else: a redirect is
+        // not followed (it ends up as a non-200 answer below)
+        msg.set_flags(Soup.MessageFlags.NO_REDIRECT);
         msg.request_headers.append('Authorization', `Bearer ${tok.token}`);
         msg.request_headers.append('anthropic-beta', QUOTA_BETA);
         msg.request_headers.append('Content-Type', 'application/json');

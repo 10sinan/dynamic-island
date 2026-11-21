@@ -15,6 +15,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
+import {MAX_ART_BYTES, checkArtUrl, readCapped} from '../lib/artFetch.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
 
 const MPRIS = 'org.mpris.MediaPlayer2.';
@@ -31,7 +32,9 @@ const EQ_FLAT = 0.22;
 
 Gio._promisify(Gio.DBusConnection.prototype, 'call', 'call_finish');
 Gio._promisify(Gio.DBusProxy, 'new_for_bus', 'new_for_bus_finish');
-Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
+Gio._promisify(Gio.File.prototype, 'read_async', 'read_finish');
+Gio._promisify(Gio.InputStream.prototype, 'read_bytes_async', 'read_bytes_finish');
 
 /** Scale a square pixbuf to `px` and round its corners (alpha), as a new pixbuf. */
 function roundedPixbuf(src, px, radius) {
@@ -484,24 +487,43 @@ export default class MusicModule extends IslandModule {
 
     // ------------------------------------------------------------ cover art + colours
 
+    // The URL is chosen by the player (or a web page through the browser), so:
+    // only regular local files and https to public hosts, never more than
+    // MAX_ART_BYTES, no redirects (a redirect could point at the local network).
     async _fetchBytes(url) {
-        if (url.startsWith('file://')) {
-            const r = await Gio.File.new_for_uri(url).load_contents_async(this.cancellable);
-            return Array.isArray(r) ? r.find(v => v instanceof Uint8Array) : r;
+        const target = checkArtUrl(url);
+        if (!target)
+            throw new Error('unsupported art url');
+        if (target.kind === 'file') {
+            const file = Gio.File.new_for_uri(url);
+            const info = await file.query_info_async('standard::type,standard::size',
+                Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_LOW, this.cancellable);
+            if (info.get_file_type() !== Gio.FileType.REGULAR || info.get_size() > MAX_ART_BYTES)
+                throw new Error('art file not usable');
+            const stream = await file.read_async(GLib.PRIORITY_LOW, this.cancellable);
+            try {
+                return await readCapped(stream, MAX_ART_BYTES, this.cancellable);
+            } finally {
+                stream.close(null);
+            }
         }
-        if (/^https?:\/\//.test(url)) {
-            const Soup = (await import('gi://Soup?version=3.0')).default;
-            Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_finish');
-            this._soup ??= new Soup.Session({timeout: 8});
-            const msg = Soup.Message.new('GET', url);
-            if (!msg)
-                throw new Error('bad url');
-            const bytes = await this._soup.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, this.cancellable);
+        const Soup = (await import('gi://Soup?version=3.0')).default;
+        Gio._promisify(Soup.Session.prototype, 'send_async', 'send_finish');
+        this._soup ??= new Soup.Session({timeout: 8});
+        const msg = Soup.Message.new('GET', url);
+        if (!msg)
+            throw new Error('bad url');
+        msg.set_flags(Soup.MessageFlags.NO_REDIRECT);
+        const stream = await this._soup.send_async(msg, GLib.PRIORITY_DEFAULT, this.cancellable);
+        try {
             if (msg.status_code !== 200)
                 throw new Error(`HTTP ${msg.status_code}`);
-            return bytes.toArray();
+            if (msg.response_headers.get_content_length() > MAX_ART_BYTES)
+                throw new Error('art too large');
+            return await readCapped(stream, MAX_ART_BYTES, this.cancellable);
+        } finally {
+            stream.close(null);
         }
-        throw new Error('unsupported art url');
     }
 
     /** -> {pixbuf, accent, tint} | null. Cached per URL. */

@@ -42,4 +42,7 @@ echo "== extension log lines"
 grep -E "dynamic-island|JS ERROR|JS WARNING|already disposed|CRITICAL" "$SANDBOX/shell.log" |
     grep -v "modules ready\|not available on this system" | sort | uniq -c | head -40
 echo "== total log lines: $(wc -l < "$SANDBOX/shell.log")"
-[ -n "${DI_LOG:-}" ] && grep -n -B3 -A1 "CRITICAL" "$SANDBOX/shell.log" | head -60
+# `if`, not `&&`: with DI_LOG unset a bare `[ ... ] && ...` made the whole script exit 1
+if [ -n "${DI_LOG:-}" ]; then
+    grep -n -B3 -A1 "CRITICAL" "$SANDBOX/shell.log" | head -60
+fi
