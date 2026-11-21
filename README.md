@@ -84,7 +84,7 @@ Orta island ayrıca kısa süreli **etkinlikler** gösterir:
 - Caps Lock, klavye düzeni gibi diğer OSD'ler ve tam ekrandaki değişiklikler GNOME'un kendi göstergesinde kalır.
 
 - **Hover:** Üstüne gelince hemen, yaylanarak açılır. İmleç çekilince 150 ms sonra kapanır. İmleç yokken 5 sn sonra kendiliğinden kapanır.
-- **Liquid glass:** Island gövdesi yarı saydam cam gibidir: arkasındaki duvar kâğıdı/pencereler bulanıklaşır, üstte hafif parlama ve ışıklı bir kenar çizgisi olur. Gücü `glass-strength` (0-100, varsayılan 60) ile ayarlanır; `0` eski düz siyah gövdedir. Müzik çalarken albüm renkleri de camın içinden görünür.
+- **Liquid glass:** Island gövdesi yarı saydam cam gibidir: arkası görünür, üstte hafif parlama ve ışıklı bir kenar çizgisi olur. Gücü `glass-strength` (0-100, varsayılan 60) ile ayarlanır; `0` eski düz siyah gövdedir. Müzik çalarken albüm renkleri de camın içinden görünür.
 - **Ayarlar:** Hepsi `di-config` terminal arayüzünden değiştirilir ve **anında** uygulanır.
 - **Gizlenme:** Tam ekran uygulamalarda panelle birlikte gizlenir. Etkinlikler ekranında görünür kalır.
 - **Veri okuma:** Veriler `/proc`, `/sys` ve shell servisleri (Gvc, NetworkManager, GnomeBluetooth, PowerProfiles) üzerinden **asenkron** okunur; ana thread bloklanmaz.
