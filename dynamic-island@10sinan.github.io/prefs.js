@@ -43,6 +43,8 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         setLanguage(s.get_string('language'));
         window.set_default_size(680, 760);
         window.add(this._general(s, window));
+        window.add(this._features(s));
+        window.add(this._claude(s, window));
         window.add(this._timing(s));
         window.add(this._modules(s));
     }
@@ -125,6 +127,11 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         this._switch(s, look, 'show-seconds', _('Show seconds on the clock'));
         page.add(look);
 
+        return page;
+    }
+
+    _features(s) {
+        const page = new Adw.PreferencesPage({title: _('Features'), icon_name: 'starred-symbolic'});
         const feat = new Adw.PreferencesGroup({title: _('Features')});
         this._switch(s, feat, 'clipboard-history', _('Clipboard history'),
             _('Last 10 copies, memory only, never written to disk'));
@@ -133,6 +140,15 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         this._switch(s, feat, 'notification-preview', _('Notification preview'));
         this._switch(s, feat, 'screenshot-preview', _('Screenshot thumbnail'));
         this._switch(s, feat, 'meeting-mode', _('Meeting mode (mic/camera → Do Not Disturb)'));
+        this._switch(s, feat, 'auto-power-saver', _('Auto Power Saver on low battery'));
+        this._spin(s, feat, 'auto-power-saver-level', _('Power saver battery level'), '%', 5);
+        page.add(feat);
+        return page;
+    }
+
+    _claude(s, window) {
+        const page = new Adw.PreferencesPage({title: 'Claude', icon_name: 'utilities-terminal-symbolic'});
+        const feat = new Adw.PreferencesGroup({title: 'Claude Code'});
         this._switch(s, feat, 'claude-notify', _('Claude Code notifications'),
             _('When Claude finishes or waits for you (run: di-config claude-hooks install)'));
         this._switch(s, feat, 'claude-real-usage', _('Claude: real quota from Anthropic'),
@@ -163,8 +179,6 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
                 formatTokens(w.used), pct)}));
         });
         feat.add(cal);
-        this._switch(s, feat, 'auto-power-saver', _('Auto Power Saver on low battery'));
-        this._spin(s, feat, 'auto-power-saver-level', _('Power saver battery level'), '%', 5);
         page.add(feat);
         return page;
     }
