@@ -425,7 +425,9 @@ export class Island {
         const g = Math.max(0, Math.min(100, this._cfg.glassStrength ?? 0)) / 100;
         // the album colour (while music plays) wins over the theme's outline
         let edge = this._borderColor ?? (this.actor?.hover ? t.edgeHover : t.edge);
-        const alpha = 1 - 0.62 * g;
+        // no backdrop blur: Shell.BlurEffect ignores rounded corners and
+        // painted a square shadow around the pill, so keep it more opaque
+        const alpha = 1 - 0.45 * g;
         const rgba = (c, a) => `rgba(${c.r}, ${c.g}, ${c.b}, ${a.toFixed(3)})`;
         const bt = this._bodyTint;
         const base = bt ? bt.a : hexToRgb(t.bg);
@@ -445,25 +447,6 @@ export class Island {
         if (g > 0 && !this._borderColor)
             edge = `rgba(255, 255, 255, ${((this.actor?.hover ? 0.30 : 0.20) * (0.4 + 0.6 * g)).toFixed(3)})`;
         this._bg.set_style(`border-radius: ${Math.max(0, this._radius)}px; ${body} border-color: ${edge};`);
-        this._syncGlassBlur(g);
-    }
-
-    // Blurs whatever is behind the pill (the wallpaper / windows under the panel).
-    _syncGlassBlur(g) {
-        let fx = this._bg.get_effect('di-glass');
-        if (g === 0) {
-            if (fx)
-                this._bg.remove_effect_by_name('di-glass');
-            return;
-        }
-        if (!fx) {
-            fx = new Shell.BlurEffect({mode: Shell.BlurMode.BACKGROUND, brightness: 1, radius: 0});
-            this._bg.add_effect_with_name('di-glass', fx);
-        }
-        const radius = Math.round(6 + 34 * g);
-        if (fx.radius !== radius)
-            fx.radius = radius;
-        fx.brightness = 0.85 + 0.15 * (1 - g);
     }
 
     /**
