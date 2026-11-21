@@ -43,7 +43,7 @@ Spotify, tarayıcılar (YouTube Music dahil), VLC, Rhythmbox gibi **MPRIS** dest
 - **Hareket:** Kart açıkken ve müzik çalarken arka plandaki renkler yavaşça akar, kapağın arkasındaki parıltı ve kapak hafifçe nabız atar, equalizer çubukları (5 adet, iki renkli) oynar. **Müzik çalarken island'ın gövdesi de albüm renginde iki renkli bir gradient'e dönüşür** (panelde, açıkken ve şarkı değişimi önizlemesinde), kenarı albüm renginde yanar; duraklayınca ya da müzik bitince 0,7 sn'de tema rengine geri döner. Duraklayınca her şey durur; kart kapalıyken hiçbir animasyon çalışmaz.
 - **Şarkı değişince:** Island kısa süre (4 sn) kapak, başlık ve sanatçıyla açılır. `music-popup` ile kapatılabilir.
 - Birden çok oynatıcı varsa çalan, yoksa en son çalan gösterilir.
-- Kapaklar `file://` ya da `https://` adresinden alınır. `https` için yalnızca oynatıcının bildirdiği kapak adresi istenir, başka bir şey gönderilmez.
+- Kapaklar `file://` (yalnızca normal dosya) ya da `https://` adresinden alınır, en fazla 8 MB. `https` için yalnızca oynatıcının bildirdiği kapak adresi istenir, başka bir şey gönderilmez. Kapak adresini oynatıcı (tarayıcıda web sayfası) belirlediği için `http://`, yönlendirmeler ve yerel ağ adresleri (`localhost`, `192.168.x.x`, `10.x.x.x`, `.local` …) reddedilir; bunlarda kapak görünmez.
 - `dynamic-music-pill` eklentisi dock'ta çalışmaya devam eder; ikisi birbirini etkilemez.
 
 ### Pano geçmişi
@@ -252,7 +252,9 @@ Güvenlik tasarımı:
 - Ayar **varsayılan kapalı** (`claude-permission-buttons`); `di-config claude-hooks install` ek olarak bu hook'u da kurar.
 - **Hiçbir şey kendiliğinden onaylanmaz.** İzin yalnızca düğmeye fare tıklamasıyla verilir (Enter/klavye yok). Cevap vermezsen, island kapanırsa, zaman aşımına uğrarsa, eklenti kapalıysa ya da hata olursa hook hiçbir şey yazmaz ve Claude Code **normal izin penceresini** gösterir (test: `tests/claudepermission.test.py`).
 - Claude'un penceresine zaten bakıyorsan ya da Rahatsız Etme açıksa düğmeler çıkmaz; normal pencere gelir.
-- Komut özeti kırpılırsa `…` ile belirtilir, gizlenmez. Birden çok istek sırayla gösterilir.
+- **Göremediğin şeye izin verilmez.** Island'da düğmeler yalnızca isteğin tamamı gösterilebiliyorsa çıkar: Bash komutu 120 karakterden uzunsa ya da araç özetlenemiyorsa (MCP araçları, Task, Glob…) island'a hiç sorulmaz, karar Claude Code'un kendi penceresinde verilir ("Claude seni bekliyor" bildirimi yine gelir). Gösterilen komut tek satıra kısaltılmaz, satırlara sarılarak tamamı görünür.
+- Edit / Write gibi dosya araçlarında yalnızca dosya yolu gösterilir, değişikliğin içeriği gösterilmez. İçeriği görmek istiyorsan Claude Code'un penceresinden onayla.
+- Birden çok istek sırayla gösterilir; ekrandakinin arkasında en fazla 8 istek bekler, fazlası Claude Code'un penceresine gider.
 - Başka bir yerel süreç D-Bus'a sahte istek gönderebilir ama **izin veremez**: onay yalnızca bekleyen hook çağrısına, tıklamayla döner.
 
 Kurulum: `di-config claude-hooks install` ve `di-config set claude-permission-buttons true`.
@@ -337,8 +339,10 @@ tests/
 ├── claudeusage.test.js    # Claude kullanım hesabı testleri (gjs)
 ├── claudequota.test.js    # Anthropic kota yanıtı ayrıştırma testleri (gjs)
 ├── wave.test.js           # dalgalı çizgi geometrisi testleri (gjs)
+├── artfetch.test.js       # kapak adresi kontrolleri + boyut sınırı (gjs)
 ├── claudehook.test.py     # Claude Code hook betiği testleri
 ├── claudepermission.test.py  # izin hook'u: allow/deny/ask yolları
+├── diconfig.test.py       # claude-hooks: settings.json izinlerinin korunması
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
 ├── headless-smoke.sh      # izole headless shell başlatır
@@ -398,8 +402,10 @@ gjs -m tests/spring.test.js
 gjs -m tests/claudeusage.test.js
 gjs -m tests/claudequota.test.js
 gjs -m tests/wave.test.js
+gjs -m tests/artfetch.test.js
 python3 tests/claudehook.test.py
 python3 tests/claudepermission.test.py
+python3 tests/diconfig.test.py
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots
 ```
