@@ -4,3 +4,6 @@ gschemas.compiled
 __pycache__/
 *.pyc
 docs/shots/
+# Claude Code: local worktrees and personal settings (may hold permissions / keys)
+.claude/worktrees/
+.claude/settings.local.json
