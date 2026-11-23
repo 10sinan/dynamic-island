@@ -87,6 +87,13 @@ export class Meter {
         this.actor.connect('destroy', () => {
             this._dead = true;
         });
+        this.actor.connect('notify::mapped', () => {
+            if (this.actor.mapped && this._latest && !this._dead) {
+                const args = this._latest;
+                this._latest = null;
+                this._apply(...args);
+            }
+        });
 
         this._title = new St.Label({style_class: 'di-title', text: title,
             y_align: Clutter.ActorAlign.CENTER});
@@ -114,6 +121,18 @@ export class Meter {
     update(valueText, fraction = 0, sev = 'ok', subText = null) {
         if (this._dead)
             return;
+        // A meter that is not on screen (the tile of a collapsed island, or an island hidden
+        // in fullscreen) is not touched: no text/relayout/animation for nothing. The newest
+        // reading is applied the moment it shows up.
+        if (!this.actor.mapped) {
+            this._latest = [valueText, fraction, sev, subText];
+            return;
+        }
+        this._latest = null;
+        this._apply(valueText, fraction, sev, subText);
+    }
+
+    _apply(valueText, fraction, sev, subText) {
         // Setting identical text still queues a relayout; skip it.
         if (this._value.text !== valueText)
             this._value.text = valueText;
