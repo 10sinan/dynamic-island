@@ -12,6 +12,27 @@
 
 *Ekran görüntüleri test ortamından (sahte oynatıcı, örnek veriler) alınmıştır.*
 
+<!-- DEMO: docs/img/demo.gif (kısa ekran kaydı: hover ile açılma, müzik kartı, Quick Settings). Eklenince aşağıdaki satırı açın:
+![Demo](docs/img/demo.gif)
+-->
+> 🎞️ **Demo GIF'i için yer ayrıldı** — `docs/img/demo.gif` eklenince buraya konacak.
+
+## English summary
+
+**Dynamic Island** replaces three parts of the GNOME Shell 50 top panel (Activities, the clock, Quick Settings)
+with black "pills" that expand when you hover over them. No clicking needed.
+
+- **Left:** CPU / RAM / temperature / network / battery / GPU / disk, live graphs, top processes, workspaces.
+- **Centre:** clock, music card (MPRIS, cover-art colours), calendar, notification list, search (Super+R),
+  volume/brightness/notification/screenshot previews in the island.
+- **Right:** Quick Settings (sliders, Wi-Fi/Bluetooth/power toggles, per-app volume, optional clipboard history).
+- **Optional Claude Code integration:** notifications when Claude finishes or waits, optional Allow/Deny buttons,
+  local usage estimate, and (opt-in) the real plan quota. See [Security and privacy](#güvenlik-ve-gizlilik).
+
+GNOME Shell **50 only**. GPL-3.0. Install: `git clone https://github.com/10sinan/dynamic-island.git && cd dynamic-island && ./install.sh`,
+log out and in once, then `gnome-extensions enable dynamic-island@10sinan.github.io`. Settings: Extensions app,
+or `di-config` in a terminal. The rest of this document is in Turkish.
+
 
 Üst panelde **üç siyah hap**. **Tıklama yok**: her şey üstüne gelince açılır, imleç çekilince kapanır.
 
@@ -48,12 +69,14 @@ Spotify, tarayıcılar (YouTube Music dahil), VLC, Rhythmbox gibi **MPRIS** dest
 
 ### Pano geçmişi
 
-Sağ island'da **son 10 kopya** listelenir (metin ve resim; resimler küçük resimle). Bir kayda tıklayınca **panoya geri konur**, sen istediğin yere kendin yapıştırırsın (otomatik yapıştırma yok: terminalde ve bazı uygulamalarda yanlış çalışır). Liste 5-6 satırdan uzunsa tekerlekle kayar, **Temizle** hepsini siler.
+**Varsayılan olarak kapalıdır** (kopyaladığın her şeyi okuduğu için). Açmak: Ayarlar → Özellikler → *Pano geçmişi* ya da `di-config set clipboard-history true`.
+
+Açıkken sağ island'da **son 10 kopya** listelenir (metin ve resim; resimler küçük resimle). Bir kayda tıklayınca **panoya geri konur**, sen istediğin yere kendin yapıştırırsın (otomatik yapıştırma yok: terminalde ve bazı uygulamalarda yanlış çalışır). Liste 5-6 satırdan uzunsa tekerlekle kayar, **Temizle** hepsini siler.
 
 - **Yalnızca bellekte tutulur**, diske hiçbir şey yazılmaz; oturumu ya da eklentiyi kapatınca silinir. Ayar değiştirince (island'lar yeniden kurulurken) silinmez.
-- Parola yöneticilerinin "bu gizli" işaretiyle (`x-kde-passwordManagerHint` vb.) kopyaladığı içerik hiç okunmaz.
+- Parola yöneticilerinin ve gizli bilgi servislerinin "bu gizli" işaretiyle (`x-kde-passwordManagerHint`, `org.freedesktop.Secret…`, `x-nspasswordmanager` vb.) kopyaladığı içerik hiç okunmaz. Bu işaret uygulamanın iyi niyetine bağlıdır: işaretlemeyen bir uygulamadan kopyalanan parola listeye girer.
 - Aynı şeyi tekrar kopyalarsan yeni satır eklenmez, üste taşınır. Çok uzun metinler 20 000 karakterde, 8 MB'tan büyük resimler hiç kaydedilmez.
-- `clipboard-history=false` ile izleme tamamen durur ve bölüm kaybolur. Kurulu `gnome-clipboard` gibi bir pano eklentisiyle birlikte çalışır, ikisi birbirini etkilemez.
+- `clipboard-history=false` (varsayılan) ile izleme tamamen durur ve bölüm kaybolur. Kurulu `gnome-clipboard` gibi bir pano eklentisiyle birlikte çalışır, ikisi birbirini etkilemez.
 
 ### Olay göstergeleri
 
@@ -92,12 +115,17 @@ Orta island ayrıca kısa süreli **etkinlikler** gösterir:
 
 ## Kurulum
 
+Gereksinimler: **GNOME Shell 50**, `glib-compile-schemas` (Fedora: `glib2-devel`, Debian/Ubuntu: `libglib2.0-bin`), isteğe bağlı `python3` (`di-config` ve Claude hook'u için).
+
 ```bash
-cd ~/projects/dynmıc_island
-./install.sh                                  # şemayı derler, eklentiyi ve di-config'i bağlar
+git clone https://github.com/10sinan/dynamic-island.git
+cd dynamic-island
+./install.sh        # şemayı derler; eklentiyi, di-config'i ve di-claude-hook'u ~/.local altına symlink'ler
 # → oturumu BİR KEZ kapatıp tekrar aç (Wayland'da shell yeniden başlatılamaz)
 gnome-extensions enable dynamic-island@10sinan.github.io
 ```
+
+`install.sh` hiçbir dosyayı kopyalamaz, yalnızca symlink kurar; klasörü taşırsan ya da silersen eklenti de gider. Eklenti yolunda symlink olmayan bir klasör varsa hata verip durur. `~/.local/bin` PATH'te olmalıdır (aksi halde betik hatırlatır).
 
 Sonraki **ayar** değişiklikleri için tekrar giriş gerekmez. Yalnızca **kod** değişince
 tekrar giriş gerekir; GJS modülleri önbellekte tuttuğu için `disable`/`enable` yetmez.
@@ -166,6 +194,34 @@ di-config reset                                       # hepsini varsayılana dö
 | `notification-preview` | açık | bildirimler island'da |
 | `notification-duration` | 5000 ms | önizleme süresi (kritik bildirimler en az 10 sn) |
 
+## Bilinen sınırlamalar
+
+- **Yalnızca GNOME Shell 50.** `metadata.json` başka sürüm içermez; `addTopChrome`, OSD ve overview'un özel alanları gibi dahili API'ler sürümler arasında değişir.
+- **Yalnızca ana monitör:** island'lar birincil monitörün panelinde durur.
+- **Panel öğelerine bağımlılık:** saat, Quick Settings ve Activities düğmeleri gizlenir (silinmez); bu düğmeleri değiştiren başka eklentilerle çakışabilir.
+- **Özel/dahili API'ler:** arama (`Main.overview` içi), `panel.toggleQuickSettings` yaması, OSD ve bildirim balonu yönlendirmesi GNOME güncellemesinde kırılabilir; kırılınca ilgili özellik GNOME'un kendi davranışına döner.
+- **Kod değişince oturum kapatıp açmak gerekir** (Wayland'da shell yeniden başlatılamaz); yalnızca ayar değişiklikleri anında uygulanır.
+- **Claude kartı bir tahmindir** (yerel kayıtlardan); gerçek kota belgelenmemiş bir adrese dayanır ve her an çalışmayabilir.
+- **Açık ajan listesi** Claude Code'un hangi terminalleri açık tuttuğunu bilmez; kapatılmış oturum 30 dk "boşta" görünebilir.
+- **Pano geçmişi** yalnızca metin ve PNG alır; "gizli" işaretini göndermeyen uygulamaların kopyaları listeye girer.
+- Arayüz Türkçe ve İngilizce'dir.
+
+## Güvenlik ve gizlilik
+
+Eklenti kendi makinende çalışır ve varsayılan olarak **hiçbir veriyi internete göndermez**. Ağ kullanan ya da başka uygulamaların dosyalarına dokunan her şey aşağıda:
+
+| Ne | Ne okur / nereye gider | Varsayılan |
+|---|---|---|
+| **Claude gerçek kotası** | `~/.claude/.credentials.json` içindeki giriş anahtarını okur, `https://api.anthropic.com/api/oauth/usage` adresine gönderir (başka hiçbir yere; yönlendirme izlenmez). **Bu adres belgelenmemiştir.** Anahtar kaydedilmez ve loglanmaz. Başarısız olursa özellik kendini kapatır (kurallar yukarıda). Kod tek bir dosyada yalıtılmıştır: `lib/claudeRealQuota.js`. | **Kapalı**; açarken onay penceresi |
+| **Pano geçmişi** | Kopyaladığın metin/PNG'yi son 10 kayıt olarak yalnızca bellekte tutar, diske yazmaz. Parola yöneticisi işaretli kopyalar atlanır. | **Kapalı** |
+| **Claude kullanım kartı / ajan paneli** | `~/.claude/projects/**/*.jsonl` oturum kayıtlarını **yerelde** okur (komut, dosya adı ve son isteğin metni ekranda görünebilir); hiçbir şey dışarı gitmez. Ajan paneli: `claude-agents-panel`. | Açık |
+| **Müzik kapağı** | Oynatıcının verdiği `file://` ya da `https://` adresinden kapak indirir. https için ad önce çözülür ve yerel/özel ağa çıkan adresler reddedilir; yönlendirme izlenmez, 8 MB sınırı vardır. | Açık |
+| **Claude bildirim köprüsü** | `tools/di-claude-hook` → yerel D-Bus nesnesi `/org/gnome/Shell/Extensions/DynamicIsland` → island. Aynı kullanıcının başka süreçleri de bu nesneyi çağırabilir: istekler hız sınırlıdır (20 patlama, saniyede 5), izin düğmeleri hiçbir şeyi kendiliğinden onaylamaz. | Bildirim açık, izin düğmeleri **kapalı** |
+
+**Hook'ta sır maskeleme en iyi çabadır.** `di-claude-hook`, Claude Code'un araç girdilerini (komutlar, mesajlar) D-Bus'a ve island'a göndermeden önce bilinen kalıplarla maskeler: `Authorization:`/`Bearer` değerleri, `--password`/`--token`/`--secret`/`--api-key` bayrakları, `password=`/`token=`/`api_key:` atamaları, URL içi `kullanıcı:parola@`, `curl -u`, `sk-ant-…`, `ghp_…`/`github_pat_…`, AWS anahtar kimlikleri, Slack/GitLab belirteçleri ve JWT'ler `*****` olur (yalnızca değer; komutun kalanı okunur kalır). Bu **kalıp eşlemesidir, garanti değildir**: tanınmayan biçimdeki ya da adı belli olmayan bir sır maskelenmeyebilir. Ekran paylaşırken ya da hassas işlerde izin düğmelerini ve ajan panelini kapalı tut.
+
+Eklenti `eval` ya da gizlenmiş kod içermez; alt süreç olarak yalnızca Ayarlar uygulamasını (`gnome-control-center`) açar.
+
 ## Nasıl çalışıyor?
 
 ### Panel yerini alma (`lib/panelSlot.js`)
@@ -210,7 +266,13 @@ Arayüz dili cihazın diline göre **değil**, `language` ayarına göre belirle
 
 Orta island'da **CLAUDE** kartı: 5 saatlik oturumda kullanılan token ve oturumun ne zaman sıfırlanacağı. Veri, bu bilgisayardaki `~/.claude/projects/**/*.jsonl` kayıtlarından **tahmin edilir**; hiçbir şey internete gönderilmez, hesap bilgin/token'ın okunmaz. Anthropic planındaki kalan kotayı yerelde yayımlamadığı için "kalan" bir limite göredir: ayarlardan **Claude token limiti** (bin token) girersen kalan yüzde görünür (örn. `di-config set claude-token-limit 20000` = 20M). Hesap yalnızca girdi + çıktı + önbellek yazma tokenlarını sayar, önbellek okumayı saymaz; resmî `/usage` ekranıyla birebir aynı değildir (Anthropic limiti farklı ağırlıklarla sayar ve yüzdeyi yerelde yayımlamaz).
 
-**Gerçek kota (önerilen):** `claude-real-usage` açıksa kart, Claude Code'un `/usage` ekranındaki rakamların aynısını gösterir: **5 saat** ve **haftalık** (varsa model bazlı haftalık) satırları; her satırda turuncu çubuk, yüzde ve sıfırlanma (`4,7 sa (Per 01:30)`). Bunun için Claude Code'un `~/.claude/.credentials.json` dosyasındaki giriş anahtarı **yalnızca okunur** ve yalnızca `api.anthropic.com`'a gönderilir (yenilenmez/değiştirilmez); island açıkken 3 dakikada bir güncellenir. Bu adres resmî olarak belgelenmemiştir; çalışmazsa kart yerel tahmine döner. Açmak: `di-config set claude-real-usage true` ya da Ayarlar → Özellikler.
+**Gerçek kota (isteğe bağlı, varsayılan KAPALI):** `claude-real-usage` açıksa kart, Claude Code'un `/usage` ekranındaki rakamların aynısını gösterir: **5 saat** ve **haftalık** (varsa model bazlı haftalık) satırları; her satırda turuncu çubuk, yüzde ve sıfırlanma (`4,7 sa (Per 01:30)`). Bunun için Claude Code'un `~/.claude/.credentials.json` dosyasındaki giriş anahtarı **yalnızca okunur** ve yalnızca `api.anthropic.com`'a gönderilir (yenilenmez, değiştirilmez, kaydedilmez, loglanmaz); aralık en az 1 dakikadır, island açıkken 3 dakikada bir güncellenir. Ayarlar penceresinde açarken ne okunduğunu söyleyen bir **onay penceresi** çıkar. Kapanma kuralları:
+
+- Giriş dosyası yoksa/okunamıyorsa ya da Anthropic **401/403** derse özellik hemen kapanır (`claude-real-usage` yeniden `false` olur, sessizce).
+- Ağ/sunucu (5xx, zaman aşımı) hatalarında art arda **3** başarısızlıktan sonra kapanır; başarılı bir istek sayacı sıfırlar.
+- Anahtarın **süresi dolmuşsa** kapanmaz: istek atılmaz, son değerler kalır, dosya sonraki yoklamada yeniden okunur (Claude Code çalışınca yeniler).
+
+Bu adres (`/api/oauth/usage`) **resmî olarak belgelenmemiştir** ve haber verilmeden değişebilir ya da kalkabilir; o durumda özellik yukarıdaki kurallarla kapanır ve kart yerel tahmine döner. Açmak: `di-config set claude-real-usage true` (onay penceresi yalnızca ayarlar penceresinde çıkar) ya da Ayarlar → Claude.
 
 **Açık ajanlar (üstüne gelince):** Claude kartının üstünde imleci kısa süre (~0,2 sn) tutunca kartın altında bir panel açılır; imleç çekilince kapanır. Kartın başlığında ayrıca `2 ajan` rozeti görünür. Panelde son 30 dakikada hareket eden her Claude Code oturumu (en fazla 6) için:
 - **proje adı** (çalışma klasörünün adı), durum noktası (turuncu = çalışıyor, gri = boşta) ve `çalışıyor` / `12 dk önce`,
@@ -320,6 +382,7 @@ dynamic-island@10sinan.github.io/
 │   ├── osd.js             # ses/parlaklık OSD'sini island'a yönlendirir
 │   ├── notifications.js   # bildirim önizleme (GNOME balonu ekran dışına alınır)
 │   ├── events.js          # olay göstergeleri (şarj, pil, Wi-Fi, Bluetooth, mikrofon/kamera)
+│   ├── claudeRealQuota.js # gerçek Claude kotası: tek yalıtılmış servis (kapanma kuralları)
 │   ├── history.js graph.js# canlı grafikler için örnek tamponu + Cairo çizimi
 │   ├── clipboardStore.js  # pano geçmişi (bellekte), clipList.js: liste mantığı
 │   ├── glyphs.js          # sağ ikon satırının Cairo ile çizilmiş ikonları (glyphLogic.js: seviye/renk kararları)
@@ -412,6 +475,8 @@ gjs -m tests/spring.test.js
 gjs -m tests/claudeusage.test.js
 gjs -m tests/claudeagents.test.js
 gjs -m tests/claudequota.test.js
+gjs -m tests/claudeRealQuota.test.js
+gjs -m tests/claudebridge.test.js
 gjs -m tests/wave.test.js
 gjs -m tests/artfetch.test.js
 python3 tests/claudehook.test.py
@@ -419,6 +484,7 @@ python3 tests/claudepermission.test.py
 python3 tests/diconfig.test.py
 XDG_CONFIG_HOME=$(mktemp -d) dbus-run-session -- python3 -I tests/tui.test.py
 tests/headless-smoke.sh 10 /tmp/di-shots
+tests/headless-quota-failure.sh   # gerçek kota: kötü giriş durumunda kendini kapatır
 ```
 
 `headless-smoke.sh`, ayrı bir D-Bus, geçici bir dconf ve yalnızca bu eklentiyle headless bir
