@@ -15,7 +15,15 @@ export class Timer {
         return this._id !== 0;
     }
 
-    schedule(ms, fn) {
+    /**
+     * @param {number} ms
+     * @param {Function} fn
+     * @param {boolean} [coarse]  background polling: whole seconds, so GLib can
+     *   coalesce the wakeup. Those timers fire on the wall-clock second, up to
+     *   ~1 s off, which is wrong for anything the user watches (an activity
+     *   that should stay 4 s, an auto-collapse): leave it off for those.
+     */
+    schedule(ms, fn, coarse = false) {
         this.clear();
         const cb = () => {
             this._id = 0;
@@ -26,8 +34,7 @@ export class Timer {
             }
             return GLib.SOURCE_REMOVE;
         };
-        // Whole seconds: let GLib coalesce the wakeup with other timers.
-        this._id = ms >= 1000 && ms % 1000 === 0
+        this._id = coarse && ms >= 1000 && ms % 1000 === 0
             ? GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, ms / 1000, cb)
             : GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, cb);
     }

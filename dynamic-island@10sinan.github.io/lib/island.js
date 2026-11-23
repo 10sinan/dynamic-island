@@ -1330,7 +1330,7 @@ export class Island {
         if (!this._destroyed) {
             this._pollTimer.schedule(
                 this._mode === 'expanded' ? this._cfg.pollExpanded : this._cfg.pollCompact,
-                () => this._tick());
+                () => this._tick(), true);
         }
     }
 
