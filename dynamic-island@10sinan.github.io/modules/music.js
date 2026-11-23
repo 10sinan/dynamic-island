@@ -53,6 +53,14 @@ function rgbCss({r, g, b}, a = 1) {
     return a === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
+/** set_style() restyles the actor even for an identical string: skip those (colour glides call this every frame). */
+function setStyleIfChanged(actor, css) {
+    if (!actor || actor._diStyle === css)
+        return;
+    actor._diStyle = css;
+    actor.set_style(css);
+}
+
 function ellipsized(styleClass) {
     const l = new St.Label({style_class: styleClass, y_align: Clutter.ActorAlign.CENTER});
     l.clutter_text.ellipsize = Pango.EllipsizeMode.END;
@@ -164,7 +172,7 @@ class Equalizer {
         const ca = hexToRgb(a), cb = hexToRgb(b);
         this._bars.forEach((bar, i) => {
             const t = this._bars.length > 1 ? i / (this._bars.length - 1) : 0;
-            bar.set_style(`background-color: ${toHex(mix(ca, cb, t))};`);
+            setStyleIfChanged(bar, `background-color: ${toHex(mix(ca, cb, t))};`);
         });
     }
 
@@ -656,12 +664,12 @@ export default class MusicModule extends IslandModule {
         const fade = (x, al) => `rgba(${x.r}, ${x.g}, ${x.b}, ${al})`;
         const grad = (dir, from, to) => `background-gradient-direction: ${dir}; background-gradient-start: ${from}; background-gradient-end: ${to};`;
         this._eqs().forEach(e => e.setColors(hex(c.a), hex(c.a2)));
-        this._fill?.set_style(grad('horizontal', hex(c.a), hex(c.a2)));
-        this._playButton?.set_style(`background-color: ${hex(c.a)};`);
+        setStyleIfChanged(this._fill, grad('horizontal', hex(c.a), hex(c.a2)));
+        setStyleIfChanged(this._playButton, `background-color: ${hex(c.a)};`);
         // flowing colour layers behind the content, and the glow behind the cover
-        this._flowA?.set_style(grad('horizontal', fade(c.f1, 0.95), fade(c.f1, 0)));
-        this._flowB?.set_style(grad('horizontal', fade(c.f2, 0), fade(c.f2, 0.95)));
-        this._glow?.set_style(grad('radial', fade(c.a, 0.55), fade(c.a, 0)));
+        setStyleIfChanged(this._flowA, grad('horizontal', fade(c.f1, 0.95), fade(c.f1, 0)));
+        setStyleIfChanged(this._flowB, grad('horizontal', fade(c.f2, 0), fade(c.f2, 0.95)));
+        setStyleIfChanged(this._glow, grad('radial', fade(c.a, 0.55), fade(c.a, 0)));
     }
 
     /**

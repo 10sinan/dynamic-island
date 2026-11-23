@@ -446,7 +446,13 @@ export class Island {
         // lit rim: a white edge that gets brighter with the strength
         if (g > 0 && !this._borderColor)
             edge = `rgba(255, 255, 255, ${((this.actor?.hover ? 0.30 : 0.20) * (0.4 + 0.6 * g)).toFixed(3)})`;
-        this._bg.set_style(`border-radius: ${Math.max(0, this._radius)}px; ${body} border-color: ${edge};`);
+        // set_style() restyles the actor even when the string did not change;
+        // during a colour glide most frames round to the same colours.
+        const style = `border-radius: ${Math.max(0, this._radius)}px; ${body} border-color: ${edge};`;
+        if (style !== this._bgStyle) {
+            this._bgStyle = style;
+            this._bg.set_style(style);
+        }
     }
 
     /**
