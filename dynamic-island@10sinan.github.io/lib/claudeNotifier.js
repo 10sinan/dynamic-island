@@ -13,6 +13,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {ClaudeBridge} from './claudeBridge.js';
+import {Timer} from './disposer.js';
 import {_, _f} from './i18n.js';
 
 const ORANGE = [217, 119, 87];
@@ -27,6 +28,7 @@ export class ClaudeNotifier {
         this._working = new Map();   // session -> {project, since}
         this._perm = [];   // queued permission requests [{req, reply, win}]
         this._permShown = null;
+        this._nextTimer = new Timer();   // pause before the next queued permission request
         this._bridge = new ClaudeBridge(ev => this._onEvent(ev), (req, reply) => this._onPermission(req, reply));
     }
 
@@ -89,10 +91,7 @@ export class ClaudeNotifier {
             this._permShown = null;
             this._island?.endActivity('claude-permission');
             // the next waiting request, after the island has settled
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 450, () => {
-                this._nextPermission();
-                return GLib.SOURCE_REMOVE;
-            });
+            this._nextTimer.schedule(450, () => this._nextPermission());
         };
         item.answer = answer;
         const shown = this._island.showActivity('claude-permission', {
@@ -349,8 +348,9 @@ export class ClaudeNotifier {
         for (const {reply} of this._perm ?? [])
             reply('ask');
         this._perm = [];
-        this._permShown?.answer?.('ask');
+        this._permShown?.answer?.('ask');   // schedules the next request ...
         this._permShown = null;
+        this._nextTimer?.clear();           // ... which must not outlive us
         if (this._staleTimer) {
             GLib.source_remove(this._staleTimer);
             this._staleTimer = 0;
