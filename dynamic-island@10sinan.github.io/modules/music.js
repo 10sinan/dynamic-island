@@ -261,8 +261,16 @@ export default class MusicModule extends IslandModule {
         if (this._players.has(name) || this._dead)
             return;
         this._players.set(name, null);   // reserve: NameOwnerChanged may fire twice
-        const proxy = await Gio.DBusProxy.new_for_bus(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE,
-            null, name, PATH, PLAYER_IFACE, this.cancellable);
+        let proxy;
+        try {
+            proxy = await Gio.DBusProxy.new_for_bus(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE,
+                null, name, PATH, PLAYER_IFACE, this.cancellable);
+        } catch (e) {
+            // a failed attempt must not keep the name reserved: the player would never be picked up again
+            if (this._players.get(name) === null)
+                this._players.delete(name);
+            throw e;
+        }
         if (this._dead || !this._players.has(name)) {
             return;
         }
