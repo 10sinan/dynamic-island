@@ -217,7 +217,6 @@ export class ClaudeNotifier {
         box.add_child(this._wave);
         box.add_child(this._pillLabel);
         let last = 0, painted = 0;
-        // the timeline only advances while the pill is on screen
         this._waveTl = new Clutter.Timeline({actor: this._wave, duration: 60000, repeat_count: -1});
         this._waveTl.connect('new-frame', (_t, ms) => {
             const dt = Math.max(0, Math.min(100, ms - last)) / 1000;
@@ -232,6 +231,18 @@ export class ClaudeNotifier {
             }
         });
         this._waveTl.start();
+        // An actor-bound Timeline keeps running (and keeps the frame clock busy) while its
+        // actor is hidden - the island being expanded hides the pill: pause it then.
+        this._wave.connect('notify::mapped', () => {
+            if (!this._wave || !this._waveTl)
+                return;
+            if (this._wave.mapped)
+                this._waveTl.start();
+            else
+                this._waveTl.pause();
+        });
+        if (!this._wave.mapped)
+            this._waveTl.pause();
         box.connect('destroy', () => {
             this._stopWave();
             this._wave = this._pillLabel = null;
