@@ -19,6 +19,7 @@ import {_, _f} from './i18n.js';
 const ORANGE = [217, 119, 87];
 const LIGHT = [255, 186, 150];
 const WAVE_FRAME_MS = 32;
+const MAX_WORKING = 32;   // sessions shown as "working" at once
 export const MAX_QUEUED_PERMISSIONS = 8;   // waiting behind the one on screen
 
 export class ClaudeNotifier {
@@ -36,6 +37,11 @@ export class ClaudeNotifier {
     _onEvent(ev) {
         const key = ev.session || ev.project;
         if (ev.kind === 'working') {
+            // bounded: the session id comes from whoever called the bridge
+            if (!this._working.has(key) && this._working.size >= MAX_WORKING) {
+                const oldest = [...this._working].sort((a, b) => a[1].since - b[1].since)[0];
+                this._working.delete(oldest[0]);
+            }
             this._working.set(key, {project: ev.project, since: GLib.get_monotonic_time()});
             this._syncWorking();
             return;
