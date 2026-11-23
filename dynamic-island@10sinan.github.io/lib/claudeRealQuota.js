@@ -7,20 +7,32 @@
 //   * one request at a time, at most one per MIN_GAP_S, shared by the Claude
 //     card and the quota warnings (they used to ask separately);
 //   * the token is never logged or stored here; failures log a fixed message;
-//   * if the request fails for any reason (no login, expired login, network,
-//     HTTP error) the feature switches itself off for good (the setting goes
-//     back to false) instead of retrying: the user turns it on again on purpose.
+//   * a credentials problem (no login file, unreadable or expired token, HTTP
+//     401 / 403) switches the feature off at once: the `claude-real-usage`
+//     setting goes back to false and nothing is retried;
+//   * a network or server problem (timeout, 5xx, odd answer) is tolerated twice;
+//     the third failure in a row switches it off, any good answer resets the
+//     count. The user turns the feature on again on purpose.
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
 import {fetchQuota} from './claudeFetch.js';
 
 const MIN_GAP_S = 60;
+export const MAX_FAILURES = 3;   // network / server failures in a row before the feature switches off
 
 export class RealQuota {
-    /** @param {Gio.Settings} settings  the extension's settings (to switch the feature off) */
-    constructor(settings) {
+    /**
+     * @param {Gio.Settings} settings  the extension's settings (to switch the feature off)
+     * @param {Function} [fetch]       (holder, cancellable) -> result of lib/claudeFetch.js; injectable for tests
+     * @param {Function} [now]         monotonic seconds; injectable for tests
+     */
+    constructor(settings, fetch = fetchQuota, now = () => GLib.get_monotonic_time() / 1e6) {
+        this._now = now;
         this._settings = settings;
+        this._fetch = fetch;
+        this._failures = 0;
+        this._failAt = 0;
         this._cancellable = new Gio.Cancellable();
         this._holder = {soup: null};
         this._busy = null;
@@ -47,9 +59,11 @@ export class RealQuota {
     refresh() {
         if (this._dead)
             return Promise.resolve(null);
-        const now = GLib.get_monotonic_time() / 1e6;
+        const now = this._now();
         if (this._rows && now - this._at < MIN_GAP_S)
             return Promise.resolve(this._rows);
+        if (this._failAt && now - this._failAt < MIN_GAP_S)
+            return Promise.resolve(this._rows);   // just failed: do not hammer the endpoint
         this._busy ??= this._request().finally(() => {
             this._busy = null;
         });
@@ -57,16 +71,22 @@ export class RealQuota {
     }
 
     async _request() {
-        const r = await fetchQuota(this._holder, this._cancellable);
+        const r = await this._fetch(this._holder, this._cancellable);
         if (this._dead || r.cancelled)
             return null;
         if (!r.rows) {
-            this._giveUp();
-            return null;
+            if (r.auth || ++this._failures >= MAX_FAILURES) {
+                this._giveUp();
+                return null;
+            }
+            this._failAt = this._now();
+            return this._rows;   // an older good answer, if any
         }
+        this._failures = 0;
+        this._failAt = 0;
         this._rows = r.rows;
         this._when = Date.now();
-        this._at = GLib.get_monotonic_time() / 1e6;
+        this._at = this._now();
         return this._rows;
     }
 
