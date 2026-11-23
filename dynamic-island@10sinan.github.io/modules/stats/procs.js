@@ -86,18 +86,26 @@ export default class ProcsModule extends IslandModule {
     }
 
     async tick() {
-        if (!this._cpu)
+        // One snapshot at a time: onShown() and the island's own first tick
+        // both ask right after opening; two overlapping samples would give
+        // the second one a tiny dt and a noisy CPU %.
+        if (!this._cpu || this._busy)
             return;
-        const cur = await this._snapshot();
-        const now = GLib.get_monotonic_time() / 1e6;
-        const dt = this._prevAt ? now - this._prevAt : 0;
-        const top = topProcesses(this._prev, cur, dt);
-        this._prev = cur;
-        this._prevAt = now;
-        if (!this._cpu)
-            return;
-        this._fill(this._cpu, top.cpu, g => `${Math.round(g.cpu)}%`);
-        this._fill(this._mem, top.mem, g => mem(g.memKb));
+        this._busy = true;
+        try {
+            const cur = await this._snapshot();
+            const now = GLib.get_monotonic_time() / 1e6;
+            const dt = this._prevAt ? now - this._prevAt : 0;
+            const top = topProcesses(this._prev, cur, dt);
+            this._prev = cur;
+            this._prevAt = now;
+            if (!this._cpu)
+                return;
+            this._fill(this._cpu, top.cpu, g => `${Math.round(g.cpu)}%`);
+            this._fill(this._mem, top.mem, g => mem(g.memKb));
+        } finally {
+            this._busy = false;
+        }
     }
 
     onShown() {
