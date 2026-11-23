@@ -439,8 +439,12 @@ export default class MusicModule extends IslandModule {
         const dir = this._skipDir ?? 1;
         const lines = [[this._title, i.title], [this._artist, i.artist || '—'], [this._album, i.album]];
         lines.forEach(([label, text], n) => {
-            if (!label || label.text === text)
+            // Compare with the text the label is heading for, not the one it
+            // still shows: A -> B -> A quickly must not leave a finished
+            // slide-out of B behind (label shows A, but B slides in).
+            if (!label || (label._diTarget ?? label.text) === text)
                 return;
+            label._diTarget = text;
             label.remove_all_transitions();
             if (!animate) {
                 label.text = text;
@@ -454,7 +458,7 @@ export default class MusicModule extends IslandModule {
                 duration: 150,
                 mode: Clutter.AnimationMode.EASE_IN_QUAD,
                 onComplete: () => {
-                    if (this._dead)
+                    if (this._dead || label._diTarget !== text)
                         return;
                     label.text = text;
                     label.translation_x = 22 * dir;
