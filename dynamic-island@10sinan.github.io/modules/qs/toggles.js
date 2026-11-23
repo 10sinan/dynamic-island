@@ -14,6 +14,7 @@ import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import {IslandModule} from '../base.js';
 import {_, _f, pct} from '../../lib/i18n.js';
+import {Timer} from '../../lib/disposer.js';
 
 const PP_BUS = 'org.freedesktop.UPower.PowerProfiles';
 const PP_PATH = '/org/freedesktop/UPower/PowerProfiles';
@@ -49,6 +50,7 @@ export default class TogglesModule extends IslandModule {
 
     async init() {
         this._ids = [];   // [object, id] pairs, disconnected in destroy()
+        this._connectTimer = new Timer();   // gives up the "connecting" spinner
         this._page = 'grid';
 
         this._iface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
@@ -566,13 +568,12 @@ export default class TogglesModule extends IslandModule {
         else
             this._nm.add_and_activate_connection_async(null, dev, ap.get_path(), null, null);
         // give up the spinner if nothing happens
-        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 20, () => {
+        this._connectTimer.schedule(20000, () => {
             if (this._connecting === ssid) {
                 this._connecting = null;
                 this._pageSig = null;
                 this._sync();
             }
-            return GLib.SOURCE_REMOVE;
         });
     }
 
@@ -638,6 +639,7 @@ export default class TogglesModule extends IslandModule {
     }
 
     destroy() {
+        this._connectTimer?.clear();
         this._unsubCaffeine?.();
         this._unsubCaffeine = this._caffeine = null;
         for (const [obj, id] of this._ids ?? []) {
