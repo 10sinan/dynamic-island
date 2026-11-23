@@ -10,6 +10,7 @@ Install with:  di-config claude-hooks install
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -48,11 +49,48 @@ def build_args(payload, pids):
     else:
         return None
     cwd = str(payload.get("cwd") or os.getcwd())
-    project = os.path.basename(cwd.rstrip("/")) or cwd
-    message = str(payload.get("message", "")).replace("\n", " ")[:200]
+    project = redact(os.path.basename(cwd.rstrip("/")) or cwd)
+    message = redact(str(payload.get("message", "")).replace("\n", " "))[:200]
     return ["gdbus", "call", "--session", "--timeout", "1",
             "--dest", DEST, "--object-path", PATH, "--method", METHOD,
             kind, project, message, ",".join(map(str, pids)), str(payload.get("session_id", ""))[:80]]
+
+
+MASK = "*****"
+# a value: quoted (kept whole) or up to the next space / quote / separator
+_VALUE = r"""(?:"[^"]*"|'[^']*'|[^\s"'&;,)]+)"""
+_NAME = (r"[A-Za-z0-9_.-]*(?:password|passwd|passphrase|pwd|secret|token(?!s)|api[ _-]?key|apikey|"
+         r"access[ _-]?key|private[ _-]?key|credential)[A-Za-z0-9_-]*")
+_FLAG = (r"--(?:password|passwd|pass|passphrase|token|secret|api[-_]?key|access[-_]?token|auth[-_]?token|"
+         r"client[-_]?secret|private[-_]?key)")
+
+# (pattern, replacement): only the secret itself becomes MASK, the rest of the command stays readable.
+_REDACT = [(re.compile(p, re.I) if i else re.compile(p), r) for i, (p, r) in enumerate([
+    # 0  well-known token shapes (case-sensitive): the whole token is the secret
+    (r"\bsk-ant-[A-Za-z0-9_-]{8,}|\bsk-[A-Za-z0-9]{20,}|\bgithub_pat_[A-Za-z0-9_]{20,}|\bgh[pousr]_[A-Za-z0-9]{20,}"
+     r"|\bglpat-[A-Za-z0-9_-]{16,}|\bxox[abprs]-[A-Za-z0-9-]{10,}|\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA)[A-Z0-9]{16}\b"
+     r"|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}", MASK),
+    # 1  Authorization: [Scheme] value   (header in a -H argument, an env var, JSON ...)
+    (r"(\bauthorization[\"']?\s*[:=]\s*(?:(?:bearer|basic|token|digest)\s+)?)" + _VALUE, r"\1" + MASK),
+    # 2  Bearer value anywhere else
+    (r"(\bbearer\s+)[^\s\"'&;,)]{6,}", r"\1" + MASK),
+    # 3  --password value / --token value  (--password=value is rule 4); a following flag is not a value
+    (r"(" + _FLAG + r"\s+)(?!-)" + _VALUE, r"\1" + MASK),
+    # 4  password=..., GITHUB_TOKEN=..., "api_key": "...", x-api-key: ..., --token=...
+    (r"(\b" + _NAME + r"[\"']?\s*[=:]\s*)" + _VALUE, r"\1" + MASK),
+    # 5  scheme://user:password@host
+    (r"(://[^/\s:@]+:)[^@\s/]+(@)", r"\1" + MASK + r"\2"),
+    # 6  curl -u user:password
+    (r"(\s-u\s+[^\s:]+:)\S+", r"\1" + MASK),
+])]
+
+
+def redact(text):
+    """Mask secrets in a command / message before it leaves this process (D-Bus, the island's window, logs)."""
+    text = str(text)
+    for pattern, repl in _REDACT:
+        text = pattern.sub(repl, text)
+    return text
 
 
 def summarize(tool, tool_input):
@@ -66,7 +104,8 @@ def summarize(tool, tool_input):
         text = str(ti.get("url") or ti.get("query") or "")
     else:
         text = ""
-    text = " ".join(text.split())
+    # mask first: cutting at 120 characters must not leave half a secret on screen
+    text = " ".join(redact(text).split())
     return text if len(text) <= 120 else text[:119] + "…"
 
 
@@ -80,8 +119,8 @@ def build_permission_args(payload, pids):
     if str(payload.get("hook_event_name", "")) != "PermissionRequest":
         return None
     cwd = str(payload.get("cwd") or os.getcwd())
-    project = os.path.basename(cwd.rstrip("/")) or cwd
-    tool = str(payload.get("tool_name", ""))[:60]
+    project = redact(os.path.basename(cwd.rstrip("/")) or cwd)
+    tool = redact(str(payload.get("tool_name", "")))[:60]
     summary = summarize(tool, payload.get("tool_input"))
     if not summary or summary.endswith("…"):
         return None
