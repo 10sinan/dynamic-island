@@ -15,7 +15,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
-import {MAX_ART_BYTES, checkArtUrl, readCapped} from '../lib/artFetch.js';
+import {MAX_ART_BYTES, artSocketGuard, assertPublicHost, checkArtUrl, readCapped} from '../lib/artFetch.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
 
 const MPRIS = 'org.mpris.MediaPlayer2.';
@@ -527,6 +527,8 @@ export default class MusicModule extends IslandModule {
                 stream.close(null);
             }
         }
+        // the name must not resolve to this machine / the local network either
+        await assertPublicHost(GLib.Uri.parse(url, GLib.UriFlags.NONE).get_host(), this.cancellable);
         const Soup = (await import('gi://Soup?version=3.0')).default;
         Gio._promisify(Soup.Session.prototype, 'send_async', 'send_finish');
         this._soup ??= new Soup.Session({timeout: 8});
@@ -534,7 +536,17 @@ export default class MusicModule extends IslandModule {
         if (!msg)
             throw new Error('bad url');
         msg.set_flags(Soup.MessageFlags.NO_REDIRECT);
-        const stream = await this._soup.send_async(msg, GLib.PRIORITY_DEFAULT, this.cancellable);
+        // ... and neither may the address Soup really connects to (DNS rebinding)
+        const abort = new Gio.Cancellable();
+        const outer = this.cancellable?.connect('cancelled', () => abort.cancel());
+        msg.connect('network-event', artSocketGuard(() => abort.cancel()));
+        let stream;
+        try {
+            stream = await this._soup.send_async(msg, GLib.PRIORITY_DEFAULT, abort);
+        } finally {
+            if (outer)
+                this.cancellable.disconnect(outer);
+        }
         try {
             if (msg.status_code !== 200)
                 throw new Error(`HTTP ${msg.status_code}`);

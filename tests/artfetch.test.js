@@ -3,7 +3,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import {MAX_ART_BYTES, checkArtUrl, isPrivateHost, readCapped} from '../dynamic-island@10sinan.github.io/lib/artFetch.js';
+import {MAX_ART_BYTES, allPublic, assertPublicHost, checkArtUrl, isPrivateHost, readCapped} from '../dynamic-island@10sinan.github.io/lib/artFetch.js';
 
 Gio._promisify(Gio.InputStream.prototype, 'read_bytes_async', 'read_bytes_finish');
 
@@ -51,10 +51,34 @@ check('non-string', checkArtUrl(null) === null && checkArtUrl(42) === null);
 check('isPrivateHost trailing dot', isPrivateHost('localhost.'));
 check('isPrivateHost public name', !isPrivateHost('example.com'));
 
+print('allPublic');
+check('public addresses', allPublic(['93.184.216.34', '2606:4700::1111']));
+check('one private address spoils it', !allPublic(['93.184.216.34', '127.0.0.1']));
+check('ipv6 loopback', !allPublic(['::1']));
+check('mapped ipv4 loopback', !allPublic(['::ffff:127.0.0.1']));
+check('no answer', !allPublic([]));
+
+print('assertPublicHost');
+const rejects = async (host, why = /./) => {
+    try {
+        await assertPublicHost(host);
+        return false;
+    } catch (e) {
+        return why.test(e.message);
+    }
+};
+
 print('readCapped');
 const loop = GLib.MainLoop.new(null, false);
 (async () => {
     try {
+        check('refuses a private literal', await rejects('192.168.1.1'));
+        check('refuses localhost', await rejects('localhost'));
+        // not caught by the name rules: only the lookup (/etc/hosts -> ::1 / 127.0.0.1) reveals it
+        if (GLib.spawn_command_line_sync('getent hosts localhost.localdomain')[3] === 0)
+            check('refuses a name that resolves to loopback', await rejects('localhost.localdomain', /resolves to a private/));
+        else
+            print('  skip: localhost.localdomain is not defined on this machine');
         const small = new Uint8Array(200000).map((_v, i) => i & 0xff);
         const got = await readCapped(Gio.MemoryInputStream.new_from_bytes(GLib.Bytes.new(small)), MAX_ART_BYTES);
         check('reads whole small stream', got.length === small.length && got[199999] === (199999 & 0xff));
