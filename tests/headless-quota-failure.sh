@@ -4,7 +4,8 @@
 # this extension) with an EMPTY home directory, turns claude-real-usage on and
 # asks the service for numbers:
 #   case 1  no ~/.claude/.credentials.json            -> off at once
-#   case 2  a credentials file with an expired token  -> off at once (no network involved)
+#   case 2  a credentials file with an expired token  -> stays ON (only a pause, no request),
+#           and once the file is gone on the next poll   -> off (the file is read again each time)
 # Exit status 0 = both cases behave. (The 3-failure rule for network / server
 # errors is covered by tests/claudeRealQuota.test.js.)
 #
@@ -56,6 +57,13 @@ run_case() { # name  [credentials json]
     sleep 3
     echo "case: $1"
     expect "service exists while the setting is on" "$(ev "!!$EXT._quota")" "true"
+    if [ "$1" = expired ]; then
+        # only a pause: no request, nothing switched off, however often it is asked
+        for n in 1 2 3 4; do ev "$EXT._quota.refresh(); true" >/dev/null; sleep 0.7; done
+        expect "expired token: setting stays on" "$($S get "$SCHEMA" claude-real-usage)" "true"
+        expect "expired token: service stays" "$(ev "!!$EXT._quota")" "true"
+        rm -f "$home/.claude/.credentials.json"   # the next poll reads the file again and finds it gone
+    fi
     ev "$EXT._quota.refresh(); true" >/dev/null
     sleep 2
     expect "setting switched back to false" "$($S get "$SCHEMA" claude-real-usage)" "false"
