@@ -159,7 +159,7 @@ export default class DynamicIslandExtension extends Extension {
             }
             if (compact.length)
                 s.set_strv('stats-compact-modules', compact);
-            console.log(`${LOG_PREFIX} settings migrated to layout v2: tiles [${tiles}] compact [${compact}]`);
+            console.debug(`${LOG_PREFIX} settings migrated to layout v2: tiles [${tiles}] compact [${compact}]`);
         }
 
         if (from < 3) {
