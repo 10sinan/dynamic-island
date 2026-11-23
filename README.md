@@ -222,6 +222,14 @@ Eklenti kendi makinende çalışır ve varsayılan olarak **hiçbir veriyi inter
 
 Eklenti `eval` ya da gizlenmiş kod içermez; alt süreç olarak yalnızca Ayarlar uygulamasını (`gnome-control-center`) açar.
 
+### Güvenlik açığı bildirme
+
+Bir güvenlik sorunu bulursan lütfen **herkese açık bir issue açma**. GitHub'ın özel bildirim özelliğini kullan:
+depoda **Security** sekmesi → **Report a vulnerability** → formu doldur. Bildirim yalnızca depo sahibine görünür.
+Ne olduğunu, nasıl yeniden üretileceğini ve etkilediği sürümü yazman yeterli. (Bu seçenek görünmüyorsa depo
+ayarlarında *Private vulnerability reporting* henüz açılmamış demektir; o zaman normal bir issue ile yalnızca
+"özel iletişim istiyorum" yaz, ayrıntıyı yazma.)
+
 ## Nasıl çalışıyor?
 
 ### Panel yerini alma (`lib/panelSlot.js`)
