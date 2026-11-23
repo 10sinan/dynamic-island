@@ -216,9 +216,9 @@ export class NotificationPreview {
         r.frame.remove_all_transitions();
         r.flash.remove_all_transitions();
         r.frame.set_scale(0.78, 0.78);
-        r.frame.ease({scale_x: 1, scale_y: 1, duration: 420, mode: Clutter.AnimationMode.EASE_OUT_BACK});
+        r.frame.ease({scale_x: 1, scale_y: 1, duration: C.POP_MS, mode: C.EASE_POP});
         r.flash.opacity = 230;
-        r.flash.ease({opacity: 0, duration: 340, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        r.flash.ease({opacity: 0, duration: C.FLASH_MS, mode: C.EASE_FADE});
     }
 
     _update(n) {

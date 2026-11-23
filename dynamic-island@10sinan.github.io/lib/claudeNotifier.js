@@ -15,6 +15,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {ClaudeBridge} from './claudeBridge.js';
 import {Timer} from './disposer.js';
 import {_, _f} from './i18n.js';
+import * as C from './constants.js';
 
 const ORANGE = [217, 119, 87];
 const LIGHT = [255, 186, 150];
@@ -180,7 +181,7 @@ export class ClaudeNotifier {
                 const pill = this._pill;
                 this._pill = null;
                 this._stopWave();
-                pill.ease({opacity: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                pill.ease({opacity: 0, duration: C.FADE_OUT_MS, mode: C.EASE_FADE,
                     onComplete: () => this._island?.setCompactAccessory(null)});
             }
             return;
@@ -191,7 +192,7 @@ export class ClaudeNotifier {
             this._pill = this._buildPill();
             this._pill.opacity = 0;
             this._island.setCompactAccessory(this._pill);
-            this._pill.ease({opacity: 255, duration: 260, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+            this._pill.ease({opacity: 255, duration: C.FADE_IN_MS, mode: C.EASE_FADE});
         }
         if (this._pillLabel.text !== text) {
             this._pillLabel.text = text;
@@ -354,7 +355,7 @@ export class ClaudeNotifier {
         // a little pop on the badge every time a new event arrives
         this._badge.set_pivot_point(0.5, 0.5);
         this._badge.set_scale(0.6, 0.6);
-        this._badge.ease({scale_x: 1, scale_y: 1, duration: 420, mode: Clutter.AnimationMode.EASE_OUT_BACK});
+        this._badge.ease({scale_x: 1, scale_y: 1, duration: C.POP_MS, mode: C.EASE_POP});
     }
 
     destroy() {

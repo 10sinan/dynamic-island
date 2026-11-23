@@ -264,8 +264,8 @@ export class Island {
             opacity: 255,
             scale_x: 1,
             scale_y: 1,
-            duration: C.APPEAR_MS,
-            mode: Clutter.AnimationMode.EASE_OUT_BACK,
+            duration: C.POP_MS,
+            mode: C.EASE_POP,
         });
     }
 
@@ -478,7 +478,7 @@ export class Island {
         const from = this._bodyTint ?? flat;
         this._tintTarget = target;
         this._tintTl?.stop();
-        const tl = new Clutter.Timeline({actor: this.actor, duration: 700});
+        const tl = new Clutter.Timeline({actor: this.actor, duration: C.COLOUR_MS});
         this._tintTl = tl;
         tl.connect('new-frame', () => {
             const p = tl.get_progress();
@@ -912,13 +912,13 @@ export class Island {
                     // already (partly) visible - quick hover out and in - must not stall
                     delay: prev === mode || box.opacity > 0 ? 0 : C.FADE_IN_DELAY_MS,
                     duration: C.FADE_IN_MS,
-                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    mode: C.EASE_FADE,
                 });
             } else if (box.visible) {
                 box.ease({
                     opacity: 0,
                     duration: C.FADE_OUT_MS,
-                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    mode: C.EASE_FADE,
                     onComplete: () => {
                         if (!this._destroyed && this._mode !== m)
                             box.hide();

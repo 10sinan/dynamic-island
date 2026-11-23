@@ -15,6 +15,7 @@ import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import {IslandModule} from '../base.js';
 import {_, _f, pct} from '../../lib/i18n.js';
 import {Timer} from '../../lib/disposer.js';
+import * as C from '../../lib/constants.js';
 
 const PP_BUS = 'org.freedesktop.UPower.PowerProfiles';
 const PP_PATH = '/org/freedesktop/UPower/PowerProfiles';
@@ -196,7 +197,7 @@ export default class TogglesModule extends IslandModule {
             // small press bounce on the icon
             bubble.remove_all_transitions();
             bubble.set_scale(0.82, 0.82);
-            bubble.ease({scale_x: 1, scale_y: 1, duration: 380, mode: Clutter.AnimationMode.EASE_OUT_BACK});
+            bubble.ease({scale_x: 1, scale_y: 1, duration: C.POP_MS, mode: C.EASE_POP});
             onToggle();
         });
         outer.add_child(main);
@@ -380,7 +381,7 @@ export default class TogglesModule extends IslandModule {
     _slideIn(actor, dir) {
         actor.remove_all_transitions();
         actor.set({opacity: 0, translation_x: 26 * dir});
-        actor.ease({opacity: 255, translation_x: 0, duration: 300, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+        actor.ease({opacity: 255, translation_x: 0, duration: C.SLIDE_IN_MS, mode: C.EASE_SLIDE});
     }
 
     _switch(on, onToggle) {
@@ -394,7 +395,7 @@ export default class TogglesModule extends IslandModule {
         paint(on);
         sw.connect('clicked', () => {
             on = !on;
-            knob.ease({translation_x: on ? 16 : 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+            knob.ease({translation_x: on ? 16 : 0, duration: C.SNAP_MS, mode: C.EASE_SLIDE});
             sw.set_style(on ? `background-color: ${this.accent};` : null);
             onToggle();
         });
@@ -441,8 +442,8 @@ export default class TogglesModule extends IslandModule {
             list.add_child(actor);
             if (this._pageFresh) {
                 actor.set({opacity: 0, translation_y: 8});
-                actor.ease({opacity: 255, translation_y: 0, delay: 40 + i * 28, duration: 260,
-                    mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+                actor.ease({opacity: 255, translation_y: 0, delay: 40 + i * 28, duration: C.SLIDE_IN_MS,
+                    mode: C.EASE_SLIDE});
             }
         });
         this._pageFresh = false;

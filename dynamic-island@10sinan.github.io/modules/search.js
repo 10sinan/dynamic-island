@@ -16,6 +16,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {IslandModule} from './base.js';
 import {_} from '../lib/i18n.js';
+import * as C from '../lib/constants.js';
 
 const DEBOUNCE_MS = 140;
 const PER_PROVIDER = 3;
@@ -90,7 +91,7 @@ export default class SearchModule extends IslandModule {
         this._entry.text = '';
         this._renderEmpty();
         this._box.set({opacity: 0, translation_y: -8});
-        this._box.ease({opacity: 255, translation_y: 0, duration: 260, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+        this._box.ease({opacity: 255, translation_y: 0, duration: C.SLIDE_IN_MS, mode: C.EASE_SLIDE});
         // after the morph started: the entry must be mapped to take focus
         if (this._focusIdle)
             GLib.source_remove(this._focusIdle);
@@ -217,8 +218,8 @@ export default class SearchModule extends IslandModule {
                 this._list.add_child(row);
                 if (firstPaint) {
                     row.set({opacity: 0, translation_y: 6});
-                    row.ease({opacity: 255, translation_y: 0, delay: n * 22, duration: 220,
-                        mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+                    row.ease({opacity: 255, translation_y: 0, delay: n * 22, duration: C.SLIDE_IN_MS,
+                        mode: C.EASE_SLIDE});
                 }
                 n++;
             }

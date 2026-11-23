@@ -17,14 +17,14 @@ import St from 'gi://St';
 import {IslandModule} from './base.js';
 import {MAX_ART_BYTES, artSocketGuard, assertPublicHost, checkArtUrl, readCapped} from '../lib/artFetch.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
+import * as C from '../lib/constants.js';
 
 const MPRIS = 'org.mpris.MediaPlayer2.';
 const PATH = '/org/mpris/MediaPlayer2';
 const PLAYER_IFACE = 'org.mpris.MediaPlayer2.Player';
 const COVER_PX = 176;            // decoded cover size (88 logical px at 2x)
 const ART_CACHE = 8;
-const ART_SETTLE_MS = 350;
-const COLOR_GLIDE_MS = 700;   // palette change on a new cover   // wait for a late cover URL after a track change
+const ART_SETTLE_MS = 350;   // wait for a late cover URL after a track change
 const POPUP_MS = 4000;
 const VIDEO_MAX_W = 232;   // the live window preview fits into this box
 const VIDEO_MAX_H = 130;
@@ -121,8 +121,8 @@ class Cover {
             opacity: 255,
             scale_x: 1,
             scale_y: 1,
-            duration: 460,
-            mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+            duration: C.COVER_FADE_MS,
+            mode: C.EASE_SLIDE,
             onComplete: () => {
                 if (this._dead)
                     return;
@@ -136,8 +136,8 @@ class Cover {
             scale_x: 0.9,
             scale_y: 0.9,
             opacity: 120,
-            duration: 460,
-            mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+            duration: C.COVER_FADE_MS,
+            mode: C.EASE_SLIDE,
         });
     }
 }
@@ -197,7 +197,7 @@ class Equalizer {
             this._bars.forEach(bar => {
                 bar.remove_all_transitions();
                 if (bar.mapped)
-                    bar.ease({scale_y: EQ_FLAT, duration: 260, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+                    bar.ease({scale_y: EQ_FLAT, duration: C.FADE_IN_MS, mode: C.EASE_FADE});
                 else
                     bar.scale_y = EQ_FLAT;
             });
@@ -463,8 +463,8 @@ export default class MusicModule extends IslandModule {
                 translation_x: -18 * dir,
                 opacity: 0,
                 delay: n * 45,
-                duration: 150,
-                mode: Clutter.AnimationMode.EASE_IN_QUAD,
+                duration: C.TEXT_OUT_MS,
+                mode: C.EASE_LEAVE,
                 onComplete: () => {
                     if (this._dead || label._diTarget !== text)
                         return;
@@ -473,8 +473,8 @@ export default class MusicModule extends IslandModule {
                     label.ease({
                         translation_x: 0,
                         opacity: 255,
-                        duration: 340,
-                        mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+                        duration: C.TEXT_IN_MS,
+                        mode: C.EASE_SLIDE,
                     });
                 },
             });
@@ -653,8 +653,8 @@ export default class MusicModule extends IslandModule {
             this._paintColors(target);
             return;
         }
-        const tl = new Clutter.Timeline({actor: this._card, duration: COLOR_GLIDE_MS});
-        tl.set_progress_mode(Clutter.AnimationMode.EASE_IN_OUT_QUAD);
+        const tl = new Clutter.Timeline({actor: this._card, duration: C.COLOUR_MS});
+        tl.set_progress_mode(C.EASE_COLOUR_TIMELINE);
         const lerp = t => Object.fromEntries(Object.keys(target).map(k => [k, mix(from[k], target[k], t)]));
         tl.connect('new-frame', () => {
             if (!this._dead)
@@ -699,7 +699,7 @@ export default class MusicModule extends IslandModule {
 
     /** Slow colour flow, glow and cover pulse: only while the card is open and playing. */
     _cardMotion(on) {
-        const E = Clutter.AnimationMode.EASE_IN_OUT_SINE;
+        const E = C.EASE_LOOP;
         const stop = a => a?.remove_all_transitions();
         // Players report many property changes (volume, metadata, shuffle...);
         // restarting the endless loops each time snaps them back to their
@@ -722,12 +722,12 @@ export default class MusicModule extends IslandModule {
         }
         this._flowA.opacity = 255;
         this._flowB.opacity = 40;
-        this._flowA.ease({opacity: 40, duration: 4800, mode: E, repeatCount: -1, autoReverse: true});
-        this._flowB.ease({opacity: 255, duration: 4800, mode: E, repeatCount: -1, autoReverse: true});
+        this._flowA.ease({opacity: 40, duration: C.AMBIENT_SLOW_MS, mode: E, repeatCount: -1, autoReverse: true});
+        this._flowB.ease({opacity: 255, duration: C.AMBIENT_SLOW_MS, mode: E, repeatCount: -1, autoReverse: true});
         this._glow.set({opacity: 110, scale_x: 0.92, scale_y: 0.92});
-        this._glow.ease({opacity: 230, scale_x: 1.08, scale_y: 1.08, duration: 1700, mode: E,
+        this._glow.ease({opacity: 230, scale_x: 1.08, scale_y: 1.08, duration: C.AMBIENT_PULSE_MS, mode: E,
             repeatCount: -1, autoReverse: true});
-        this._cardCover?.actor.ease({scale_x: 1.025, scale_y: 1.025, duration: 1700, mode: E,
+        this._cardCover?.actor.ease({scale_x: 1.025, scale_y: 1.025, duration: C.AMBIENT_PULSE_MS, mode: E,
             repeatCount: -1, autoReverse: true});
     }
 
@@ -741,8 +741,8 @@ export default class MusicModule extends IslandModule {
         this._tintNew.opacity = 0;
         this._tintNew.ease({
             opacity: 255,
-            duration: 650,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            duration: C.COLOUR_MS,
+            mode: C.EASE_FADE,
             onComplete: () => {
                 if (this._dead || !this._tintOld)
                     return;

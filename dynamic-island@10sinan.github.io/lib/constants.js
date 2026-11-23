@@ -1,6 +1,8 @@
 // Fixed values. Everything a user may want to change lives in GSettings
 // (schemas/*.gschema.xml, edited with tools/di-config).
 
+import Clutter from 'gi://Clutter';
+
 export const LOG_PREFIX = '[dynamic-island]';
 
 // Geometry (logical pixels)
@@ -21,15 +23,12 @@ export const EXIT_SLACK = 8;         // an open island keeps hover this far outs
 export const HOVER_INTENT_MS = 60;     // the pointer must stay this long before the island opens (a brush-by does nothing)
 export const MIN_OPEN_MS = 250;        // an island that just opened is not collapsed before this (no half-open twitch)
 export const LEAVE_STREAK_MS = 900;    // leaving again within this long of the last leave = hand jitter at the edge: wait longer
-export const COLLAPSE_MS = 260;
+export const COLLAPSE_MS = 260;                // island collapse (opening length is the user's `animation-duration`)
 export const SPRING_DAMPING = 0.74;            // < 1: a small bounce when opening ('spring' setting)
 export const SPRING_DAMPING_COLLAPSE = 0.92;
 export const MORPH_BLUR = 14;                  // px, content blur at the start of a morph
 export const MORPH_BLUR_SHARE = 0.8;           // blur fades over this share of the animation duration
-export const FADE_OUT_MS = 110;
-export const FADE_IN_MS = 220;
-export const FADE_IN_DELAY_MS = 90;
-export const APPEAR_MS = 360;
+export const FADE_IN_DELAY_MS = 90;    // incoming island content waits for the outgoing one to leave
 export const REBUILD_DEBOUNCE_MS = 150;
 export const ACTIVITY_LEAVE_MS = 1500;  // activity paused by hover ends this long after leaving
 export const OSD_DURATION_MS = 1500;
@@ -38,3 +37,43 @@ export const OSD_DURATION_MS = 1500;
 export const BAR_W_COMPACT = 22;
 export const BAR_W_TILE = 58;
 export const BAR_W_OSD = 200;
+
+// ---------------------------------------------------------------------------
+// Motion: ONE place for every animation length (ms) and easing. Animations of the
+// same kind use the same entry, so the interface moves with one rhythm.
+// (Dwell times - how long a popup stays - are not animations; they stay with their feature.)
+//
+//   kind        what                                             duration      easing
+//   fade in     something appears / gets bright                 FADE_IN_MS    EASE_FADE
+//   fade out    something goes away                             FADE_OUT_MS   EASE_FADE
+//   slide in    a panel / row / page slides + fades in          SLIDE_IN_MS   EASE_SLIDE
+//   snap        a small control moves (switch knob)             SNAP_MS       EASE_SLIDE
+//   pop         scale-up with a little overshoot                POP_MS        EASE_POP
+//   glide       a value moves (bars, ring, progress)            GLIDE_MS      EASE_SLIDE
+//   colour      palette / tint changes                          COLOUR_MS     EASE_FADE
+//   text swap   old text leaves, new text arrives               TEXT_OUT_MS / TEXT_IN_MS
+//   live        follows a control that is being dragged         LIVE_MS       EASE_FADE
+//   ambient     endless slow loops (flow, glow, pulse)          AMBIENT_*     EASE_LOOP
+// ---------------------------------------------------------------------------
+export const FADE_IN_MS = 220;
+export const FADE_OUT_MS = 120;
+export const SLIDE_IN_MS = 260;
+export const SNAP_MS = 200;
+export const POP_MS = 400;
+export const GLIDE_MS = 500;
+export const COLOUR_MS = 700;
+export const TEXT_OUT_MS = 150;
+export const TEXT_IN_MS = 340;
+export const LIVE_MS = 120;
+export const FLASH_MS = 340;
+export const COVER_FADE_MS = 460;
+export const AMBIENT_SLOW_MS = 4800;
+export const AMBIENT_PULSE_MS = 1700;
+export const AMBIENT_ICON_MS = 700;
+
+export const EASE_FADE = Clutter.AnimationMode.EASE_OUT_QUAD;
+export const EASE_SLIDE = Clutter.AnimationMode.EASE_OUT_CUBIC;
+export const EASE_POP = Clutter.AnimationMode.EASE_OUT_BACK;
+export const EASE_LEAVE = Clutter.AnimationMode.EASE_IN_QUAD;
+export const EASE_LOOP = Clutter.AnimationMode.EASE_IN_OUT_SINE;
+export const EASE_COLOUR_TIMELINE = Clutter.AnimationMode.EASE_IN_OUT_QUAD;
