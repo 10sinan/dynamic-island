@@ -13,7 +13,8 @@ const check = (name, cond) => {
 const ROWS = [{kind: 'session', model: null, percent: 10, resetsAt: null}];
 const NET = {error: 'Anthropic not reachable'};
 const SERVER = {error: 'Anthropic answered', status: 503};
-const AUTH = {error: 'Login expired · opening Claude Code renews it', auth: true};
+const AUTH = {error: 'No Claude Code login found', auth: true};   // no / unreadable file, HTTP 401 or 403
+const EXPIRED = {error: 'Login expired · opening Claude Code renews it', expired: true};
 
 /** A service whose answers come from `script`, one per request, and a clock we move by hand. */
 function make(script) {
@@ -26,10 +27,34 @@ function make(script) {
 }
 
 print('credential problems switch it off at once');
-for (const [name, res] of [['no login / unreadable file / expired token / 401 / 403', AUTH]]) {
+for (const [name, res] of [['no / unreadable login file, HTTP 401 / 403', AUTH]]) {
     const {q, setting} = make([res]);
     await q.refresh();
     check(name, setting.value === false && (await q.refresh()) === null);
+}
+
+print('an expired token is only a pause');
+{
+    const {q, setting, calls, tick} = make([{rows: ROWS}, EXPIRED, EXPIRED, EXPIRED, EXPIRED, {rows: ROWS}]);
+    await q.refresh();
+    for (let i = 0; i < 4; i++) {
+        tick(61);
+        check(`expired #${i + 1}: still on, last rows kept`, (await q.refresh())?.length === 1 && setting.value === true);
+    }
+    tick(61);
+    const again = await q.refresh();
+    check('after Claude Code renewed it the next poll asks again', calls.n === 6 && again?.length === 1);
+}
+{
+    // expiry does not count towards the 3 failures
+    const {q, setting, tick} = make([NET, NET, EXPIRED, NET]);
+    for (let i = 0; i < 3; i++) {
+        await q.refresh();
+        tick(61);
+    }
+    check('two failures, an expiry: still on', setting.value === true);
+    await q.refresh();
+    check('the third real failure still switches it off', setting.value === false);
 }
 
 print('network and server failures are tolerated');

@@ -9,8 +9,9 @@ import {QUOTA_BETA, QUOTA_URL, parseQuota, readToken} from './claudeQuota.js';
 /**
  * @param {{soup: object|null}} holder  keeps one Soup session between calls
  * @returns {Promise<{rows?: Array, error?: string, auth?: boolean, cancelled?: boolean}>}
- *   error is an i18n key; `auth` marks a credentials problem (no / unreadable / expired login,
- *   HTTP 401 or 403) as opposed to a network or server one
+ *   error is an i18n key; `auth` marks a credentials problem (no / unreadable login file,
+ *   HTTP 401 or 403) as opposed to a network or server one; `expired` means the token in
+ *   the file has run out (no request was made: Claude Code renews it, the file is read again next time)
  */
 export async function fetchQuota(holder, cancellable) {
     try {
@@ -27,7 +28,7 @@ export async function fetchQuota(holder, cancellable) {
         if (!tok)
             return {error: 'No Claude Code login found', auth: true};
         if (tok.expired)
-            return {error: 'Login expired · opening Claude Code renews it', auth: true};
+            return {error: 'Login expired · opening Claude Code renews it', expired: true};
         const Soup = (await import('gi://Soup?version=3.0')).default;
         Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_finish');
         holder.soup ??= new Soup.Session({timeout: 10, user_agent: 'dynamic-island'});

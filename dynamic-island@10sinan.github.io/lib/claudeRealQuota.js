@@ -7,9 +7,12 @@
 //   * one request at a time, at most one per MIN_GAP_S, shared by the Claude
 //     card and the quota warnings (they used to ask separately);
 //   * the token is never logged or stored here; failures log a fixed message;
-//   * a credentials problem (no login file, unreadable or expired token, HTTP
-//     401 / 403) switches the feature off at once: the `claude-real-usage`
-//     setting goes back to false and nothing is retried;
+//   * a credentials problem (no or unreadable login file, HTTP 401 / 403)
+//     switches the feature off at once: the `claude-real-usage` setting goes
+//     back to false and nothing is retried;
+//   * an expired token is only a pause: Claude Code renews it when it runs.
+//     No request is made, the last numbers stay, the file is read again on
+//     the next poll, and it does not count as a failure;
 //   * a network or server problem (timeout, 5xx, odd answer) is tolerated twice;
 //     the third failure in a row switches it off, any good answer resets the
 //     count. The user turns the feature on again on purpose.
@@ -74,6 +77,8 @@ export class RealQuota {
         const r = await this._fetch(this._holder, this._cancellable);
         if (this._dead || r.cancelled)
             return null;
+        if (r.expired)
+            return this._rows;   // wait for Claude Code to renew the login; the next poll reads the file again
         if (!r.rows) {
             if (r.auth || ++this._failures >= MAX_FAILURES) {
                 this._giveUp();
