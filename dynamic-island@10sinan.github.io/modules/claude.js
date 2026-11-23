@@ -290,6 +290,13 @@ export default class ClaudeUsageModule extends IslandModule {
 
     /** Glide the ring to a new fraction/colour (no jumpy redraws). */
     _setRing(frac, color) {
+        // Already gliding to this very value (every tick asks again, and a poll
+        // faster than the 600 ms glide would restart the easing each time).
+        const goal = this._ringGoal;
+        if (this._ringTl && goal && goal.frac === frac && goal.color.r === color.r &&
+            goal.color.g === color.g && goal.color.b === color.b)
+            return;
+        this._ringGoal = {frac, color};
         const from = this._ringFrac, fromC = this._ringColor;
         this._ringTl?.stop();
         if (Math.abs(from - frac) < 0.002 && fromC.r === color.r && fromC.g === color.g && fromC.b === color.b)
