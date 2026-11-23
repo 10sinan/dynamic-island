@@ -1,11 +1,12 @@
 {
   "uuid": "dynamic-island@10sinan.github.io",
   "name": "Dynamic Island",
-  "description": "Three black pills in the top panel, no clicks needed: stats (left), clock + music + calendar + notifications (centre), Quick Settings (right). Everything opens on hover. Optional Claude Code usage card.",
+  "description": "Replaces the top-panel clock, Activities and Quick Settings with three hover-to-open pills: system stats, clock/music/calendar/notifications, and quick settings. Everything opens on hover, no clicks needed.",
   "shell-version": [
     "50"
   ],
   "settings-schema": "org.gnome.shell.extensions.dynamic-island",
   "url": "https://github.com/10sinan/dynamic-island",
-  "version": 1
+  "version": 1,
+  "version-name": "0.1.0"
 }
