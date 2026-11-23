@@ -369,6 +369,9 @@ Animasyon sırasında hiçbir içerik yeniden yerleşmez:
 - **Gölge yok:** Island'ların arkasında gölge yok (hem görünüm hem performans için).
 - **Çubuklar:** Seviye çubukları genişlik yerine `scale_x` ile anime edilir.
 - **Veri yenileme:** Kapalıyken yalnızca panelde görünen modüller yenilenir. Açılınca veri yenilemesi animasyon bitince yapılır.
+- **Hover histerezisi (titreme önleme):** İmleç adanın üstünde en az 60 ms durmalı (üstünden geçip gitmek hiçbir şey açmaz; kapanırken hâlâ büyükse anında yeniden açılır). Açık ada kenarının 8 px dışına kadar hover sayılır (görünmez bir pay). Yeni açılan ada 250 ms'den önce kapanmaz; kenarda titreyen el (kısa sürede tekrar çıkış) kapanma bekleyişini en çok 3 katına uzatır. Senaryolar: `tests/headless-hover.sh`.
+- **Animasyon tablosu:** Tüm süreler ve easing'ler `lib/constants.js` içindeki tek tabloda (belirme, kaybolma, kayma, pop, süzülme, renk...); aynı türdeki animasyonlar aynı değeri kullanır.
+- **Görünmeyen çizilmez:** Gizli bir karodaki metin/çubuk güncellenmez (görününce en yeni değer yazılır); görünmeyen equalizer ve Claude dalgası durur (dalganın zaman çizgisi artık gizliyken duraklatılır).
 
 ### Ayar değişince
 

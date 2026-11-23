@@ -28,6 +28,9 @@ Biçim [Keep a Changelog](https://keepachangelog.com/) tarzındadır. Henüz sü
   yuvarlanmaz (1 sn'ye kadar sapma vardı). Yalnızca arka plan yoklaması birleştirilmiş zamanlayıcı kullanmaya devam eder.
 - **`install.sh`** hata durumunda "Bitti" demeden çıkış kodu 1 ile durur; `glib-compile-schemas` yoksa söyler; `di-claude-hook` da bağlanır.
 
+- **Hover (akıcılık turu):** imleç adanın üstünde en az 60 ms durmadan ada açılmaz (eskiden anında; `hover-expand-delay` bundan büyükse o geçerli). Açık ada kenarının **8 px dışına kadar hover sayılır** (görünmez bir pay: bu bantta altındaki pencereler tıklama almaz). Yeni açılan ada 250 ms'den önce kapanmaz; kenarda titreme (900 ms içinde tekrar çıkış) kapanma bekleyişini en çok 3 katına uzatır.
+- **Animasyon süreleri** tek tabloda (`lib/constants.js`); aynı türdeki animasyonlar aynı süre/easing'i kullanır (ör. tüm kayarak giriş 260 ms, tüm pop 400 ms, tüm süzülmeler 500 ms). Küçük sapmalar: ajan paneli girişi 160→220, Claude pill çıkışı 200→120, çubuklar 380→500 ms.
+
 ### Düzeltmeler
 
 - Eklenti kapanırken/yeniden kurulurken **sızan zamanlayıcılar**: kaynak izleme (10 sn'lik `/proc` yoklaması), izin sırası (450 ms),
@@ -45,6 +48,7 @@ Biçim [Keep a Changelog](https://keepachangelog.com/) tarzındadır. Henüz sü
 
 - Renk geçişlerinde (700 ms) aynı `set_style` metni her karede tekrar yazılmıyor.
 - Claude "çalışıyor" dalgası ve dış çizgi yenilemesi ~30 fps ile sınırlı (başsız ölçüm: boşta 17, dalga 72 → 54 CPU tiki / 10 sn).
+- Gizliyken (genişlemiş adada pill, kapalı adada karo) çizim ve güncelleme yok: Claude dalgası zaman çizgisi duraklatılır (gizliyken faz ilerliyordu), `Meter` gizliyken yazmaz ve görününce en yeni değeri uygular.
 - Saat etiketleri yalnızca değişince atanıyor (aynı metin de yeniden yerleşim kuyruğuna giriyordu).
 
 ### Testler
