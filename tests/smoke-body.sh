@@ -523,6 +523,8 @@ dreset accent-color; dreset theme; sleep 1.2
 echo "   reset: theme body=$(ev "$C._bg.get_style().match(/background-color: (#[0-9a-f]+)/)[1]") accent=$(ev "$C._cfg.accent")"
 
 echo "== clipboard history (real St.Clipboard, memory only)"
+echo "   off by default: store=$(ev "$EXT._clip === null") (nothing reads the clipboard until switched on)"
+dset clipboard-history true; sleep 1.5
 CL="$EXT._clip"
 cliptext() { ev "imports.gi.St.Clipboard.get_default().set_text(imports.gi.St.ClipboardType.CLIPBOARD, '$1'); true" >/dev/null; sleep 0.45; }
 echo "   store exists=$(ev "!!$CL") starts empty or with real content: $(ev "$CL.items.length") entries"
@@ -555,7 +557,7 @@ echo "   a settings change rebuilds the islands but keeps the history: $BEFORE_N
 dreset hover-expand-delay; sleep 1.2
 dset clipboard-history false; sleep 1.2
 echo "   clipboard-history=false -> store gone: $(ev "$EXT._clip === null") section hidden: $(ev "!$Q._modules.some(m => m.constructor.id === 'clipboard')")"
-dreset clipboard-history; sleep 1.2
+dset clipboard-history true; sleep 1.2
 echo "   back on, fresh and empty (history is never kept when switched off): $(ev "!!$EXT._clip") entries=$(ev "$EXT._clip.items.length")"
 
 echo "== features off -> plain GNOME"

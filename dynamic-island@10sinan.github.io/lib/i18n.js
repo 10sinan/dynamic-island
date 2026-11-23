@@ -115,7 +115,8 @@ const TR = {
     'Super+A opens the right island': 'Super+A sağ island\'ı açsın', 'Look': 'Görünüm', 'Color theme': 'Renk teması',
     'Accent color (#rrggbb, empty = theme color)': 'Vurgu rengi (#rrggbb, boş = tema rengi)',
     'Show seconds on the clock': 'Saatte saniye göster', 'Features': 'Özellikler', 'Clipboard history': 'Pano geçmişi',
-    'Last 10 copies, memory only, never written to disk': 'Son 10 kopya, yalnızca bellekte, diske yazılmaz',
+    'Last 10 copies, memory only, never written to disk. Off by default: it reads everything you copy (password manager copies are skipped)':
+        'Son 10 kopya, yalnızca bellekte, diske yazılmaz. Varsayılan kapalı: kopyaladığın her şeyi okur (parola yöneticisi kopyaları atlanır)',
     'Preview on track change': 'Şarkı değişince önizleme',
     'Volume/brightness indicator in the island': 'Ses/parlaklık göstergesi island\'da',
     'Notification preview': 'Bildirim önizleme', 'Screenshot thumbnail': 'Ekran görüntüsü küçük resmi',

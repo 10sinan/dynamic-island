@@ -70,7 +70,7 @@ EN = {
     "Üst sol köşede CPU, RAM, ağ... Kapatınca GNOME'un Activities düğmesi geri gelir.":
         "CPU, RAM, network... in the top-left corner. Turning it off brings GNOME's Activities button back.",
     "Pano geçmişi (son 10 kopya, yalnızca bellekte)": "Clipboard history (last 10 copies, memory only)",
-    "Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır.":
+    "Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır. Varsayılan kapalı: açıkken kopyaladığın her şey okunur.":
         "What you copy is listed in the right island; click to put it back. Never written to disk; password-manager content is skipped.",
     "Toplantı modu (mikrofon/kamera → Rahatsız Etme)": "Meeting mode (mic/camera → Do Not Disturb)",
     "Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner.":
@@ -255,7 +255,7 @@ TABS = [
         dict(key="stats-enabled", kind="bool", label="Sol island (istatistik, Activities yerine)",
              help="Üst sol köşede CPU, RAM, ağ... Kapatınca GNOME'un Activities düğmesi geri gelir."),
         dict(key="clipboard-history", kind="bool", label="Pano geçmişi (son 10 kopya, yalnızca bellekte)",
-             help="Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır."),
+             help="Kopyaladıkların sağ island'da listelenir; tıklayınca panoya geri konur. Diske yazılmaz, parola yöneticisi içerikleri atlanır. Varsayılan kapalı: açıkken kopyaladığın her şey okunur."),
         dict(key="meeting-mode", kind="bool", label="Toplantı modu (mikrofon/kamera → Rahatsız Etme)",
              help="Mikrofon ya da kamera kullanılırken Rahatsız Etme otomatik açılır, bitince 10 sn sonra eski haline döner."),
         dict(key="claude-notify", kind="bool", label="Claude Code bildirimleri",

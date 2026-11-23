@@ -134,7 +134,7 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         const page = new Adw.PreferencesPage({title: _('Features'), icon_name: 'starred-symbolic'});
         const feat = new Adw.PreferencesGroup({title: _('Features')});
         this._switch(s, feat, 'clipboard-history', _('Clipboard history'),
-            _('Last 10 copies, memory only, never written to disk'));
+            _('Last 10 copies, memory only, never written to disk. Off by default: it reads everything you copy (password manager copies are skipped)'));
         this._switch(s, feat, 'music-popup', _('Preview on track change'));
         this._switch(s, feat, 'osd-enabled', _('Volume/brightness indicator in the island'));
         this._switch(s, feat, 'notification-preview', _('Notification preview'));

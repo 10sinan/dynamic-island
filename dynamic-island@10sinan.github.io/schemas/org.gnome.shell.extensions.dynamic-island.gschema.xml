@@ -181,8 +181,8 @@
       <summary>Accent colour override (#rrggbb); empty = use the theme's accent</summary>
     </key>
     <key name="clipboard-history" type="b">
-      <default>true</default>
-      <summary>Keep the last 10 copies (in memory only) and show them in the right island</summary>
+      <default>false</default>
+      <summary>Keep the last 10 copies (in memory only, never copies marked secret by a password manager) and show them in the right island. Off by default: it reads everything you copy</summary>
     </key>
     <key name="meeting-mode" type="b">
       <default>true</default>
