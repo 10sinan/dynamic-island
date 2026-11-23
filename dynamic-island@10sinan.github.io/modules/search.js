@@ -92,7 +92,10 @@ export default class SearchModule extends IslandModule {
         this._box.set({opacity: 0, translation_y: -8});
         this._box.ease({opacity: 255, translation_y: 0, duration: 260, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
         // after the morph started: the entry must be mapped to take focus
-        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+        if (this._focusIdle)
+            GLib.source_remove(this._focusIdle);
+        this._focusIdle = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this._focusIdle = 0;
             if (this._open && this._entry)
                 this._entry.grab_key_focus();
             return GLib.SOURCE_REMOVE;
@@ -130,6 +133,10 @@ export default class SearchModule extends IslandModule {
     }
 
     _cancel() {
+        if (this._focusIdle) {
+            GLib.source_remove(this._focusIdle);
+            this._focusIdle = 0;
+        }
         if (this._timer) {
             GLib.source_remove(this._timer);
             this._timer = 0;
