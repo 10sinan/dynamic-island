@@ -11,6 +11,7 @@ import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 
 import {IslandModule} from '../base.js';
 import {_} from '../../lib/i18n.js';
+import * as C from '../../lib/constants.js';
 
 const MAX_ROWS = 5;
 
@@ -103,7 +104,7 @@ export default class MixerModule extends IslandModule {
         this._rows.set(id, entry);
         this._paint(entry);
         row.set({opacity: 0, translation_y: 6});
-        row.ease({opacity: 255, translation_y: 0, duration: 240, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+        row.ease({opacity: 255, translation_y: 0, duration: C.SLIDE_IN_MS, mode: C.EASE_SLIDE});
         this._sync();
     }
 

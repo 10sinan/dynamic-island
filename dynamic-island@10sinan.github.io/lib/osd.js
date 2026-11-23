@@ -64,7 +64,7 @@ export class OsdRouter {
         const box = new St.BoxLayout({style_class: 'di-osd', y_align: Clutter.ActorAlign.CENTER});
         this._icon = new St.Icon({style_class: 'di-osd-icon', icon_size: 16,
             y_align: Clutter.ActorAlign.CENTER});
-        this._bar = new LevelBar(C.BAR_W_OSD, {accent: this._accent, animMs: 120, height: 6});
+        this._bar = new LevelBar(C.BAR_W_OSD, {accent: this._accent, animMs: C.LIVE_MS, height: 6});
         this._pct = new St.Label({style_class: 'di-osd-value', y_align: Clutter.ActorAlign.CENTER});
         box.add_child(this._icon);
         box.add_child(this._bar.actor);

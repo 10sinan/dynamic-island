@@ -14,6 +14,7 @@ import {_, _f, weekdayName} from '../lib/i18n.js';
 import {WINDOW_MS, addEntry, formatTokens, parseLine, splitDuration, windowStats} from '../lib/claudeUsage.js';
 import {untilReset} from '../lib/claudeQuota.js';
 import {IDLE_MAX_MS, listAgents, parseActivity, pruneAgents, rowBudget, updateAgent} from '../lib/claudeAgents.js';
+import * as C from '../lib/constants.js';
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
@@ -163,7 +164,7 @@ export default class ClaudeUsageModule extends IslandModule {
         this._renderAgents(true);
         box.remove_all_transitions();
         box.show();
-        box.ease({opacity: 255, duration: 160, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        box.ease({opacity: 255, duration: C.FADE_IN_MS, mode: C.EASE_FADE});
         this.ctx?.requestExpandedRelayout?.();
     }
 
@@ -172,7 +173,7 @@ export default class ClaudeUsageModule extends IslandModule {
         if (!box || !box.visible)
             return;
         box.remove_all_transitions();
-        box.ease({opacity: 0, duration: 110, mode: Clutter.AnimationMode.EASE_OUT_QUAD, onComplete: () => {
+        box.ease({opacity: 0, duration: C.FADE_OUT_MS, mode: C.EASE_FADE, onComplete: () => {
             if (this._agentsBox !== box)
                 return;
             box.hide();
@@ -306,8 +307,8 @@ export default class ClaudeUsageModule extends IslandModule {
             this._ring?.queue_repaint();
             return;
         }
-        const tl = new Clutter.Timeline({actor: this._ring, duration: 600});
-        tl.set_progress_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+        const tl = new Clutter.Timeline({actor: this._ring, duration: C.GLIDE_MS});
+        tl.set_progress_mode(C.EASE_SLIDE);
         tl.connect('new-frame', () => {
             const p = tl.get_progress();
             this._ringFrac = from + (frac - from) * p;
@@ -526,7 +527,7 @@ export default class ClaudeUsageModule extends IslandModule {
         const elapsed = Math.min(1, (nowMs - w.start) / WINDOW_MS);
         if (this._shown !== elapsed.toFixed(3)) {
             this._shown = elapsed.toFixed(3);
-            this._fill?.ease({scale_x: elapsed, duration: 500, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+            this._fill?.ease({scale_x: elapsed, duration: C.GLIDE_MS, mode: C.EASE_SLIDE});
         }
 
         if (limit > 0) {
@@ -595,7 +596,7 @@ export default class ClaudeUsageModule extends IslandModule {
             c.reset.text = this._resetText(r, now);
             const f = r.percent / 100;
             if (Math.abs(c.fill.scale_x - f) > 0.002)
-                c.fill.ease({scale_x: f, duration: 600, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+                c.fill.ease({scale_x: f, duration: C.GLIDE_MS, mode: C.EASE_SLIDE});
             c.fill.set_style(r.percent >= 90 ? 'background-color: #ff6354;' : null);
         });
         // ring: the 5-hour window, as in the table

@@ -10,6 +10,7 @@ import St from 'gi://St';
 
 import {IslandModule} from './base.js';
 import {shortDate} from '../lib/i18n.js';
+import * as C from '../lib/constants.js';
 
 export default class ClockModule extends IslandModule {
     static id = 'clock';
@@ -110,7 +111,7 @@ export default class ClockModule extends IslandModule {
         const target = this._indicator?.visible ? 255 : 0;
         for (const d of this._dots) {
             if (d.opacity !== target)
-                d.ease({opacity: target, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+                d.ease({opacity: target, duration: C.FADE_IN_MS, mode: C.EASE_FADE});
         }
     }
 

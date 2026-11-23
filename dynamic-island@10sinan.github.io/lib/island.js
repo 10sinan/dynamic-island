@@ -264,8 +264,8 @@ export class Island {
             opacity: 255,
             scale_x: 1,
             scale_y: 1,
-            duration: C.APPEAR_MS,
-            mode: Clutter.AnimationMode.EASE_OUT_BACK,
+            duration: C.POP_MS,
+            mode: C.EASE_POP,
         });
     }
 
@@ -478,7 +478,7 @@ export class Island {
         const from = this._bodyTint ?? flat;
         this._tintTarget = target;
         this._tintTl?.stop();
-        const tl = new Clutter.Timeline({actor: this.actor, duration: 700});
+        const tl = new Clutter.Timeline({actor: this.actor, duration: C.COLOUR_MS});
         this._tintTl = tl;
         tl.connect('new-frame', () => {
             const p = tl.get_progress();
@@ -511,12 +511,18 @@ export class Island {
                 this._activityTimer.clear();   // hovering freezes the activity
                 return;
             }
+            // coming back soon after leaving: remember it, the next leave waits longer
+            const now = GLib.get_monotonic_time() / 1000;
+            this._leaveStreak = now - (this._leftAt ?? -1e9) < C.LEAVE_STREAK_MS ? Math.min(2, (this._leaveStreak ?? 0) + 1) : 0;
             if (this._mode === 'expanded' || !this._cfg.expandOnHover || this._slot.menuOpen)
                 return;
-            if (this._cfg.hoverDelay <= 0) {
-                this._setMode('expanded');     // instantly
+            // Still big from a collapse that has not finished: reopen at once (the spring keeps
+            // its speed). From rest, wait a moment so that a pointer only passing by does nothing.
+            const delay = this._springTl ? this._cfg.hoverDelay : Math.max(this._cfg.hoverDelay, C.HOVER_INTENT_MS);
+            if (delay <= 0) {
+                this._setMode('expanded');
             } else {
-                this._hoverTimer.schedule(this._cfg.hoverDelay, () => {
+                this._hoverTimer.schedule(delay, () => {
                     if (this.actor.hover && !this._slot.menuOpen && this._mode === 'compact')
                         this._setMode('expanded');
                 });
@@ -528,10 +534,16 @@ export class Island {
             if (this._mode === 'activity') {
                 this._activityTimer.schedule(this._activity?.leaveMs ?? C.ACTIVITY_LEAVE_MS, () => this.endActivity());
             } else if (this._mode === 'expanded') {
-                if (this._cfg.leaveDelay <= 0)
+                this._leftAt = GLib.get_monotonic_time() / 1000;
+                if (this._cfg.leaveDelay <= 0) {
                     this._maybeCollapse();
-                else
-                    this._collapseTimer.schedule(this._cfg.leaveDelay, () => this._maybeCollapse());
+                } else {
+                    // jitter at the edge (left again right after coming back) waits up to 3x longer;
+                    // a freshly opened island is not collapsed before MIN_OPEN_MS
+                    const open = this._leftAt - (this._openedAt ?? -1e9);
+                    const delay = Math.max(this._cfg.leaveDelay * (1 + (this._leaveStreak ?? 0)), C.MIN_OPEN_MS - open);
+                    this._collapseTimer.schedule(delay, () => this._maybeCollapse());
+                }
             }
         }
     }
@@ -798,10 +810,12 @@ export class Island {
 
     /** Hit box = union of pills + the gap above (up to the panel edge) + side slack. */
     _hitboxFor(rects, f) {
-        const side = C.HIT_SLACK_X;
+        // An open pill keeps hover a few px outside its edge (hysteresis), the compact one does not.
+        const open = rects.some(r => r.h > f.compactH + 2 || r.w > this._compactW + 2);
+        const side = open ? C.EXIT_SLACK : C.HIT_SLACK_X;
         const minX = Math.min(...rects.map(r => r.x)) - side;
         const maxX = Math.max(...rects.map(r => r.x + r.w)) + side;
-        const bottom = Math.max(...rects.map(r => r.y + r.h));
+        const bottom = Math.max(...rects.map(r => r.y + r.h)) + (open ? C.EXIT_SLACK : 0);
         const y = Math.round(f.outerTop);
         return {x: minX, y, w: maxX - minX, h: bottom - y};
     }
@@ -898,13 +912,13 @@ export class Island {
                     // already (partly) visible - quick hover out and in - must not stall
                     delay: prev === mode || box.opacity > 0 ? 0 : C.FADE_IN_DELAY_MS,
                     duration: C.FADE_IN_MS,
-                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    mode: C.EASE_FADE,
                 });
             } else if (box.visible) {
                 box.ease({
                     opacity: 0,
                     duration: C.FADE_OUT_MS,
-                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    mode: C.EASE_FADE,
                     onComplete: () => {
                         if (!this._destroyed && this._mode !== m)
                             box.hide();
@@ -931,6 +945,8 @@ export class Island {
                 }
             }
         }
+        if (mode === 'expanded' && prev !== 'expanded')
+            this._openedAt = GLib.get_monotonic_time() / 1000;
         if (mode === 'expanded') {
             if (this._cfg.autoCollapse > 0)
                 this._autoTimer.schedule(this._cfg.autoCollapse, () => this._onAutoCollapse());

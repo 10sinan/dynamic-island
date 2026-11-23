@@ -15,6 +15,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {ClaudeBridge} from './claudeBridge.js';
 import {Timer} from './disposer.js';
 import {_, _f} from './i18n.js';
+import * as C from './constants.js';
 
 const ORANGE = [217, 119, 87];
 const LIGHT = [255, 186, 150];
@@ -180,7 +181,7 @@ export class ClaudeNotifier {
                 const pill = this._pill;
                 this._pill = null;
                 this._stopWave();
-                pill.ease({opacity: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                pill.ease({opacity: 0, duration: C.FADE_OUT_MS, mode: C.EASE_FADE,
                     onComplete: () => this._island?.setCompactAccessory(null)});
             }
             return;
@@ -191,7 +192,7 @@ export class ClaudeNotifier {
             this._pill = this._buildPill();
             this._pill.opacity = 0;
             this._island.setCompactAccessory(this._pill);
-            this._pill.ease({opacity: 255, duration: 260, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+            this._pill.ease({opacity: 255, duration: C.FADE_IN_MS, mode: C.EASE_FADE});
         }
         if (this._pillLabel.text !== text) {
             this._pillLabel.text = text;
@@ -216,7 +217,6 @@ export class ClaudeNotifier {
         box.add_child(this._wave);
         box.add_child(this._pillLabel);
         let last = 0, painted = 0;
-        // the timeline only advances while the pill is on screen
         this._waveTl = new Clutter.Timeline({actor: this._wave, duration: 60000, repeat_count: -1});
         this._waveTl.connect('new-frame', (_t, ms) => {
             const dt = Math.max(0, Math.min(100, ms - last)) / 1000;
@@ -231,6 +231,18 @@ export class ClaudeNotifier {
             }
         });
         this._waveTl.start();
+        // An actor-bound Timeline keeps running (and keeps the frame clock busy) while its
+        // actor is hidden - the island being expanded hides the pill: pause it then.
+        this._wave.connect('notify::mapped', () => {
+            if (!this._wave || !this._waveTl)
+                return;
+            if (this._wave.mapped)
+                this._waveTl.start();
+            else
+                this._waveTl.pause();
+        });
+        if (!this._wave.mapped)
+            this._waveTl.pause();
         box.connect('destroy', () => {
             this._stopWave();
             this._wave = this._pillLabel = null;
@@ -354,7 +366,7 @@ export class ClaudeNotifier {
         // a little pop on the badge every time a new event arrives
         this._badge.set_pivot_point(0.5, 0.5);
         this._badge.set_scale(0.6, 0.6);
-        this._badge.ease({scale_x: 1, scale_y: 1, duration: 420, mode: Clutter.AnimationMode.EASE_OUT_BACK});
+        this._badge.ease({scale_x: 1, scale_y: 1, duration: C.POP_MS, mode: C.EASE_POP});
     }
 
     destroy() {

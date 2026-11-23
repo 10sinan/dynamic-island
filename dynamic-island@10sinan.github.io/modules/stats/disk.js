@@ -18,6 +18,7 @@ import {_, _f} from '../../lib/i18n.js';
 import {Meter} from '../../lib/widgets.js';
 import {IoMeter, formatBytes, parseDiskstats} from '../../lib/diskio.js';
 import {clamp01, formatRate, readText, severity} from '../../lib/proc.js';
+import * as C from '../../lib/constants.js';
 
 Gio._promisify(Gio.File.prototype, 'query_filesystem_info_async', 'query_filesystem_info_finish');
 
@@ -105,7 +106,7 @@ export default class DiskModule extends IslandModule {
             this._icon?.remove_all_transitions();
             if (on) {
                 // gentle pulse while the transfer runs
-                this._icon.ease({opacity: 110, duration: 700, mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
+                this._icon.ease({opacity: 110, duration: C.AMBIENT_ICON_MS, mode: C.EASE_LOOP,
                     repeatCount: -1, autoReverse: true});
             } else {
                 this._icon.opacity = 255;
