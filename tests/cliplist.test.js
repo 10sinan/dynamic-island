@@ -33,6 +33,9 @@ check('text wins over an image offered together', pickKind(['image/png', 'text/p
 check('unknown formats are ignored', pickKind(['application/x-foo']) === null && pickKind([]) === null);
 check('password manager hint -> secret, never stored',
     isSecret(['text/plain', 'x-kde-passwordManagerHint']) && pickKind(['text/plain', 'x-kde-passwordManagerHint']) === null);
+for (const m of ['org.freedesktop.Secret', 'org.freedesktop.Secret.Item', 'application/x-nspasswordmanager', 'x-nspasswordmanager', 'x-secret'])
+    check(`secret format ${m} -> never stored`, isSecret(['text/plain', m]) && pickKind(['UTF8_STRING', m]) === null);
+check('ordinary formats are not secret', !isSecret(['text/plain', 'text/html', 'image/png', 'UTF8_STRING']));
 check('hint is matched case-insensitively', isSecret(['X-KDE-PasswordManagerHint']));
 
 print('oneLine');

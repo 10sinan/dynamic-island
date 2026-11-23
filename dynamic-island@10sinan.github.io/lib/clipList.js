@@ -36,11 +36,16 @@ export class ClipList {
     }
 }
 
-/** Clipboard formats that password managers use to say "this is secret". */
-const SECRET_MIMES = ['x-kde-passwordmanagerhint', 'application/x-nspasswordmanager', 'x-nspasswordmanager'];
+/**
+ * Clipboard formats that password managers and secret services use to say
+ * "this is secret": x-kde-passwordManagerHint (KeePassXC, Bitwarden, ...),
+ * the nspasswordmanager variants, and anything in the org.freedesktop.Secret
+ * family. Matched case-insensitively on the whole format name.
+ */
+const SECRET_MIME = /passwordmanager|(^|[./:-])org\.freedesktop\.secret|x-secret|secret-service|^application\/x-?secret/i;
 
 export function isSecret(mimetypes) {
-    return mimetypes.some(m => SECRET_MIMES.includes(m.toLowerCase()));
+    return mimetypes.some(m => SECRET_MIME.test(m));
 }
 
 /** What to store for a clipboard offering these formats: 'text' | 'image' | null. */
