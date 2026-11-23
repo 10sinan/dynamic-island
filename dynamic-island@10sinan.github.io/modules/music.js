@@ -681,6 +681,15 @@ export default class MusicModule extends IslandModule {
     _cardMotion(on) {
         const E = Clutter.AnimationMode.EASE_IN_OUT_SINE;
         const stop = a => a?.remove_all_transitions();
+        // Players report many property changes (volume, metadata, shuffle...);
+        // restarting the endless loops each time snaps them back to their
+        // start values. Only (re)start when the state really changes.
+        const prev = this._motion;
+        // (a loop Clutter dropped while the card was off screen is restarted)
+        if (prev && prev.on === on && prev.flow === this._flowA &&
+            (!on || this._flowA?.get_transition('opacity')))
+            return;
+        this._motion = {on, flow: this._flowA};
         for (const a of [this._flowA, this._flowB, this._glow, this._cardCover?.actor])
             stop(a);
         if (!this._flowA)
