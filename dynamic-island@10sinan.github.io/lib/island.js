@@ -892,7 +892,9 @@ export class Island {
                 box.show();
                 box.ease({
                     opacity: 255,
-                    delay: prev === mode ? 0 : C.FADE_IN_DELAY_MS,
+                    // the delay lets the outgoing content leave first; a box that is
+                    // already (partly) visible - quick hover out and in - must not stall
+                    delay: prev === mode || box.opacity > 0 ? 0 : C.FADE_IN_DELAY_MS,
                     duration: C.FADE_IN_MS,
                     mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                 });
