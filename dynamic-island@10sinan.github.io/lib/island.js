@@ -338,7 +338,7 @@ export class Island {
         this._root.insert_child_above(area, this._bg);
         this._outline = area;
         this._onBgChanged();
-        let last = 0;
+        let last = 0, painted = 0;
         const tl = new Clutter.Timeline({actor: area, duration: 60000, repeat_count: -1});
         tl.connect('new-frame', (_t, msecs) => {
             const o = this._outlineFx;
@@ -355,7 +355,11 @@ export class Island {
                 this._removeOutline();
                 return;
             }
-            this._outline.queue_repaint();
+            // the line is a slow wave: ~30 fps looks the same and halves the repaints
+            if (msecs - painted >= 32 || msecs < painted) {
+                painted = msecs;
+                this._outline.queue_repaint();
+            }
         });
         this._outlineTl = tl;
         tl.start();

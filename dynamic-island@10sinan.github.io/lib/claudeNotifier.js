@@ -18,6 +18,7 @@ import {_, _f} from './i18n.js';
 
 const ORANGE = [217, 119, 87];
 const LIGHT = [255, 186, 150];
+const WAVE_FRAME_MS = 32;
 export const MAX_QUEUED_PERMISSIONS = 8;   // waiting behind the one on screen
 
 export class ClaudeNotifier {
@@ -208,14 +209,20 @@ export class ClaudeNotifier {
         this._pillLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         box.add_child(this._wave);
         box.add_child(this._pillLabel);
-        let last = 0;
+        let last = 0, painted = 0;
         // the timeline only advances while the pill is on screen
         this._waveTl = new Clutter.Timeline({actor: this._wave, duration: 60000, repeat_count: -1});
         this._waveTl.connect('new-frame', (_t, ms) => {
             const dt = Math.max(0, Math.min(100, ms - last)) / 1000;
             last = ms > last ? ms : 0;
             this._wavePhase += dt * 2 * Math.PI / 0.9;
-            this._wave?.queue_repaint();
+            // ~30 fps is plenty for a 22 x 12 px wave; a repaint every frame
+            // keeps the compositor busy for as long as Claude works (measured
+            // headless: ~3.8x the idle CPU)
+            if (ms - painted >= WAVE_FRAME_MS || ms < painted) {
+                painted = ms;
+                this._wave?.queue_repaint();
+            }
         });
         this._waveTl.start();
         box.connect('destroy', () => {
