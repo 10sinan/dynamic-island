@@ -39,7 +39,8 @@ export async function fetchQuota(holder, cancellable) {
     } catch (e) {
         if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
             return {cancelled: true};
-        console.debug(`[dynamic-island] claude quota: ${e.message}`);
+        // fixed text on purpose: nothing from the request (headers, token) may reach a log
+        console.debug('[dynamic-island] claude quota request failed');
         return {error: 'Anthropic not reachable'};
     }
 }
