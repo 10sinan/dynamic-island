@@ -19,6 +19,7 @@ import {MeetingMode} from './lib/meeting.js';
 import {AutoPowerSaver} from './lib/powerPolicy.js';
 import {ClaudeNotifier} from './lib/claudeNotifier.js';
 import {ClaudeQuotaWatch} from './lib/claudeQuotaWatch.js';
+import {RealQuota} from './lib/claudeRealQuota.js';
 import {readConfig} from './lib/settings.js';
 import {setLanguage} from './lib/i18n.js';
 import {LOG_PREFIX, REBUILD_DEBOUNCE_MS} from './lib/constants.js';
@@ -239,7 +240,9 @@ export default class DynamicIslandExtension extends Extension {
             this._clip.destroy();
             this._clip = null;
         }
-        const services = {clipboard: this._clip, caffeine: this._caffeine};
+        // the only place that may read Claude Code's login token; exists only while opted in
+        this._quota = cfg.claudeRealUsage ? new RealQuota(this._settings) : null;
+        const services = {clipboard: this._clip, caffeine: this._caffeine, quota: this._quota};
         cfg.centerModules = this._modules('center-modules', CENTER_MODULES);
         cfg.centerCompactModules = this._modules('center-compact-modules', CENTER_MODULES);
         cfg.qsModules = this._modules('qs-modules', QS_MODULES);
@@ -305,8 +308,8 @@ export default class DynamicIslandExtension extends Extension {
             if (center && cfg.notificationPreview)
                 this._features.push(new NotificationPreview(center, cfg));
             // 80 % / 95 % warnings for the Claude plan quota (real data only)
-            if (center && cfg.claudeRealUsage && cfg.claudeQuotaAlerts)
-                this._features.push(new ClaudeQuotaWatch(center));
+            if (center && this._quota && cfg.claudeQuotaAlerts)
+                this._features.push(new ClaudeQuotaWatch(center, this._quota));
             // Claude Code hook -> D-Bus -> wavy orange notification
             if (center && cfg.claudeNotify) {
                 try {
@@ -344,5 +347,7 @@ export default class DynamicIslandExtension extends Extension {
         for (const island of this._islands ?? [])
             island.destroy();
         this._islands = [];
+        this._quota?.destroy();
+        this._quota = null;
     }
 }

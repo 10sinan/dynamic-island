@@ -14,7 +14,6 @@ import {_, _f, weekdayName} from '../lib/i18n.js';
 import {WINDOW_MS, addEntry, formatTokens, parseLine, splitDuration, windowStats} from '../lib/claudeUsage.js';
 import {untilReset} from '../lib/claudeQuota.js';
 import {IDLE_MAX_MS, listAgents, parseActivity, pruneAgents, rowBudget, updateAgent} from '../lib/claudeAgents.js';
-import {fetchQuota} from '../lib/claudeFetch.js';
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
@@ -349,26 +348,22 @@ export default class ClaudeUsageModule extends IslandModule {
                 this._scanning = false;
             }
         }
-        if (this.ctx?.config?.claudeRealUsage && !this._fetching && now - (this._quotaAt ?? 0) >= QUOTA_EVERY_S)
+        if (this.ctx?.config?.claudeRealUsage && this.ctx?.services?.quota && !this._fetching &&
+            now - (this._quotaAt ?? 0) >= QUOTA_EVERY_S)
             await this._fetchQuota();
         this._render();
     }
 
-    /** Real quota from Anthropic (shared request code: lib/claudeFetch.js). */
+    /** Real quota from Anthropic, through the shared service (lib/claudeRealQuota.js). */
     async _fetchQuota() {
         this._fetching = true;
         const nowS = GLib.get_monotonic_time() / 1e6;
         try {
-            this._soupHolder ??= {soup: null};
-            const r = await fetchQuota(this._soupHolder, this.cancellable);
-            if (r.cancelled)
-                return;
-            if (r.rows) {
-                this._quota = {rows: r.rows, at: Date.now()};
-                this._quotaErr = null;
-            } else {
-                this._quotaErr = r.status ? _f('Anthropic answered %s', r.status) : _(r.error);
-            }
+            const quota = this.ctx?.services?.quota;
+            const rows = await quota?.refresh();
+            // no answer = the service switched the feature off (the islands are rebuilt without it)
+            if (rows?.length)
+                this._quota = {rows, at: quota.when};
         } finally {
             this._quotaAt = nowS;
             this._fetching = false;
@@ -612,8 +607,6 @@ export default class ClaudeUsageModule extends IslandModule {
     }
 
     destroy() {
-        this._soupHolder?.soup?.abort();
-        this._soupHolder = null;
         if (this._agentsTimer) {
             GLib.source_remove(this._agentsTimer);
             this._agentsTimer = 0;

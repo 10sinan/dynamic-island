@@ -9,7 +9,6 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import {crossedThresholds, untilReset} from './claudeQuota.js';
-import {fetchQuota} from './claudeFetch.js';
 import {_, _f, pct} from './i18n.js';
 
 const EVERY_S = 300;
@@ -18,10 +17,10 @@ const LIGHT = [255, 186, 150];
 const RED = [255, 99, 84];
 
 export class ClaudeQuotaWatch {
-    constructor(island) {
+    /** @param {RealQuota} quota  the shared quota service (lib/claudeRealQuota.js) */
+    constructor(island, quota) {
         this._island = island;
-        this._cancellable = new Gio.Cancellable();
-        this._holder = {soup: null};
+        this._quota = quota;
         this._state = new Map();
         this._first = true;
         this._notif = new Gio.Settings({schema_id: 'org.gnome.desktop.notifications'});
@@ -40,16 +39,16 @@ export class ClaudeQuotaWatch {
             return;
         this._busy = true;
         try {
-            const r = await fetchQuota(this._holder, this._cancellable);
-            if (!r.rows || !this._island)
+            const rows = await this._quota.refresh();
+            if (!rows || !this._island)
                 return;
-            this.rows = r.rows;
-            const crossed = crossedThresholds(r.rows, this._state, this._first);
+            this.rows = rows;
+            const crossed = crossedThresholds(rows, this._state, this._first);
             this._first = false;
             // highest level first; one pop-up per poll is enough
             crossed.sort((a, b) => b.level - a.level);
             if (crossed.length)
-                this.show(crossed[0].row, crossed[0].level, r.rows);
+                this.show(crossed[0].row, crossed[0].level, rows);
         } finally {
             this._busy = false;
         }
@@ -115,12 +114,10 @@ export class ClaudeQuotaWatch {
     }
 
     destroy() {
-        this._cancellable?.cancel();
         if (this._timer)
             GLib.source_remove(this._timer);
         this._timer = 0;
-        this._holder?.soup?.abort();
-        this._holder = null;
+        this._quota = null;
         if (this._island?.activityKey === 'claude-quota')
             this._island.endActivity('claude-quota');
         this._island?.setOutlineEffect(null);
