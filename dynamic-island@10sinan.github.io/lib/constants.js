@@ -14,9 +14,13 @@ export const EXPANDED_RADIUS = 26;   // radius = min(EXPANDED_RADIUS, height / 2
 export const FLOAT_H = 34;           // height when there is no panel slot
 export const FLOAT_GAP = 6;
 export const SCREEN_MARGIN = 4;
-export const HIT_SLACK_X = 4;        // = SLOT_MARGIN / 2: hover area reaches the edges of the reserved slot
+export const HIT_SLACK_X = 4;
+export const EXIT_SLACK = 8;         // an open island keeps hover this far outside its edge (hysteresis: entering needs the pill, leaving needs this much more)        // = SLOT_MARGIN / 2: hover area reaches the edges of the reserved slot
 
 // Timing (ms) that is not user-configurable
+export const HOVER_INTENT_MS = 60;     // the pointer must stay this long before the island opens (a brush-by does nothing)
+export const MIN_OPEN_MS = 250;        // an island that just opened is not collapsed before this (no half-open twitch)
+export const LEAVE_STREAK_MS = 900;    // leaving again within this long of the last leave = hand jitter at the edge: wait longer
 export const COLLAPSE_MS = 260;
 export const SPRING_DAMPING = 0.74;            // < 1: a small bounce when opening ('spring' setting)
 export const SPRING_DAMPING_COLLAPSE = 0.92;
