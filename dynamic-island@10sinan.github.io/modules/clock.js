@@ -96,11 +96,17 @@ export default class ClockModule extends IslandModule {
     _sync() {
         if (this._dead)
             return;
+        // identical text still queues a relayout of the pill: assign only changes
         const time = this._timeText();
-        for (const l of this._timeLabels)
-            l.text = time;
-        if (this._date)
-            this._date.text = shortDate(GLib.DateTime.new_now_local());
+        for (const l of this._timeLabels) {
+            if (l.text !== time)
+                l.text = time;
+        }
+        if (this._date) {
+            const date = shortDate(GLib.DateTime.new_now_local());
+            if (this._date.text !== date)
+                this._date.text = date;
+        }
         const target = this._indicator?.visible ? 255 : 0;
         for (const d of this._dots) {
             if (d.opacity !== target)

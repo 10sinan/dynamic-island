@@ -20,6 +20,7 @@ export class Caffeine {
         this._tick = 0;
         this._subs = new Set();
         this._dead = false;
+        this._queue = Promise.resolve();   // set() calls run one after another
     }
 
     get active() {
@@ -61,8 +62,18 @@ export class Caffeine {
         this.set(STEPS[(i + 1) % STEPS.length]);
     }
 
-    /** seconds > 0 timed, -1 endless, 0 off */
-    async set(seconds) {
+    /**
+     * seconds > 0 timed, -1 endless, 0 off.
+     * Serialized: a second call (double tap) while Inhibit is still in flight
+     * would otherwise take a second cookie and lose the first one for good.
+     */
+    set(seconds) {
+        this._queue = this._queue.then(() => this._set(seconds))
+            .catch(e => console.warn(`[dynamic-island] keep-awake failed: ${e?.message ?? e}`));
+        return this._queue;
+    }
+
+    async _set(seconds) {
         if (this._dead)
             return;
         this._clearTimers();

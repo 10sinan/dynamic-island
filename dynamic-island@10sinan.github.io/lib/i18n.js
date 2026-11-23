@@ -108,6 +108,10 @@ const TR = {
     'Bluetooth devices': 'Bluetooth cihazları',
     'No paired devices': 'Eşleşmiş cihaz yok',
     // settings window
+    'Cancel': 'Vazgeç', 'Enable': 'Aç',
+    'Let Dynamic Island use your Claude login?': 'Dynamic Island Claude girişini kullansın mı?',
+    'To show your real plan quota it reads the login token that Claude Code keeps in ~/.claude/.credentials.json and sends it to api.anthropic.com, and nowhere else, about every 3 minutes. The token is never logged or saved by Dynamic Island. If a request fails the feature switches itself off. Turn it on only if you are comfortable with this.':
+        'Gerçek kotayı göstermek için Claude Code\'un ~/.claude/.credentials.json dosyasında tuttuğu giriş anahtarını okur ve yaklaşık 3 dakikada bir yalnızca api.anthropic.com\'a gönderir. Anahtar Dynamic Island tarafından asla loglanmaz ya da kaydedilmez. Bir istek başarısız olursa özellik kendiliğinden kapanır. Yalnızca bununla rahatsan aç.',
     'General': 'Genel', 'Timing': 'Zamanlama', 'Modules': 'Modüller', 'Islands': 'Island\'lar',
     'Center island': 'Orta island', 'Replaces the panel clock': 'Paneldeki saatin yerine geçer',
     'Left island': 'Sol island', 'Statistics; replaces the Activities button': 'İstatistik; Activities düğmesinin yerine geçer',
@@ -115,7 +119,8 @@ const TR = {
     'Super+A opens the right island': 'Super+A sağ island\'ı açsın', 'Look': 'Görünüm', 'Color theme': 'Renk teması',
     'Accent color (#rrggbb, empty = theme color)': 'Vurgu rengi (#rrggbb, boş = tema rengi)',
     'Show seconds on the clock': 'Saatte saniye göster', 'Features': 'Özellikler', 'Clipboard history': 'Pano geçmişi',
-    'Last 10 copies, memory only, never written to disk': 'Son 10 kopya, yalnızca bellekte, diske yazılmaz',
+    'Last 10 copies, memory only, never written to disk. Off by default: it reads everything you copy (password manager copies are skipped)':
+        'Son 10 kopya, yalnızca bellekte, diske yazılmaz. Varsayılan kapalı: kopyaladığın her şeyi okur (parola yöneticisi kopyaları atlanır)',
     'Preview on track change': 'Şarkı değişince önizleme',
     'Volume/brightness indicator in the island': 'Ses/parlaklık göstergesi island\'da',
     'Notification preview': 'Bildirim önizleme', 'Screenshot thumbnail': 'Ekran görüntüsü küçük resmi',

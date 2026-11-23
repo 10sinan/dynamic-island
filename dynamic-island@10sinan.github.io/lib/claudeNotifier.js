@@ -13,10 +13,13 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {ClaudeBridge} from './claudeBridge.js';
+import {Timer} from './disposer.js';
 import {_, _f} from './i18n.js';
 
 const ORANGE = [217, 119, 87];
 const LIGHT = [255, 186, 150];
+const WAVE_FRAME_MS = 32;
+const MAX_WORKING = 32;   // sessions shown as "working" at once
 export const MAX_QUEUED_PERMISSIONS = 8;   // waiting behind the one on screen
 
 export class ClaudeNotifier {
@@ -27,12 +30,18 @@ export class ClaudeNotifier {
         this._working = new Map();   // session -> {project, since}
         this._perm = [];   // queued permission requests [{req, reply, win}]
         this._permShown = null;
+        this._nextTimer = new Timer();   // pause before the next queued permission request
         this._bridge = new ClaudeBridge(ev => this._onEvent(ev), (req, reply) => this._onPermission(req, reply));
     }
 
     _onEvent(ev) {
         const key = ev.session || ev.project;
         if (ev.kind === 'working') {
+            // bounded: the session id comes from whoever called the bridge
+            if (!this._working.has(key) && this._working.size >= MAX_WORKING) {
+                const oldest = [...this._working].sort((a, b) => a[1].since - b[1].since)[0];
+                this._working.delete(oldest[0]);
+            }
             this._working.set(key, {project: ev.project, since: GLib.get_monotonic_time()});
             this._syncWorking();
             return;
@@ -89,10 +98,7 @@ export class ClaudeNotifier {
             this._permShown = null;
             this._island?.endActivity('claude-permission');
             // the next waiting request, after the island has settled
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 450, () => {
-                this._nextPermission();
-                return GLib.SOURCE_REMOVE;
-            });
+            this._nextTimer.schedule(450, () => this._nextPermission());
         };
         item.answer = answer;
         const shown = this._island.showActivity('claude-permission', {
@@ -209,14 +215,20 @@ export class ClaudeNotifier {
         this._pillLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         box.add_child(this._wave);
         box.add_child(this._pillLabel);
-        let last = 0;
+        let last = 0, painted = 0;
         // the timeline only advances while the pill is on screen
         this._waveTl = new Clutter.Timeline({actor: this._wave, duration: 60000, repeat_count: -1});
         this._waveTl.connect('new-frame', (_t, ms) => {
             const dt = Math.max(0, Math.min(100, ms - last)) / 1000;
             last = ms > last ? ms : 0;
             this._wavePhase += dt * 2 * Math.PI / 0.9;
-            this._wave?.queue_repaint();
+            // ~30 fps is plenty for a 22 x 12 px wave; a repaint every frame
+            // keeps the compositor busy for as long as Claude works (measured
+            // headless: ~3.8x the idle CPU)
+            if (ms - painted >= WAVE_FRAME_MS || ms < painted) {
+                painted = ms;
+                this._wave?.queue_repaint();
+            }
         });
         this._waveTl.start();
         box.connect('destroy', () => {
@@ -349,8 +361,9 @@ export class ClaudeNotifier {
         for (const {reply} of this._perm ?? [])
             reply('ask');
         this._perm = [];
-        this._permShown?.answer?.('ask');
+        this._permShown?.answer?.('ask');   // schedules the next request ...
         this._permShown = null;
+        this._nextTimer?.clear();           // ... which must not outlive us
         if (this._staleTimer) {
             GLib.source_remove(this._staleTimer);
             this._staleTimer = 0;

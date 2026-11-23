@@ -338,7 +338,7 @@ export class Island {
         this._root.insert_child_above(area, this._bg);
         this._outline = area;
         this._onBgChanged();
-        let last = 0;
+        let last = 0, painted = 0;
         const tl = new Clutter.Timeline({actor: area, duration: 60000, repeat_count: -1});
         tl.connect('new-frame', (_t, msecs) => {
             const o = this._outlineFx;
@@ -355,7 +355,11 @@ export class Island {
                 this._removeOutline();
                 return;
             }
-            this._outline.queue_repaint();
+            // the line is a slow wave: ~30 fps looks the same and halves the repaints
+            if (msecs - painted >= 32 || msecs < painted) {
+                painted = msecs;
+                this._outline.queue_repaint();
+            }
         });
         this._outlineTl = tl;
         tl.start();
@@ -446,7 +450,13 @@ export class Island {
         // lit rim: a white edge that gets brighter with the strength
         if (g > 0 && !this._borderColor)
             edge = `rgba(255, 255, 255, ${((this.actor?.hover ? 0.30 : 0.20) * (0.4 + 0.6 * g)).toFixed(3)})`;
-        this._bg.set_style(`border-radius: ${Math.max(0, this._radius)}px; ${body} border-color: ${edge};`);
+        // set_style() restyles the actor even when the string did not change;
+        // during a colour glide most frames round to the same colours.
+        const style = `border-radius: ${Math.max(0, this._radius)}px; ${body} border-color: ${edge};`;
+        if (style !== this._bgStyle) {
+            this._bgStyle = style;
+            this._bg.set_style(style);
+        }
     }
 
     /**
@@ -827,6 +837,8 @@ export class Island {
         if (![to.x, to.y, to.w, to.h].every(Number.isFinite))
             return;
         this._setHitbox(this._hitboxFor([to], f));
+        if (!this._hb)
+            return;   // _setHitbox refused non-finite geometry and there is no earlier one
         this._bg.set_position(to.x - this._hb.x, to.y - this._hb.y);
         this._bg.set_size(to.w, to.h);
         // T2: the shadow only exists while the pill is still.
@@ -882,7 +894,9 @@ export class Island {
                 box.show();
                 box.ease({
                     opacity: 255,
-                    delay: prev === mode ? 0 : C.FADE_IN_DELAY_MS,
+                    // the delay lets the outgoing content leave first; a box that is
+                    // already (partly) visible - quick hover out and in - must not stall
+                    delay: prev === mode || box.opacity > 0 ? 0 : C.FADE_IN_DELAY_MS,
                     duration: C.FADE_IN_MS,
                     mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                 });
@@ -920,8 +934,11 @@ export class Island {
         if (mode === 'expanded') {
             if (this._cfg.autoCollapse > 0)
                 this._autoTimer.schedule(this._cfg.autoCollapse, () => this._onAutoCollapse());
-            // T3: refresh after the morph, not during it.
-            if (!this._ticking)
+            // T3: refresh after the morph, not during it. Only when the view
+            // opens: a re-measure (prev === mode: search results, a list that
+            // grew) must not restart the poll, or every content change would
+            // trigger a full round of module ticks.
+            if (prev !== 'expanded' && !this._ticking)
                 this._pollTimer.schedule(animating ? duration : 0, () => this._tick());
         } else {
             this._autoTimer.clear();
@@ -1172,7 +1189,15 @@ export class Island {
             ...p.fixed.map(M => ({M, fixed: true})),
             ...ids.map(id => ({M: p.registry[id], fixed: false})),
         ];
-        const all = entries.map(e => ({...e, m: new e.M(ctx)}));
+        // one module whose constructor throws must not take the others down
+        const all = [];
+        for (const e of entries) {
+            try {
+                all.push({...e, m: new e.M(ctx)});
+            } catch (err) {
+                logIsland.warn(`${C.LOG_PREFIX} [${this._id}] module ${e.M.id} could not start: ${err}`);
+            }
+        }
         this._modules = all.map(e => e.m);   // so destroy() reaches them even mid-init
 
         const results = await Promise.allSettled(all.map(e => e.m.init()));
@@ -1317,7 +1342,7 @@ export class Island {
         if (!this._destroyed) {
             this._pollTimer.schedule(
                 this._mode === 'expanded' ? this._cfg.pollExpanded : this._cfg.pollCompact,
-                () => this._tick());
+                () => this._tick(), true);
         }
     }
 

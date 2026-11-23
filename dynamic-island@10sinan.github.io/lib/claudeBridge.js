@@ -28,6 +28,32 @@ const IFACE = `
   </interface>
 </node>`;
 
+/**
+ * Token bucket: `burst` events at once, then `perSecond` more each second.
+ * Any process of this user can call the bridge; a real Claude Code hook sends
+ * a handful of events per second at most.
+ */
+export class TokenBucket {
+    constructor(burst = 20, perSecond = 5, now = () => GLib.get_monotonic_time() / 1e6) {
+        this._burst = burst;
+        this._rate = perSecond;
+        this._now = now;
+        this._tokens = burst;
+        this._at = now();
+    }
+
+    /** True if the event may pass (and uses one token). */
+    take() {
+        const t = this._now();
+        this._tokens = Math.min(this._burst, this._tokens + (t - this._at) * this._rate);
+        this._at = t;
+        if (this._tokens < 1)
+            return false;
+        this._tokens -= 1;
+        return true;
+    }
+}
+
 export class ClaudeBridge {
     /**
      * @param {(ev) => void} onEvent
@@ -37,11 +63,14 @@ export class ClaudeBridge {
         this._onEvent = onEvent;
         this._onPermission = onPermission;
         this._pending = new Set();
+        this._events = new TokenBucket();
         this._obj = Gio.DBusExportedObject.wrapJSObject(IFACE, this);
         this._obj.export(Gio.DBus.session, OBJECT_PATH);
     }
 
     ClaudeEvent(kind, project, message, pids, session) {
+        if (!this._events.take())
+            return;   // flood from some other process: dropped, nobody waits for an answer
         const ev = {
             kind: ['done', 'waiting', 'working'].includes(kind) ? kind : 'done',
             session: String(session).slice(0, 80),

@@ -8,17 +8,27 @@ import {QUOTA_BETA, QUOTA_URL, parseQuota, readToken} from './claudeQuota.js';
 
 /**
  * @param {{soup: object|null}} holder  keeps one Soup session between calls
- * @returns {Promise<{rows?: Array, error?: string}>}  error is an i18n key
+ * @returns {Promise<{rows?: Array, error?: string, auth?: boolean, cancelled?: boolean}>}
+ *   error is an i18n key; `auth` marks a credentials problem (no / unreadable login file,
+ *   HTTP 401 or 403) as opposed to a network or server one; `expired` means the token in
+ *   the file has run out (no request was made: Claude Code renews it, the file is read again next time)
  */
 export async function fetchQuota(holder, cancellable) {
     try {
         const file = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_home_dir(), '.claude', '.credentials.json']));
-        const [bytes] = await file.load_contents_async(cancellable);
+        let bytes;
+        try {
+            [bytes] = await file.load_contents_async(cancellable);
+        } catch (e) {
+            if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                throw e;
+            return {error: 'No Claude Code login found', auth: true};   // missing / unreadable file
+        }
         const tok = readToken(new TextDecoder().decode(bytes), Date.now());
         if (!tok)
-            return {error: 'No Claude Code login found'};
+            return {error: 'No Claude Code login found', auth: true};
         if (tok.expired)
-            return {error: 'Login expired · opening Claude Code renews it'};
+            return {error: 'Login expired · opening Claude Code renews it', expired: true};
         const Soup = (await import('gi://Soup?version=3.0')).default;
         Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_finish');
         holder.soup ??= new Soup.Session({timeout: 10, user_agent: 'dynamic-island'});
@@ -30,8 +40,8 @@ export async function fetchQuota(holder, cancellable) {
         msg.request_headers.append('anthropic-beta', QUOTA_BETA);
         msg.request_headers.append('Content-Type', 'application/json');
         const body = await holder.soup.send_and_read_async(msg, GLib.PRIORITY_LOW, cancellable);
-        if (msg.status_code === 401)
-            return {error: 'Login expired · opening Claude Code renews it'};
+        if (msg.status_code === 401 || msg.status_code === 403)
+            return {error: 'Login expired · opening Claude Code renews it', auth: true};
         if (msg.status_code !== 200)
             return {error: 'Anthropic answered', status: msg.status_code};
         const rows = parseQuota(JSON.parse(new TextDecoder().decode(body.toArray())));
@@ -39,7 +49,8 @@ export async function fetchQuota(holder, cancellable) {
     } catch (e) {
         if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
             return {cancelled: true};
-        console.debug(`[dynamic-island] claude quota: ${e.message}`);
+        // fixed text on purpose: nothing from the request (headers, token) may reach a log
+        console.debug('[dynamic-island] claude quota request failed');
         return {error: 'Anthropic not reachable'};
     }
 }

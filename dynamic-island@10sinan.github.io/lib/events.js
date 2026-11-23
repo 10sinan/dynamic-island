@@ -224,6 +224,8 @@ export class EventHub {
         this._armed = {thermal: true, memory: true, disk: true};
         this._firstCheck = true;
         await this._checkResources();
+        if (this._dead)
+            return;   // destroyed while the first reading was in flight: no timer may outlive us
         this._watchId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, WATCH_SECONDS, () => {
             this._checkResources().catch(e => this._failed('resources', e));
             return GLib.SOURCE_CONTINUE;

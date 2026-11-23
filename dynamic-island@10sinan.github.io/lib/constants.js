@@ -1,6 +1,5 @@
 // Fixed values. Everything a user may want to change lives in GSettings
 // (schemas/*.gschema.xml, edited with tools/di-config).
-import Clutter from 'gi://Clutter';
 
 export const LOG_PREFIX = '[dynamic-island]';
 
@@ -30,9 +29,6 @@ export const APPEAR_MS = 360;
 export const REBUILD_DEBOUNCE_MS = 150;
 export const ACTIVITY_LEAVE_MS = 1500;  // activity paused by hover ends this long after leaving
 export const OSD_DURATION_MS = 1500;
-export const MENU_CLOSE_MS = 160;
-
-export const COLLAPSE_MODE = Clutter.AnimationMode.EASE_IN_OUT_CUBIC;
 
 // Meter bar widths
 export const BAR_W_COMPACT = 22;

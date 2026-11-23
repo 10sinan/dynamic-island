@@ -15,7 +15,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import {IslandModule} from './base.js';
-import {MAX_ART_BYTES, checkArtUrl, readCapped} from '../lib/artFetch.js';
+import {MAX_ART_BYTES, artSocketGuard, assertPublicHost, checkArtUrl, readCapped} from '../lib/artFetch.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
 
 const MPRIS = 'org.mpris.MediaPlayer2.';
@@ -51,6 +51,14 @@ function formatTime(us) {
 
 function rgbCss({r, g, b}, a = 1) {
     return a === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+/** set_style() restyles the actor even for an identical string: skip those (colour glides call this every frame). */
+function setStyleIfChanged(actor, css) {
+    if (!actor || actor._diStyle === css)
+        return;
+    actor._diStyle = css;
+    actor.set_style(css);
 }
 
 function ellipsized(styleClass) {
@@ -164,7 +172,7 @@ class Equalizer {
         const ca = hexToRgb(a), cb = hexToRgb(b);
         this._bars.forEach((bar, i) => {
             const t = this._bars.length > 1 ? i / (this._bars.length - 1) : 0;
-            bar.set_style(`background-color: ${toHex(mix(ca, cb, t))};`);
+            setStyleIfChanged(bar, `background-color: ${toHex(mix(ca, cb, t))};`);
         });
     }
 
@@ -261,8 +269,16 @@ export default class MusicModule extends IslandModule {
         if (this._players.has(name) || this._dead)
             return;
         this._players.set(name, null);   // reserve: NameOwnerChanged may fire twice
-        const proxy = await Gio.DBusProxy.new_for_bus(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE,
-            null, name, PATH, PLAYER_IFACE, this.cancellable);
+        let proxy;
+        try {
+            proxy = await Gio.DBusProxy.new_for_bus(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE,
+                null, name, PATH, PLAYER_IFACE, this.cancellable);
+        } catch (e) {
+            // a failed attempt must not keep the name reserved: the player would never be picked up again
+            if (this._players.get(name) === null)
+                this._players.delete(name);
+            throw e;
+        }
         if (this._dead || !this._players.has(name)) {
             return;
         }
@@ -431,8 +447,12 @@ export default class MusicModule extends IslandModule {
         const dir = this._skipDir ?? 1;
         const lines = [[this._title, i.title], [this._artist, i.artist || '—'], [this._album, i.album]];
         lines.forEach(([label, text], n) => {
-            if (!label || label.text === text)
+            // Compare with the text the label is heading for, not the one it
+            // still shows: A -> B -> A quickly must not leave a finished
+            // slide-out of B behind (label shows A, but B slides in).
+            if (!label || (label._diTarget ?? label.text) === text)
                 return;
+            label._diTarget = text;
             label.remove_all_transitions();
             if (!animate) {
                 label.text = text;
@@ -446,7 +466,7 @@ export default class MusicModule extends IslandModule {
                 duration: 150,
                 mode: Clutter.AnimationMode.EASE_IN_QUAD,
                 onComplete: () => {
-                    if (this._dead)
+                    if (this._dead || label._diTarget !== text)
                         return;
                     label.text = text;
                     label.translation_x = 22 * dir;
@@ -507,6 +527,8 @@ export default class MusicModule extends IslandModule {
                 stream.close(null);
             }
         }
+        // the name must not resolve to this machine / the local network either
+        await assertPublicHost(GLib.Uri.parse(url, GLib.UriFlags.NONE).get_host(), this.cancellable);
         const Soup = (await import('gi://Soup?version=3.0')).default;
         Gio._promisify(Soup.Session.prototype, 'send_async', 'send_finish');
         this._soup ??= new Soup.Session({timeout: 8});
@@ -514,7 +536,17 @@ export default class MusicModule extends IslandModule {
         if (!msg)
             throw new Error('bad url');
         msg.set_flags(Soup.MessageFlags.NO_REDIRECT);
-        const stream = await this._soup.send_async(msg, GLib.PRIORITY_DEFAULT, this.cancellable);
+        // ... and neither may the address Soup really connects to (DNS rebinding)
+        const abort = new Gio.Cancellable();
+        const outer = this.cancellable?.connect('cancelled', () => abort.cancel());
+        msg.connect('network-event', artSocketGuard(() => abort.cancel()));
+        let stream;
+        try {
+            stream = await this._soup.send_async(msg, GLib.PRIORITY_DEFAULT, abort);
+        } finally {
+            if (outer)
+                this.cancellable.disconnect(outer);
+        }
         try {
             if (msg.status_code !== 200)
                 throw new Error(`HTTP ${msg.status_code}`);
@@ -644,12 +676,12 @@ export default class MusicModule extends IslandModule {
         const fade = (x, al) => `rgba(${x.r}, ${x.g}, ${x.b}, ${al})`;
         const grad = (dir, from, to) => `background-gradient-direction: ${dir}; background-gradient-start: ${from}; background-gradient-end: ${to};`;
         this._eqs().forEach(e => e.setColors(hex(c.a), hex(c.a2)));
-        this._fill?.set_style(grad('horizontal', hex(c.a), hex(c.a2)));
-        this._playButton?.set_style(`background-color: ${hex(c.a)};`);
+        setStyleIfChanged(this._fill, grad('horizontal', hex(c.a), hex(c.a2)));
+        setStyleIfChanged(this._playButton, `background-color: ${hex(c.a)};`);
         // flowing colour layers behind the content, and the glow behind the cover
-        this._flowA?.set_style(grad('horizontal', fade(c.f1, 0.95), fade(c.f1, 0)));
-        this._flowB?.set_style(grad('horizontal', fade(c.f2, 0), fade(c.f2, 0.95)));
-        this._glow?.set_style(grad('radial', fade(c.a, 0.55), fade(c.a, 0)));
+        setStyleIfChanged(this._flowA, grad('horizontal', fade(c.f1, 0.95), fade(c.f1, 0)));
+        setStyleIfChanged(this._flowB, grad('horizontal', fade(c.f2, 0), fade(c.f2, 0.95)));
+        setStyleIfChanged(this._glow, grad('radial', fade(c.a, 0.55), fade(c.a, 0)));
     }
 
     /**
@@ -669,6 +701,15 @@ export default class MusicModule extends IslandModule {
     _cardMotion(on) {
         const E = Clutter.AnimationMode.EASE_IN_OUT_SINE;
         const stop = a => a?.remove_all_transitions();
+        // Players report many property changes (volume, metadata, shuffle...);
+        // restarting the endless loops each time snaps them back to their
+        // start values. Only (re)start when the state really changes.
+        const prev = this._motion;
+        // (a loop Clutter dropped while the card was off screen is restarted)
+        if (prev && prev.on === on && prev.flow === this._flowA &&
+            (!on || this._flowA?.get_transition('opacity')))
+            return;
+        this._motion = {on, flow: this._flowA};
         for (const a of [this._flowA, this._flowB, this._glow, this._cardCover?.actor])
             stop(a);
         if (!this._flowA)
