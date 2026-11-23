@@ -837,6 +837,8 @@ export class Island {
         if (![to.x, to.y, to.w, to.h].every(Number.isFinite))
             return;
         this._setHitbox(this._hitboxFor([to], f));
+        if (!this._hb)
+            return;   // _setHitbox refused non-finite geometry and there is no earlier one
         this._bg.set_position(to.x - this._hb.x, to.y - this._hb.y);
         this._bg.set_size(to.w, to.h);
         // T2: the shadow only exists while the pill is still.
@@ -1187,7 +1189,15 @@ export class Island {
             ...p.fixed.map(M => ({M, fixed: true})),
             ...ids.map(id => ({M: p.registry[id], fixed: false})),
         ];
-        const all = entries.map(e => ({...e, m: new e.M(ctx)}));
+        // one module whose constructor throws must not take the others down
+        const all = [];
+        for (const e of entries) {
+            try {
+                all.push({...e, m: new e.M(ctx)});
+            } catch (err) {
+                logIsland.warn(`${C.LOG_PREFIX} [${this._id}] module ${e.M.id} could not start: ${err}`);
+            }
+        }
         this._modules = all.map(e => e.m);   // so destroy() reaches them even mid-init
 
         const results = await Promise.allSettled(all.map(e => e.m.init()));
