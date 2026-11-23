@@ -55,6 +55,45 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         group.add(row);
     }
 
+    /**
+     * A switch that asks before it turns ON (turning it off never asks). The
+     * setting only changes after the user confirms in the dialog.
+     */
+    _confirmSwitch(s, group, window, key, title, subtitle, heading, body) {
+        const row = new Adw.SwitchRow({title, subtitle, active: s.get_boolean(key)});
+        let syncing = false;
+        const show = on => {
+            syncing = true;
+            row.active = on;
+            syncing = false;
+        };
+        row.connect('notify::active', () => {
+            if (syncing)
+                return;
+            if (!row.active) {
+                s.set_boolean(key, false);
+                return;
+            }
+            show(false);   // stays off until confirmed
+            const dialog = new Adw.AlertDialog({heading, body});
+            dialog.add_response('cancel', _('Cancel'));
+            dialog.add_response('enable', _('Enable'));
+            dialog.set_response_appearance('enable', Adw.ResponseAppearance.DESTRUCTIVE);
+            dialog.set_default_response('cancel');
+            dialog.set_close_response('cancel');
+            dialog.connect('response', (_dialog, response) => {
+                if (response === 'enable') {
+                    s.set_boolean(key, true);
+                    show(true);
+                }
+            });
+            dialog.present(window);
+        });
+        const id = s.connect(`changed::${key}`, () => show(s.get_boolean(key)));   // e.g. the feature switched itself off
+        row.connect('destroy', () => s.disconnect(id));
+        group.add(row);
+    }
+
     _spin(s, group, key, title, subtitle, step) {
         const range = s.settings_schema.get_key(key).get_range().deepUnpack()[1].deepUnpack();
         const row = new Adw.SpinRow({
@@ -151,8 +190,10 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         const feat = new Adw.PreferencesGroup({title: 'Claude Code'});
         this._switch(s, feat, 'claude-notify', _('Claude Code notifications'),
             _('When Claude finishes or waits for you (run: di-config claude-hooks install)'));
-        this._switch(s, feat, 'claude-real-usage', _('Claude: real quota from Anthropic'),
-            _('Same numbers as /usage. Reads Claude Code\'s login token and sends it only to api.anthropic.com'));
+        this._confirmSwitch(s, feat, window, 'claude-real-usage', _('Claude: real quota from Anthropic'),
+            _('Same numbers as /usage. Reads Claude Code\'s login token and sends it only to api.anthropic.com'),
+            _('Let Dynamic Island use your Claude login?'),
+            _('To show your real plan quota it reads the login token that Claude Code keeps in ~/.claude/.credentials.json and sends it to api.anthropic.com, and nowhere else, about every 3 minutes. The token is never logged or saved by Dynamic Island. If a request fails the feature switches itself off. Turn it on only if you are comfortable with this.'));
         this._switch(s, feat, 'claude-quota-alerts', _('Claude: warn at 80% and 95% of the quota'),
             _('Needs the real quota setting above'));
         this._switch(s, feat, 'claude-permission-buttons', _('Claude: allow / deny permissions from the island'),
