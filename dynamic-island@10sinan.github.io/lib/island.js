@@ -920,8 +920,11 @@ export class Island {
         if (mode === 'expanded') {
             if (this._cfg.autoCollapse > 0)
                 this._autoTimer.schedule(this._cfg.autoCollapse, () => this._onAutoCollapse());
-            // T3: refresh after the morph, not during it.
-            if (!this._ticking)
+            // T3: refresh after the morph, not during it. Only when the view
+            // opens: a re-measure (prev === mode: search results, a list that
+            // grew) must not restart the poll, or every content change would
+            // trigger a full round of module ticks.
+            if (prev !== 'expanded' && !this._ticking)
                 this._pollTimer.schedule(animating ? duration : 0, () => this._tick());
         } else {
             this._autoTimer.clear();
