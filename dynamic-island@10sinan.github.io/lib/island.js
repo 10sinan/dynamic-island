@@ -170,7 +170,21 @@ export class Island {
 
         this._bg = new St.Widget({style_class: `di-island di-island-${this._id}`});
         this._content = new St.Widget();
+        this._rim = this._shadow = null;
+        if (this._cfg.liquidGlass) {
+            // soft outer shadow: St's own box-shadow paints a hard square past the rounded corners
+            this._shadow = new St.DrawingArea({reactive: false});
+            this._shadow.connect('repaint', () => this._paintGlassShadow());
+            this._root.add_child(this._shadow);
+        }
         this._root.add_child(this._bg);
+        if (this._cfg.liquidGlass) {
+            // childless overlay that follows the pill: lit gradient edge + inner shadow.
+            // (St takes one box-shadow per widget, so the outer shadow lives on _bg.)
+            this._rim = new St.Widget({style_class: 'di-glass-rim', reactive: false});
+            this._rim.add_constraint(new Clutter.BindConstraint({source: this._bg, coordinate: Clutter.BindCoordinate.ALL}));
+            this._root.add_child(this._rim);
+        }
         this._root.add_child(this._content);
 
         const box = () => {
@@ -306,6 +320,11 @@ export class Island {
         }
         // Clip content to the pill: paint-only, no relayout.
         this._content.set_clip(bg.x, bg.y, bg.width, bg.height);
+        if (this._shadow) {
+            const m = C.GLASS_SHADOW_MARGIN;
+            this._shadow.set_position(bg.x - m, bg.y - m);
+            this._shadow.set_size(Math.max(1, bg.width + 2 * m), Math.max(1, bg.height + 2 * m));
+        }
         if (this._outline) {
             const m = OUTLINE_MARGIN;
             this._outline.set_position(bg.x - m, bg.y - m);
@@ -373,6 +392,35 @@ export class Island {
         this._outlineFx = null;
     }
 
+    /** Rings of falling alpha just outside the pill (never inside it: the body is translucent). */
+    _paintGlassShadow() {
+        const area = this._shadow;
+        if (!area || !this._bg)
+            return;
+        const cr = area.get_context();
+        try {
+            const m = C.GLASS_SHADOW_MARGIN;
+            const w = this._bg.width, h = this._bg.height, rad = Math.max(0, this._radius);
+            const steps = C.GLASS_SHADOW_STEPS;
+            for (let i = 0; i < steps; i++) {
+                const k = 0.5 + i;                       // ring centre, px outside the edge
+                const a = C.GLASS_SHADOW_ALPHA * (1 - i / steps) ** 2;
+                const x = m - k, y = m - k + C.GLASS_SHADOW_DY, rw = w + 2 * k, rh = h + 2 * k, r = rad + k;
+                cr.newSubPath();
+                cr.arc(x + rw - r, y + r, r, -Math.PI / 2, 0);
+                cr.arc(x + rw - r, y + rh - r, r, 0, Math.PI / 2);
+                cr.arc(x + r, y + rh - r, r, Math.PI / 2, Math.PI);
+                cr.arc(x + r, y + r, r, Math.PI, 1.5 * Math.PI);
+                cr.closePath();
+                cr.setSourceRGBA(0, 0, 0, a);
+                cr.setLineWidth(1);
+                cr.stroke();
+            }
+        } finally {
+            cr.$dispose();
+        }
+    }
+
     _paintOutline() {
         const o = this._outlineFx, area = this._outline;
         if (!o || !area)
@@ -425,6 +473,10 @@ export class Island {
         if (!this._bg)
             return;
         const t = this._cfg.theme;
+        if (this._rim) {
+            this._applyGlassStyle();
+            return;
+        }
         // 0..1; 0 keeps the solid body, 1 is the most see-through
         const g = Math.max(0, Math.min(100, this._cfg.glassStrength ?? 0)) / 100;
         // the album colour (while music plays) wins over the theme's outline
@@ -456,6 +508,42 @@ export class Island {
         if (style !== this._bgStyle) {
             this._bgStyle = style;
             this._bg.set_style(style);
+        }
+    }
+
+    /**
+     * 'Liquid glass' look (setting liquid-glass): a translucent body, a 1 px rim that is
+     * bright at the top and fades towards the bottom, a soft inner shadow and a thin outer one.
+     * Same inputs as the normal body (theme colour, album tint and album outline), so the
+     * music card still colours the glass. Only styles change, never geometry.
+     */
+    _applyGlassStyle() {
+        const t = this._cfg.theme;
+        const hover = !!this.actor?.hover;
+        const rgba = (c, a) => `rgba(${c.r}, ${c.g}, ${c.b}, ${a.toFixed(3)})`;
+        const white = {r: 255, g: 255, b: 255};
+        const bt = this._bodyTint;
+        const A = this._cfg.liquidGlassBlur ? C.GLASS_BODY_ALPHA_BLUR : C.GLASS_BODY_ALPHA;
+        const base = bt ? bt.a : hexToRgb(t.bg);
+        const rad = `border-radius: ${Math.max(0, this._radius)}px;`;
+        // body: faint sheen at the top fading into the (album-)tinted colour; thin drop shadow
+        const top = mix(base, white, C.GLASS_SHEEN);
+        const body = bt
+            ? `background-color: ${rgba(bt.a, A)}; background-gradient-direction: horizontal; background-gradient-start: ${rgba(bt.a, A)}; background-gradient-end: ${rgba(bt.b, A)};`
+            : `background-color: ${rgba(base, A)}; background-gradient-direction: vertical; background-gradient-start: ${rgba(top, A + 0.10)}; background-gradient-end: ${rgba(base, A)};`;
+        const bgStyle = `${rad} ${body} border-color: transparent;`;
+        // rim: the album/theme colour lightly mixed into a white edge; top brightest
+        // (_borderColor is a css rgba() string set by the music card)
+        const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(this._borderColor ?? '');
+        const tint = m ? mix(white, {r: +m[1], g: +m[2], b: +m[3]}, 0.6) : white;
+        const lit = hover ? C.GLASS_RIM_HOVER : 1;
+        const edge = (k, c = tint) => rgba(c, Math.min(1, C.GLASS_RIM_ALPHA * k * lit));
+        const rimStyle = `${rad} border-width: 1px; border-top-color: ${edge(1, white)}; border-left-color: ${edge(0.45)}; border-right-color: ${edge(0.45)}; border-bottom-color: ${edge(0.18)};`;
+        const style = bgStyle + '|' + rimStyle;
+        if (style !== this._bgStyle) {
+            this._bgStyle = style;
+            this._bg.set_style(bgStyle);
+            this._rim.set_style(rimStyle);
         }
     }
 
@@ -1402,7 +1490,7 @@ export class Island {
         this.actor.destroy();   // destroys all child actors too
 
         this.actor = null;
-        this._root = this._bg = this._content = null;
+        this._root = this._bg = this._content = this._rim = this._shadow = null;
         this._compactBox = this._compactRow = this._placeholder = null;
         this._expandedBox = this._expandedInner = this._headerRow = this._tilesRow = this._mainRow = this._bannerRow = null;
         this._activityButton = null;
