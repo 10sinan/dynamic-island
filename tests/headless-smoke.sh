@@ -35,7 +35,7 @@ EOF
 
 export XDG_DATA_HOME="$SANDBOX/data" XDG_CONFIG_HOME="$SANDBOX/config" XDG_CACHE_HOME="$SANDBOX/cache"
 
-dbus-run-session -- bash "$HERE/tests/smoke-body.sh" 2>&1 |
+dbus-run-session -- bash "${BODY:-$HERE/tests/smoke-body.sh}" 2>&1 |
     grep -vE "^dbus-daemon|^$|WARNING \*\*|goa-daemon|libgoaidentity|discover_other_daemon|fusermount|Gdk-Message|bus can.t be made|calendar-server|portal"
 
 echo "== extension log lines"
