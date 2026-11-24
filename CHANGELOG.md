@@ -5,6 +5,13 @@ Biçim [Keep a Changelog](https://keepachangelog.com/) tarzındadır. Henüz sü
 
 ## [Yayımlanmamış]
 
+### Eklenenler
+
+- **Liquid glass görünümü** (`liquid-glass`, varsayılan kapalı) ve **açıkken arka plan bulanıklığı** (`liquid-glass-blur`,
+  varsayılan kapalı). Ayarlar → Görünüm ve `di-config`. Ayrıntı README'de. Mevcut temalara ve animasyonlara dokunmaz.
+- `tests/glass-body.sh` (`BODY=... tests/headless-smoke.sh`): glass kontrolleri ve `MEASURE=1` ile CPU ölçümü;
+  `tests/smoke-body.sh` disable/enable döngüsüne bulanıklık efekti sızıntı kontrolü eklendi.
+
 ### Davranış değişiklikleri (güncellerken fark edeceksin)
 
 - **Pano geçmişi varsayılan olarak KAPALI.** Eskiden açıktı. Kullanmak istiyorsan Ayarlar → Özellikler → *Pano geçmişi*

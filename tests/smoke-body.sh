@@ -749,17 +749,27 @@ echo "   finished: rows=$(ev "$MX._rows.size") hidden=$(ev "!$MX._box?.visible")
 ev "$Q._hold(false); $Q._collapseAll(false); true" >/dev/null; sleep 0.5
 echo
 
-echo "== $CYCLES disable/enable cycles"
+echo "== $CYCLES disable/enable cycles (liquid glass + backdrop blur on, center island open at each disable)"
+dset liquid-glass true; dset liquid-glass-blur true; sleep 1.5
+# live backdrop-blur effects anywhere on the stage, and the glass-only helper actors
+GFX="(() => { const w = a => (a.get_effect?.('di-glass-blur') ? 1 : 0) + a.get_children().reduce((n, c) => n + w(c), 0); return w(global.stage); })()"
+GACT="(() => { const w = a => (a.has_style_class_name?.('di-glass-rim') ? 1 : 0) + a.get_children().reduce((n, c) => n + w(c), 0); return w(global.stage); })()"
+ev "$C.actor.hover = true; true" >/dev/null; sleep 1.5
+echo "   glass on, island open: blur effects=$(ev "$GFX") (expect 1) rim actors=$(ev "$GACT") (expect 3, one per island)"
+ev "$C.actor.hover = false; true" >/dev/null; sleep 1.5
 echo "   before: $(ev "$COUNTS")"
 for i in $(seq 1 "$CYCLES"); do
+    ev "$C.actor.hover = true; true" >/dev/null; sleep 0.6   # open: a blur effect exists right now
     gnome-extensions disable "$UUID"; sleep 0.3
     gnome-extensions enable  "$UUID"; sleep 0.5
 done
 sleep 3
 gnome-extensions info "$UUID" | grep -E "State"
 echo "   after:  $(ev "$COUNTS")"
+echo "   after cycles (islands rebuilt, closed): blur effects=$(ev "$GFX") (expect 0) rim actors=$(ev "$GACT") (expect 3)"
 gnome-extensions disable "$UUID"; sleep 1
 echo "== disabled"
+echo "   liquid glass leftovers: blur effects=$(ev "$GFX") rim actors=$(ev "$GACT") (expect 0 and 0)"
 echo "   chrome: $(ev "JSON.stringify({uiGroup: Main.layoutManager.uiGroup.get_n_children(), tracked: Main.layoutManager._trackedActors.length})")"
 echo "   slots restored: $(ev "$SLOTS")"
 echo "   osd restored=$(ev "!Object.prototype.hasOwnProperty.call(Main.osdWindowManager, 'showAll')") tray restored=$(ev "Main.messageTray.translation_y === 0 && Main.messageTray.opacity === 255") shortcut restored=$(ev "!Object.prototype.hasOwnProperty.call(Main.panel, 'toggleQuickSettings')") modal released=$(ev "Main.modalCount === $MODAL0")"

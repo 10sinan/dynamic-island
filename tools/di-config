@@ -134,6 +134,12 @@ EN = {
     "Yaylanma efekti": "Spring effect",
     "Açılırken hafifçe esneyip yerine oturur (yay fiziği). Kapalıyken de yay kullanılır ama esnemez.":
         "Opens with a slight bounce (spring physics). When off, the spring still drives it but without bounce.",
+    "Liquid glass görünümü": "Liquid glass look",
+    "Yarı saydam gövde, üstü parlak 1 px kenar, hafif iç ve ince dış gölge. Liquid glass gücünü geçersiz kılar. Varsayılan kapalı.":
+        "Translucent body, 1 px rim bright at the top, soft inner and thin outer shadow. Overrides the glass strength. Off by default.",
+    "Açık island'ın arkasını bulanıklaştır": "Blur behind the open island",
+    "Liquid glass görünümü gerekir. Yalnızca island açıkken arka plan bulanıklaşır; kapanınca efekt tamamen kalkar.":
+        "Needs the Liquid glass look. The backdrop is blurred only while the island is open; the effect is removed completely when it closes.",
     "Açılıp kapanırken bulanıklık": "Blur while opening/closing",
     "iOS gibi: island şekil değiştirirken içerik bulanıklaşır, yerine oturunca netleşir.":
         "iOS-like: content blurs while the island changes shape and sharpens as it settles.",
@@ -306,6 +312,10 @@ TABS = [
              help="Açılırken hafifçe esneyip yerine oturur (yay fiziği). Kapalıyken de yay kullanılır ama esnemez."),
         dict(key="glass-strength", kind="int", step=5, unit="%", label="Liquid glass gücü",
              zero="düz siyah", help="Island gövdesi yarı saydam olur, arkası bulanıklaşır, üstte cam parlaması ve ışıklı kenar çıkar. 0 = eski düz siyah gövde."),
+        dict(key="liquid-glass", kind="bool", label="Liquid glass görünümü",
+             help="Yarı saydam gövde, üstü parlak 1 px kenar, hafif iç ve ince dış gölge. Liquid glass gücünü geçersiz kılar. Varsayılan kapalı."),
+        dict(key="liquid-glass-blur", kind="bool", label="Açık island'ın arkasını bulanıklaştır",
+             help="Liquid glass görünümü gerekir. Yalnızca island açıkken arka plan bulanıklaşır; kapanınca efekt tamamen kalkar."),
         dict(key="morph-blur", kind="bool", label="Açılıp kapanırken bulanıklık",
              help="iOS gibi: island şekil değiştirirken içerik bulanıklaşır, yerine oturunca netleşir."),
         dict(key="poll-compact", kind="int", step=250, unit="ms", label="Yenileme (kapalıyken)",

@@ -108,6 +108,8 @@ Orta island ayrıca kısa süreli **etkinlikler** gösterir:
 
 - **Hover:** Üstüne gelince hemen, yaylanarak açılır. İmleç çekilince 150 ms sonra kapanır. İmleç yokken 5 sn sonra kendiliğinden kapanır.
 - **Liquid glass:** Island gövdesi yarı saydam cam gibidir: arkası görünür, üstte hafif parlama ve ışıklı bir kenar çizgisi olur. Gücü `glass-strength` (0-100, varsayılan 60) ile ayarlanır; `0` eski düz siyah gövdedir. Müzik çalarken albüm renkleri de camın içinden görünür.
+- **Liquid glass görünümü (`liquid-glass`, varsayılan KAPALI):** Yarı saydam gövde, üstü parlak 1 px gradyan kenar, hafif iç gölge ve ince dış gölge. Yalnızca stil; mevcut temalar ve albüm renkleri aynen çalışır (albüm rengi gövdeyi ve kenarı boyar). Açıkken `glass-strength`'i geçersiz kılar.
+  - **Arka plan bulanıklığı (`liquid-glass-blur`, varsayılan KAPALI):** Yalnızca ada **açıkken** `Shell.BlurEffect` (BACKGROUND) eklenir, kapanınca `remove_effect` ile tamamen kaldırılır (kapalı ada siyah panelin üstündedir, bulanıklaştırılacak bir şey yok). Bilinen sınır: `Shell.BlurEffect` düz dikdörtgendir, açık adanın köşelerinde yuvarlak gövdenin dışında birkaç piksel de bulanık kalır. Dış gölge `St` `box-shadow`'u yerine Cairo ile çizilir, çünkü `St` yuvarlak köşenin dışına kare gölge basıyordu; iç gölge `box-shadow` ile denendi ama her karede yeniden üretildiği için hover animasyonunu ~3,7 kat yavaşlattı, bu yüzden kenar renk gradyanı + gövde gradyanı kullanıldı.
 - **Ayarlar:** Hepsi `di-config` terminal arayüzünden değiştirilir ve **anında** uygulanır.
 - **Gizlenme:** Tam ekran uygulamalarda panelle birlikte gizlenir. Etkinlikler ekranında görünür kalır.
 - **Veri okuma:** Veriler `/proc`, `/sys` ve shell servisleri (Gvc, NetworkManager, GnomeBluetooth, PowerProfiles) üzerinden **asenkron** okunur; ana thread bloklanmaz.
@@ -430,7 +432,8 @@ tests/
 ├── fake-player.py         # testlerde kullanılan sahte MPRIS oynatıcı
 ├── tui.test.py            # di-config'i sahte terminalde tuşlarla sürer
 ├── headless-smoke.sh      # izole headless shell başlatır
-└── smoke-body.sh          # o shell içinde çalışan kontroller
+├── smoke-body.sh          # o shell içinde çalışan kontroller
+└── glass-body.sh          # liquid glass kontrolleri; MEASURE=1 ile CPU ölçümü (BODY=tests/glass-body.sh tests/headless-smoke.sh)
 ```
 
 ## Yeni modül ekleme (örn. hava durumu, takvim etkinlikleri)
