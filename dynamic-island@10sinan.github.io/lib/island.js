@@ -45,6 +45,7 @@ function isCancelled(e) {
     return e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED) ?? false;
 }
 
+const GLASS_BLUR_FX = 'di-glass-blur';
 const OUTLINE_MARGIN = 8;   // px around the pill for the wavy line + glow
 
 function sameRect(a, b) {
@@ -390,6 +391,26 @@ export class Island {
         this._outline?.destroy();
         this._outline = null;
         this._outlineFx = null;
+    }
+
+    /**
+     * Backdrop blur behind the glass (settings liquid-glass + liquid-glass-blur). It exists only
+     * while the island is open: compact sits on the black panel (nothing to blur, so no cost) and
+     * the effect is removed completely when it collapses. Shell.BlurEffect is a plain rectangle,
+     * so the very corners of an open island blur a few pixels more than the rounded body covers.
+     */
+    _syncGlassBlur() {
+        if (!this._bg || this._actorGone)
+            return;
+        const want = !!this._rim && this._cfg.liquidGlassBlur && this._mode !== 'compact';
+        const has = !!this._bg.get_effect(GLASS_BLUR_FX);
+        if (want && !has) {
+            this._bg.add_effect_with_name(GLASS_BLUR_FX, new Shell.BlurEffect({
+                mode: Shell.BlurMode.BACKGROUND, radius: C.GLASS_BLUR_RADIUS, brightness: 1,
+            }));
+        } else if (!want && has) {
+            this._bg.remove_effect_by_name(GLASS_BLUR_FX);
+        }
     }
 
     /** Rings of falling alpha just outside the pill (never inside it: the body is translucent). */
@@ -961,6 +982,7 @@ export class Island {
         if (!f)
             return;
         this._mode = mode;
+        this._syncGlassBlur();
 
         // Where the pill is right now (mid-animation values included).
         const from = this._hb
@@ -1484,6 +1506,7 @@ export class Island {
 
         this._stopSpring();
         this._removeOutline();
+        this._bg.remove_effect_by_name(GLASS_BLUR_FX);
         this._bg.remove_all_transitions();
         this.actor.remove_all_transitions();
         Main.layoutManager.removeChrome(this.actor);

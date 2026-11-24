@@ -36,6 +36,7 @@ export const OSD_DURATION_MS = 1500;
 // Liquid glass look (setting liquid-glass)
 export const GLASS_BODY_ALPHA = 0.58;          // body opacity without blur (text must stay readable on any wallpaper)
 export const GLASS_BODY_ALPHA_BLUR = 0.42;     // lower: the blurred backdrop carries the contrast
+export const GLASS_BLUR_RADIUS = 14;           // px (sigma) of the backdrop blur behind an open island
 export const GLASS_SHEEN = 0.14;               // share of white mixed into the top of the body
 export const GLASS_RIM_ALPHA = 0.55;           // brightness of the top edge; sides and bottom are fractions of it
 export const GLASS_RIM_HOVER = 1.25;           // edge brightens a little while hovered
@@ -43,7 +44,6 @@ export const GLASS_SHADOW_MARGIN = 6;          // px around the pill reserved fo
 export const GLASS_SHADOW_STEPS = 3;           // rings, falling off from the edge
 export const GLASS_SHADOW_ALPHA = 0.30;        // alpha of the innermost ring
 export const GLASS_SHADOW_DY = 1;              // shadow sits a little lower than the pill
-export const GLASS_INNER_SHADOW = 'inset 0 -3px 8px rgba(0, 0, 0, 0.30)';
 
 // Meter bar widths
 export const BAR_W_COMPACT = 22;
