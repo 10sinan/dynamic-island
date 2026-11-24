@@ -163,6 +163,8 @@ export default class DynamicIslandPrefs extends ExtensionPreferences {
         accent.add_suffix(pick);
         look.add(accent);
         this._spin(s, look, 'glass-strength', _('Liquid glass strength'), '0 = ' + _('solid'), 5);
+        this._switch(s, look, 'liquid-glass', _('Liquid glass look'), _('Translucent body, lit rim, soft shadows (overrides the strength above)'));
+        this._switch(s, look, 'liquid-glass-blur', _('Blur behind the open island'), _('Needs Liquid glass look; a little extra GPU work while open'));
         this._switch(s, look, 'show-seconds', _('Show seconds on the clock'));
         page.add(look);
 
