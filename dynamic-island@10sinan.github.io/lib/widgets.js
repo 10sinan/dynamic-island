@@ -3,7 +3,7 @@ import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
-import {BAR_W_COMPACT, BAR_W_TILE, EASE_SLIDE, GLIDE_MS} from './constants.js';
+import {BAR_W_COMPACT, BAR_W_TILE, EASE_FADE, EASE_POP, EASE_SLIDE, GLIDE_MS, PRESS_MS, SNAP_MS} from './constants.js';
 
 const DEFAULT_ACCENT = '#5ee6b5';
 
@@ -20,8 +20,8 @@ export function pressFeedback(button, pressedScale = 0.92) {
         button.ease({
             scale_x: down ? pressedScale : 1,
             scale_y: down ? pressedScale : 1,
-            duration: down ? 80 : 200,
-            mode: down ? Clutter.AnimationMode.EASE_OUT_QUAD : Clutter.AnimationMode.EASE_OUT_BACK,
+            duration: down ? PRESS_MS : SNAP_MS,
+            mode: down ? EASE_FADE : EASE_POP,
         });
     });
     return button;

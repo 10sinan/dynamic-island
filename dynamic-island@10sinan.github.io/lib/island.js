@@ -1096,7 +1096,7 @@ export class Island {
                 translation_y: 0,
                 delay: C.FADE_IN_DELAY_MS + i * C.STAGGER_STEP_MS,
                 duration: C.STAGGER_MS,
-                mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+                mode: C.EASE_SLIDE,
             });
             i++;
         }

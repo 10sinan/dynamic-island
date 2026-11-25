@@ -439,29 +439,30 @@ export class EventHub {
             if (gone || pulses-- <= 0)
                 return;
             mark.ease({
-                scale_x: 1.22, scale_y: 1.22, duration: 160,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                scale_x: 1.22, scale_y: 1.22, duration: C.ALERT_UP_MS,
+                mode: C.EASE_FADE,
                 onComplete: () => {
                     if (gone)
                         return;
                     mark.ease({
-                        scale_x: 1, scale_y: 1, duration: 220,
-                        mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
+                        scale_x: 1, scale_y: 1, duration: C.ALERT_DOWN_MS,
+                        mode: C.EASE_LOOP,
                         onComplete: pulse,
                     });
                 },
             });
         };
         mark.ease({
-            opacity: 255, scale_x: 1, scale_y: 1, duration: 380,
-            mode: Clutter.AnimationMode.EASE_OUT_BACK,
+            opacity: 255, scale_x: 1, scale_y: 1, duration: C.POP_MS,
+            mode: C.EASE_POP,
             onComplete: pulse,
         });
         [r.title, r.sub].forEach((label, n) => {
             label.set({opacity: 0, translation_x: 10});
             label.ease({
-                opacity: 255, translation_x: 0, delay: 70 + n * 50, duration: 300,
-                mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+                opacity: 255, translation_x: 0, delay: C.FADE_IN_DELAY_MS + n * C.STAGGER_STEP_MS,
+                duration: C.SLIDE_IN_MS,
+                mode: C.EASE_SLIDE,
             });
         });
     }
