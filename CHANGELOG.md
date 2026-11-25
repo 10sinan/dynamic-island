@@ -1,14 +1,15 @@
 # Değişiklik günlüğü
 
-Biçim [Keep a Changelog](https://keepachangelog.com/) tarzındadır. Henüz sürüm numarası verilmedi; aşağıdakiler
-`main`'e göre bu daldaki değişikliklerdir.
+Biçim [Keep a Changelog](https://keepachangelog.com/) tarzındadır.
 
-## [Yayımlanmamış]
+## Yayımlanmamış
+
+## 0.1.0 - 2026-11-25
 
 ### Eklenenler
 
-- **Liquid glass görünümü** (`liquid-glass`, varsayılan kapalı) ve **açıkken arka plan bulanıklığı** (`liquid-glass-blur`,
-  varsayılan kapalı). Ayarlar → Görünüm ve `di-config`. Ayrıntı README'de. Mevcut temalara ve animasyonlara dokunmaz.
+- **Deneysel: liquid glass görünümü** (`liquid-glass`, varsayılan kapalı) ve **açıkken arka plan bulanıklığı** (`liquid-glass-blur`,
+  varsayılan kapalı). Görünüm hâlâ geliştirilebilir. Ayarlar → Görünüm ve `di-config`. Ayrıntı README'de. Mevcut temalara ve animasyonlara dokunmaz.
 - `tests/glass-body.sh` (`BODY=... tests/headless-smoke.sh`): glass kontrolleri ve `MEASURE=1` ile CPU ölçümü;
   `tests/smoke-body.sh` disable/enable döngüsüne bulanıklık efekti sızıntı kontrolü eklendi.
 
@@ -26,7 +27,7 @@ Biçim [Keep a Changelog](https://keepachangelog.com/) tarzındadır. Henüz sü
     (ayar `false` olur); ağ/5xx hatalarında art arda 3 başarısızlıktan sonra kapanır, başarılı istek sayacı sıfırlar;
     **süresi dolmuş anahtar** hata sayılmaz (istek yok, son değerler kalır, dosya sonraki yoklamada yeniden okunur);
   - anahtar, `Authorization` başlığı ve istek ayrıntıları hiçbir log ya da hata mesajına girmez.
-- **`di-claude-hook` sırları maskeler** (en iyi çaba): `Bearer`/`Authorization` değerleri, `--password`/`--token`/`--secret`/`--api-key`,
+- **`di-claude-hook` sırları maskeler** (en iyi çaba, garanti vermez): `Bearer`/`Authorization` değerleri, `--password`/`--token`/`--secret`/`--api-key`,
   `password=`/`token=`/`api_key:` atamaları, URL içi parola, `curl -u`, `sk-ant-…`, `ghp_…`/`github_pat_…`, AWS anahtar kimlikleri,
   Slack/GitLab belirteçleri ve JWT'ler D-Bus'a ve island'a gitmeden önce `*****` olur. Yalnızca değer maskelenir.
 - **Claude köprüsü** (`ClaudeEvent`) hız sınırlıdır (20 patlama, saniyede 5) ve en fazla 32 "çalışıyor" oturumu izler.
