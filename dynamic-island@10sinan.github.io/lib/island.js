@@ -504,7 +504,7 @@ export class Island {
         let edge = this._borderColor ?? (this.actor?.hover ? t.edgeHover : t.edge);
         // no backdrop blur: Shell.BlurEffect ignores rounded corners and
         // painted a square shadow around the pill, so keep it more opaque
-        const alpha = 1 - 0.45 * g;
+        const alpha = 1 - 0.62 * g;
         const rgba = (c, a) => `rgba(${c.r}, ${c.g}, ${c.b}, ${a.toFixed(3)})`;
         const bt = this._bodyTint;
         const base = bt ? bt.a : hexToRgb(t.bg);
@@ -517,12 +517,12 @@ export class Island {
             body = `background-color: ${rgba(bt.a, alpha)}; background-gradient-direction: horizontal; background-gradient-start: ${rgba(bt.a, alpha)}; background-gradient-end: ${rgba(bt.b, alpha)};`;
         } else {
             // glass: a bright sheen at the top fading into the tinted body
-            const top = mix(base, {r: 255, g: 255, b: 255}, 0.16 * g);
-            body = `background-color: ${rgba(base, alpha)}; background-gradient-direction: vertical; background-gradient-start: ${rgba(top, Math.min(1, alpha + 0.10 * g))}; background-gradient-end: ${rgba(base, alpha)};`;
+            const top = mix(base, {r: 255, g: 255, b: 255}, 0.30 * g);
+            body = `background-color: ${rgba(base, alpha)}; background-gradient-direction: vertical; background-gradient-start: ${rgba(top, Math.min(1, alpha + 0.20 * g))}; background-gradient-end: ${rgba(base, alpha)};`;
         }
         // lit rim: a white edge that gets brighter with the strength
         if (g > 0 && !this._borderColor)
-            edge = `rgba(255, 255, 255, ${((this.actor?.hover ? 0.30 : 0.20) * (0.4 + 0.6 * g)).toFixed(3)})`;
+            edge = `rgba(255, 255, 255, ${((this.actor?.hover ? 0.42 : 0.30) * (0.4 + 0.6 * g)).toFixed(3)})`;
         // set_style() restyles the actor even when the string did not change;
         // during a colour glide most frames round to the same colours.
         const style = `border-radius: ${Math.max(0, this._radius)}px; ${body} border-color: ${edge};`;
