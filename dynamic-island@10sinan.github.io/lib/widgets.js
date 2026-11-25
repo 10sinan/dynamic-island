@@ -3,9 +3,29 @@ import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
-import {BAR_W_COMPACT, BAR_W_TILE, EASE_SLIDE, GLIDE_MS} from './constants.js';
+import {BAR_W_COMPACT, BAR_W_TILE, EASE_FADE, EASE_POP, EASE_SLIDE, GLIDE_MS, PRESS_MS, SNAP_MS} from './constants.js';
 
 const DEFAULT_ACCENT = '#5ee6b5';
+
+/**
+ * Press feedback for a St.Button: it shrinks slightly while held and
+ * springs back on release. Uses a transform only (no relayout); the
+ * handler dies with the actor, so nothing needs disconnecting.
+ */
+export function pressFeedback(button, pressedScale = 0.92) {
+    button.set_pivot_point(0.5, 0.5);
+    button.connect('notify::pressed', () => {
+        button.remove_all_transitions();
+        const down = button.pressed;
+        button.ease({
+            scale_x: down ? pressedScale : 1,
+            scale_y: down ? pressedScale : 1,
+            duration: down ? PRESS_MS : SNAP_MS,
+            mode: down ? EASE_FADE : EASE_POP,
+        });
+    });
+    return button;
+}
 
 /**
  * Thin horizontal level bar: a track with a coloured fill.

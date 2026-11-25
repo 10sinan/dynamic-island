@@ -415,6 +415,56 @@ export class EventHub {
         r.dot.visible = !!v.dot;
         if (v.dot)
             r.dot.set_style(`background-color: ${TONES[v.tone]};`);
+        if (!r.entered) {   // first paint of a new view only, not in-place updates
+            r.entered = true;
+            this._enter(r, v.tone);
+        }
+    }
+
+    /**
+     * Entrance of a fresh event view: the icon pops in with an overshoot, the
+     * text glides in behind it. Warnings and critical events pulse the icon
+     * afterwards (2x warn, 3x crit) so they read as urgent.
+     */
+    _enter(r, tone) {
+        const mark = r.badge.visible ? r.badge : r.icon;
+        mark.set_pivot_point(0.5, 0.5);
+        mark.set({opacity: 0, scale_x: 0.35, scale_y: 0.35});
+        let pulses = tone === 'crit' ? 3 : tone === 'warn' ? 2 : 0;
+        let gone = false;
+        mark.connect('destroy', () => {
+            gone = true;
+        });
+        const pulse = () => {
+            if (gone || pulses-- <= 0)
+                return;
+            mark.ease({
+                scale_x: 1.22, scale_y: 1.22, duration: C.ALERT_UP_MS,
+                mode: C.EASE_FADE,
+                onComplete: () => {
+                    if (gone)
+                        return;
+                    mark.ease({
+                        scale_x: 1, scale_y: 1, duration: C.ALERT_DOWN_MS,
+                        mode: C.EASE_LOOP,
+                        onComplete: pulse,
+                    });
+                },
+            });
+        };
+        mark.ease({
+            opacity: 255, scale_x: 1, scale_y: 1, duration: C.POP_MS,
+            mode: C.EASE_POP,
+            onComplete: pulse,
+        });
+        [r.title, r.sub].forEach((label, n) => {
+            label.set({opacity: 0, translation_x: 10});
+            label.ease({
+                opacity: 255, translation_x: 0, delay: C.FADE_IN_DELAY_MS + n * C.STAGGER_STEP_MS,
+                duration: C.SLIDE_IN_MS,
+                mode: C.EASE_SLIDE,
+            });
+        });
     }
 
     destroy() {

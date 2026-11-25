@@ -16,6 +16,7 @@ import St from 'gi://St';
 
 import {IslandModule} from './base.js';
 import {MAX_ART_BYTES, artSocketGuard, assertPublicHost, checkArtUrl, readCapped} from '../lib/artFetch.js';
+import {pressFeedback} from '../lib/widgets.js';
 import {accentFrom, clamp, hexToRgb, mix, palette, roundedRgba, tintFrom, toHex} from '../lib/color.js';
 import * as C from '../lib/constants.js';
 
@@ -96,10 +97,12 @@ class Cover {
         });
     }
 
-    set(pixbuf) {
+    /** dir: -1 / 1 slides the new picture in from that side (a track skip); 0 = zoom only. */
+    set(pixbuf, dir = 0) {
         if (this._dead)
             return;
         this._top.remove_all_transitions();
+        this._top.translation_x = 0;
         if (!pixbuf) {
             this._bottom.gicon = null;
             this._top.opacity = 0;
@@ -117,10 +120,14 @@ class Cover {
         this._top.gicon = pixbuf;
         this._top.opacity = 0;
         this._top.set_scale(1.14, 1.14);
+        const slide = dir * this._top.width * 0.45;
+        this._top.translation_x = slide;
+        this._bottom.translation_x = 0;
         this._top.ease({
             opacity: 255,
             scale_x: 1,
             scale_y: 1,
+            translation_x: 0,
             duration: C.COVER_FADE_MS,
             mode: C.EASE_SLIDE,
             onComplete: () => {
@@ -128,6 +135,7 @@ class Cover {
                     return;
                 this._bottom.gicon = pixbuf;
                 this._bottom.set_scale(1, 1);
+                this._bottom.translation_x = 0;
                 this._bottom.opacity = 255;
                 this._top.opacity = 0;
             },
@@ -135,6 +143,7 @@ class Cover {
         this._bottom.ease({
             scale_x: 0.9,
             scale_y: 0.9,
+            translation_x: -slide * 0.5,
             opacity: 120,
             duration: C.COVER_FADE_MS,
             mode: C.EASE_SLIDE,
@@ -391,6 +400,7 @@ export default class MusicModule extends IslandModule {
         this._renderText(changed && was);
         this._renderStatus();
         if (changed) {
+            this._artDir = this._skipDir ?? 1;
             this._skipDir = 1;
             this._pos = 0;
             this._renderProgress(true);
@@ -629,7 +639,8 @@ export default class MusicModule extends IslandModule {
     _applyArt(art) {
         const accent = art?.accent ?? this.accent;
         const tint = art?.tint ?? {r: 28, g: 28, b: 32};
-        this._cardCover?.set(art?.pixbuf ?? null);
+        this._cardCover?.set(art?.pixbuf ?? null, this._artDir ?? 0);
+        this._artDir = 0;
         this._compactCover?.set(art?.thumb ?? null);
         this._popupCover?.set(art?.popup ?? null);
         this._setTint(tint);
@@ -912,6 +923,7 @@ export default class MusicModule extends IslandModule {
             const icon = new St.Icon({icon_name: iconName, icon_size: 16});
             const b = new St.Button({style_class: style, child: icon, can_focus: false});
             b.connect('clicked', onClick);
+            pressFeedback(b);
             controls.add_child(b);
             return [b, icon];
         };

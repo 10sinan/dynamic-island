@@ -65,6 +65,8 @@ export const BAR_W_OSD = 200;
 //   colour      palette / tint changes                          COLOUR_MS     EASE_FADE
 //   text swap   old text leaves, new text arrives               TEXT_OUT_MS / TEXT_IN_MS
 //   live        follows a control that is being dragged         LIVE_MS       EASE_FADE
+//   press       button shrinks while held / springs back        PRESS_MS / SNAP_MS  EASE_FADE / EASE_POP
+//   alert       warn/crit icon pulses a few times               ALERT_UP_MS / ALERT_DOWN_MS  EASE_FADE / EASE_LOOP
 //   ambient     endless slow loops (flow, glow, pulse)          AMBIENT_*     EASE_LOOP
 // ---------------------------------------------------------------------------
 export const FADE_IN_MS = 220;
@@ -77,11 +79,18 @@ export const COLOUR_MS = 700;
 export const TEXT_OUT_MS = 150;
 export const TEXT_IN_MS = 340;
 export const LIVE_MS = 120;
+export const PRESS_MS = 80;
+export const ALERT_UP_MS = 160;
+export const ALERT_DOWN_MS = 220;
 export const FLASH_MS = 340;
 export const COVER_FADE_MS = 460;
 export const AMBIENT_SLOW_MS = 4800;
 export const AMBIENT_PULSE_MS = 1700;
 export const AMBIENT_ICON_MS = 700;
+// Expanded island: rows glide in one after the other (a slide-in per row)
+export const STAGGER_MS = SLIDE_IN_MS;
+export const STAGGER_STEP_MS = 45;     // delay between rows
+export const STAGGER_RISE = 10;        // px each row rises from
 
 export const EASE_FADE = Clutter.AnimationMode.EASE_OUT_QUAD;
 export const EASE_SLIDE = Clutter.AnimationMode.EASE_OUT_CUBIC;
