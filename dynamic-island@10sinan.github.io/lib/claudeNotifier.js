@@ -214,8 +214,17 @@ export class ClaudeNotifier {
         this._wave.connect('repaint', () => this._paintWave());
         this._pillLabel = new St.Label({style_class: 'di-claude-working-label', y_align: Clutter.ActorAlign.CENTER});
         this._pillLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        // thin divider + wave only when another widget (music) shares the pill
+        const sep = new St.Widget({style_class: 'di-claude-sep', y_align: Clutter.ActorAlign.CENTER,
+            visible: false});
+        box.add_child(sep);
         box.add_child(this._wave);
         box.add_child(this._pillLabel);
+        box._setCrowded = crowded => {
+            sep.visible = crowded;
+            if (this._pillLabel)
+                this._pillLabel.visible = !crowded;
+        };
         let last = 0, painted = 0;
         this._waveTl = new Clutter.Timeline({actor: this._wave, duration: 60000, repeat_count: -1});
         this._waveTl.connect('new-frame', (_t, ms) => {

@@ -851,6 +851,12 @@ export class Island {
 
     /** Updates the compact width (and the panel slot); returns true if it changed. */
     _syncCompactWidth() {
+        // Music + Claude side by side crowd the pill: tell the accessory to go slim.
+        if (this._accessory?._setCrowded) {
+            const others = this._compactRow.get_children().some(c =>
+                c !== this._accessory && c !== this._placeholder && c.visible);
+            this._accessory._setCrowded(others);
+        }
         const [, natural] = this._compactRow.get_preferred_width(-1);
         let w = Math.max(C.COMPACT_MIN_W, Math.ceil((natural + C.BORDER) / 2) * 2);
         if (this._growOnly)
