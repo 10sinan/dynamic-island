@@ -14,7 +14,7 @@ import {currentWindowSync} from './lib/claudeScan.js';
 const MODULES = {
     'center-modules': ['music', 'calendar', 'notifications', 'claude'],
     'stats-modules': ['workspaces', 'cpu', 'ram', 'temp', 'net', 'battery', 'gpu', 'disk', 'graph', 'procs'],
-    'qs-modules': ['sliders', 'audio', 'mixer', 'toggles', 'clipboard', 'system'],
+    'qs-modules': ['sliders', 'toggles', 'clipboard', 'system'],
     'events': ['power', 'battery-low', 'wifi', 'bluetooth', 'privacy', 'thermal', 'memory', 'disk',
         'lockkey', 'layout', 'meeting', 'powersaver'],
 };
@@ -26,8 +26,8 @@ const NAMES = () => ({
     cpu: _('CPU usage'), ram: _('RAM usage'), temp: _('CPU temperature'), net: _('Network speed'),
     battery: _('Battery'), gpu: _('GPU usage'), disk: _('Disk usage'), graph: _('Live graphs (60 s)'),
     procs: _('Top resource-using apps'),
-    workspaces: _('Workspaces and windows'), audio: _('Sound output'), mixer: _('App volume'),
-    sliders: _('Volume + brightness sliders'), toggles: _('Toggles (Wi-Fi, Bluetooth, ...)'),
+    workspaces: _('Workspaces and windows'),
+    sliders: _('Volume + brightness (with sound output and app volume)'), toggles: _('Toggles (Wi-Fi, Bluetooth, ...)'),
     clipboard: _('Clipboard history (last 10)'), system: _('Battery + system buttons'),
     power: _('Charger plugged / unplugged'), 'battery-low': _('Battery low (20%, 10%)'),
     wifi: _('Wi-Fi connected / lost'), bluetooth: _('Bluetooth device connected / disconnected'),

@@ -1,4 +1,6 @@
 // Volume + brightness sliders (GNOME's own Slider widget, island-styled).
+// The volume row has a chevron that opens a drawer in place with the sound
+// output chooser and the per-app volumes (audio.js / mixer.js sections).
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
@@ -8,6 +10,11 @@ import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 
 import {IslandModule} from '../base.js';
 import {_} from '../../lib/i18n.js';
+import AudioSection from './audio.js';
+import MixerSection from './mixer.js';
+
+const DRAWER_IN_MS = 260;
+const DRAWER_OUT_MS = 130;
 
 function volumeIcon(frac, muted) {
     if (muted || frac <= 0)
@@ -30,6 +37,10 @@ export default class SlidersModule extends IslandModule {
             this._control.connect('default-sink-changed', () => this._bindStream()),
             this._control.connect('state-changed', () => this._bindStream()),
         ];
+        this._audio = new AudioSection(this.ctx, () => this._drawerChanged());
+        this._mixer = new MixerSection(this.ctx, () => this._drawerChanged());
+        await Promise.all([this._audio.init(), this._mixer.init()]);
+        this._open = false;
         this._manager = Main.brightnessManager ?? null;
         this._managerId = this._manager?.connect('changed', () => this._bindScale()) ?? 0;
     }
@@ -78,7 +89,21 @@ export default class SlidersModule extends IslandModule {
             s.push_volume();
         });
         this._volPct = new St.Label({style_class: 'di-slider-pct', y_align: Clutter.ActorAlign.CENTER});
-        box.add_child(this._row(mute, this._volSlider, this._volPct));
+        const volRow = this._row(mute, this._volSlider, this._volPct);
+        this._chev = new St.Button({style_class: 'di-icon-button di-drawer-toggle', can_focus: false, visible: false,
+            accessible_name: _('Sound output and app volume'),
+            child: new St.Icon({icon_name: 'pan-end-symbolic', icon_size: 14})});
+        this._chev.set_pivot_point(0.5, 0.5);
+        this._chev.connect('clicked', () => this._toggleDrawer());
+        volRow.add_child(this._chev);
+        box.add_child(volRow);
+
+        // drawer: output chooser + per-app volumes, closed until the chevron is used
+        this._drawer = new St.BoxLayout({style_class: 'di-drawer', orientation: Clutter.Orientation.VERTICAL,
+            visible: false});
+        this._drawer.add_child(this._audio.build());
+        this._drawer.add_child(this._mixer.build());
+        box.add_child(this._drawer);
 
         // brightness (only with a controllable backlight)
         const light = new St.Button({style_class: 'di-icon-button', can_focus: false,
@@ -92,11 +117,80 @@ export default class SlidersModule extends IslandModule {
         box.add_child(this._lightRow);
 
         box.connect('destroy', () => {
-            this._volSlider = this._lightSlider = null;
+            this._volSlider = this._lightSlider = this._chev = this._drawer = null;
+            this._open = false;
         });
         this._bindStream();
         this._bindScale();
+        this._drawerChanged();
         return box;
+    }
+
+    // ------------------------------------------------------------ drawer
+
+    /** A section appeared / disappeared / changed size. */
+    _drawerChanged() {
+        if (!this._drawer)
+            return;
+        const has = this._audio.hasContent || this._mixer.hasContent;
+        this._chev.visible = has;
+        if (!has && this._open)
+            this._setDrawer(false, false);
+        else if (this._open)
+            this.ctx?.requestExpandedRelayout?.();
+    }
+
+    _toggleDrawer() {
+        this._setDrawer(!this._open, true);
+    }
+
+    /**
+     * The drawer takes its full size at once so the island's spring morph
+     * measures the final layout; its content fades and rises in (and fades
+     * out before the island shrinks).
+     */
+    _setDrawer(open, animate) {
+        const d = this._drawer;
+        if (!d || open === this._open)
+            return;
+        this._open = open;
+        d.remove_all_transitions();
+        this._chev?.ease({
+            rotation_angle_z: open ? 90 : 0,
+            duration: animate ? 200 : 0,
+            mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+        });
+        if (open) {
+            d.set({visible: true, opacity: animate ? 0 : 255, translation_y: animate ? -8 : 0});
+            this.ctx?.requestExpandedRelayout?.();
+            if (animate) {
+                d.ease({opacity: 255, translation_y: 0, delay: 60, duration: DRAWER_IN_MS,
+                    mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+            }
+            return;
+        }
+        const done = () => {
+            if (!this._drawer || this._open)
+                return;
+            this._drawer.hide();
+            this.ctx?.requestExpandedRelayout?.();
+        };
+        if (!animate) {
+            d.opacity = 255;
+            done();
+            return;
+        }
+        d.ease({opacity: 0, translation_y: -6, duration: DRAWER_OUT_MS, mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            onComplete: done});
+    }
+
+    onShown() {
+        this._audio?.onShown();
+    }
+
+    /** Back to the calm view whenever the island closes. */
+    onHidden() {
+        this._setDrawer(false, false);
     }
 
     _bindStream() {
@@ -157,8 +251,11 @@ export default class SlidersModule extends IslandModule {
             this._scale.disconnect(this._scaleId);
         if (this._manager && this._managerId)
             this._manager.disconnect(this._managerId);
+        this._audio?.destroy();
+        this._mixer?.destroy();
+        this._audio = this._mixer = null;
         this._stream = this._control = this._scale = this._manager = null;
-        this._volSlider = this._lightSlider = null;
+        this._volSlider = this._lightSlider = this._chev = this._drawer = null;
         super.destroy();
     }
 }

@@ -26,7 +26,7 @@ import {LOG_PREFIX, REBUILD_DEBOUNCE_MS} from './lib/constants.js';
 import {CENTER_FIXED, CENTER_MODULES, QS_FIXED, QS_MODULES, STATS_FIXED, STATS_MODULES} from './modules/index.js';
 
 const STAT_IDS = ['cpu', 'ram', 'temp', 'net', 'battery'];
-const LAYOUT_VERSION = 6;
+const LAYOUT_VERSION = 7;
 // Written by the extension itself; changing them must not rebuild the islands.
 const INTERNAL_KEYS = new Set(['meeting-dnd-active', 'layout-version']);
 
@@ -204,6 +204,12 @@ export default class DynamicIslandExtension extends Extension {
                 const after = qs.includes('audio') ? qs.indexOf('audio') : qs.indexOf('sliders');
                 s.set_strv('qs-modules', after >= 0 ? [...qs.slice(0, after + 1), 'mixer', ...qs.slice(after + 1)] : ['mixer', ...qs]);
             }
+        }
+        if (from < 7) {
+            // v7: sound output chooser and per-app volume moved into the volume row's drawer
+            const qs = userList('qs-modules');
+            if (qs && (qs.includes('audio') || qs.includes('mixer')))
+                s.set_strv('qs-modules', qs.filter(id => id !== 'audio' && id !== 'mixer'));
         }
         s.set_int('layout-version', LAYOUT_VERSION);
     }
